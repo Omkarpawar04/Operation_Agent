@@ -1,0 +1,160 @@
+{
+  "personal_info": {
+    "name": "UJMA MULANI",
+    "location": "Pune, Maharashtra",
+    "phone": "7798492771",
+    "email": "ujma2111@gmail.com",
+    "linkedin": "linkedin.com/in/ujma-mulani-63423b201",
+    "github": "github.com/Ujma21"
+  },
+  "headline": "MCA STUDENT | DATA ANALYSIS | SOFTWARE DEVELOPMENT",
+  "summary": "Detail-oriented MCA student with a strong foundation in SQL, Python, structured data management, and quantitative problem solving. Experienced in developing data-driven systems involving database management, analytical dashboards, and structured data reporting. Possesses strong analytical and data interpretation capabilities with a deep interest in financial markets, quantitative analysis, and supporting data-informed decision making.",
+  "skills": {
+    "Data & Analysis": [
+      "Python",
+      "SQL",
+      "Data Management",
+      "Data Interpretation",
+      "Quantitative Problem Solving"
+    ],
+    "Programming": [
+      "Java",
+      "Python",
+      "C++",
+      "JavaScript",
+      "SQL"
+    ],
+    "Backend & APIs": [
+      "Spring Boot",
+      "FastAPI",
+      "REST APIs",
+      "Hibernate",
+      "Spring Data JPA",
+      "WebSockets",
+      "JWT Authentication"
+    ],
+    "Databases": [
+      "MySQL",
+      "MongoDB Atlas"
+    ],
+    "Frontend": [
+      "React.js",
+      "HTML5",
+      "CSS3",
+      "Thymeleaf",
+      "Bootstrap",
+      "Tailwind CSS"
+    ],
+    "Core": [
+      "Object-Oriented Programming",
+      "Data Structures & Algorithms",
+      "MVC Architecture",
+      "Database Management",
+      "Authentication & Authorization"
+    ],
+    "Tools": [
+      "Git",
+      "GitHub",
+      "Maven",
+      "Postman",
+      "Judge0 API",
+      "VS Code",
+      "Eclipse",
+      "Spring Tool Suite (STS)"
+    ],
+    "Operating Systems": [
+      "Windows",
+      "Linux (Basic)"
+    ]
+  },
+  "projects": [
+    {
+      "name": "SkillSphere",
+      "subtitle": "Intelligent Career Readiness & Placement Ecosystem",
+      "technologies": [
+        "React.js",
+        "Node.js",
+        "Express.js",
+        "MongoDB Atlas",
+        "JWT",
+        "Tailwind CSS",
+        "Cloudinary",
+        "OpenAI API",
+        "Multer",
+        "Nodemailer",
+        "Recharts",
+        "Axios",
+        "Git"
+      ],
+      "bullets": [
+        "Developed an AI-powered career readiness platform incorporating assessment data, skill tracking, and placement analytics to support quantitative evaluation.",
+        "Implemented standardized career assessments and progress tracking to organize readiness metrics and drive data-backed student recommendations.",
+        "Engineered role-based dashboards with Recharts to deliver clear visual reporting and presentation of structured placement analytics.",
+        "Integrated MongoDB Atlas for scalable database management, ensuring reliable storage, retrieval, and analysis of multi-dimensional performance data."
+      ]
+    },
+    {
+      "name": "CodeX Arena",
+      "subtitle": "Real-Time Competitive Coding Battle Platform",
+      "technologies": [
+        "Python",
+        "FastAPI",
+        "React.js",
+        "MongoDB Atlas",
+        "WebSockets",
+        "JWT",
+        "Judge0 API",
+        "Tailwind CSS",
+        "PyMongo",
+        "Git"
+      ],
+      "bullets": [
+        "Developed a real-time competitive coding platform managing dynamic user activity, competition metrics, and evaluation data.",
+        "Built REST APIs using FastAPI and MongoDB Atlas to manage, query, and structure submission datasets and user performance records.",
+        "Integrated Judge0 API for multi-language code execution, automated test evaluation, and structured result reporting.",
+        "Implemented WebSockets for live event synchronization and JWT authentication to secure platform data access and user transactions."
+      ]
+    },
+    {
+      "name": "Fuel Agency Management System",
+      "technologies": [
+        "Java",
+        "Spring Boot",
+        "Hibernate",
+        "Thymeleaf",
+        "MySQL",
+        "Maven"
+      ],
+      "bullets": [
+        "Developed a full-stack booking and agency management system managing operational records across customer, supplier, cylinder inventory, and booking modules.",
+        "Integrated MySQL with Hibernate to design relational data schemas, perform SQL database management, and maintain transactional data integrity.",
+        "Implemented role-based authentication and authorization for Admin and Customer accounts to safeguard commercial booking data.",
+        "Created automated email notification services to support operational communication and streamline transaction-related workflows."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "Master of Computer Application (MCA)",
+      "dates": "2025–2027",
+      "institution": "School of Computer Studies, Sri Balaji University, Pune",
+      "gpa": "8.71"
+    },
+    {
+      "degree": "Bachelor of Computer Application (BCA)",
+      "dates": "2022–2025",
+      "institution": "Alard College of Business Studies, Pune",
+      "gpa": "8.6"
+    }
+  ],
+  "certifications": [
+    "MERN Full Stack Development — SmartBridge, NASSCOM FutureSkills Prime",
+    "SAP Certified Associate — Back-End Developer (ABAP Cloud) — In Progress, Expected 2026"
+  ],
+  "achievements": [
+    "1st Place — Chess, Intra-College Event."
+  ],
+  "leadership": [
+    "Academic Coordinator for Semester III, supporting the smooth conduct of academic activities."
+  ]
+}
