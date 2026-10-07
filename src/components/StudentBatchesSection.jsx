@@ -1,471 +1,324 @@
 import React, { useState } from 'react';
 import { 
-  Search, 
+  Users, 
   Plus, 
+  Search, 
   Calendar, 
   Clock, 
-  Users, 
-  BookOpen, 
-  Filter, 
-  X, 
+  MoreVertical,
   ChevronRight,
-  MoreVertical
+  PieChart as PieIcon
 } from 'lucide-react';
 
-export default function StudentBatchesSection() {
-  // State variables for search and filtering
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusTab, setStatusTab] = useState('All'); // All | Ongoing | Upcoming | Completed
-  const [scheduleType, setScheduleType] = useState('All'); // All | Weekdays | Weekends
-  const [courseFilter, setCourseFilter] = useState('All');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+export default function Batches() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [scheduleFilter, setScheduleFilter] = useState('All'); // 'All', 'Weekday', 'Weekend'
 
-  // Form State for creating a new batch
-  const [newBatch, setNewBatch] = useState({
-    title: '',
-    course: 'Financial Modeling',
-    trainer: '',
-    scheduleType: 'Weekdays',
-    days: 'Mon, Wed, Fri',
-    time: '08:00 AM - 10:00 AM',
-    maxCapacity: 30
+  // Sample data with total students and actual headcount breakdown across metrics
+  const batches = [
+    {
+      id: 1,
+      code: 'FIN-04',
+      name: 'Financial Modeling & Valuation',
+      trainer: 'Arjun Mehta',
+      type: 'Weekday',
+      schedule: 'Mon, Wed, Fri',
+      time: '10:00 AM - 12:00 PM',
+      status: 'Ongoing',
+      totalStudents: 40,
+      metrics: {
+        completed: 18, // Course Completed
+        mockGiven: 12, // Giving Mocks
+        regular: 7,    // Regular to Classes
+        absent: 3      // Absent / Lagging
+      }
+    },
+    {
+      id: 2,
+      code: 'CFA-01',
+      name: 'CFA Level 1 Intensive Batch',
+      trainer: 'Sara Joshi',
+      type: 'Weekend',
+      schedule: 'Sat & Sun',
+      time: '02:00 PM - 05:00 PM',
+      status: 'Ongoing',
+      totalStudents: 50,
+      metrics: {
+        completed: 20,
+        mockGiven: 15,
+        regular: 10,
+        absent: 5
+      }
+    },
+    {
+      id: 3,
+      code: 'PBI-02',
+      name: 'Power BI & Advanced Excel',
+      trainer: 'Dev Tripathi',
+      type: 'Weekday',
+      schedule: 'Mon - Fri',
+      time: '05:00 PM - 06:30 PM',
+      status: 'Upcoming',
+      totalStudents: 35,
+      metrics: {
+        completed: 10,
+        mockGiven: 12,
+        regular: 8,
+        absent: 5
+      }
+    },
+    {
+      id: 4,
+      code: 'INV-09',
+      name: 'Investment Banking & M&A',
+      trainer: 'Neha Sharma',
+      type: 'Weekend',
+      schedule: 'Sat & Sun',
+      time: '10:00 AM - 01:00 PM',
+      status: 'Completed',
+      totalStudents: 45,
+      metrics: {
+        completed: 30,
+        mockGiven: 10,
+        regular: 3,
+        absent: 2
+      }
+    },
+  ];
+
+  const filteredBatches = batches.filter(batch => {
+    const matchesSearch = batch.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          batch.trainer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          batch.code.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = scheduleFilter === 'All' || batch.type === scheduleFilter;
+    return matchesSearch && matchesFilter;
   });
 
-  // Sample Batches Data
-  const [batches, setBatches] = useState([
-    {
-      id: 'B001',
-      title: 'Financial Modeling & Valuation - B4',
-      course: 'Financial Modeling',
-      trainer: 'Arjun Mehta',
-      status: 'Ongoing',
-      scheduleType: 'Weekdays',
-      days: 'Mon, Wed, Fri',
-      time: '08:00 AM - 10:00 AM',
-      studentsCount: 28,
-      maxCapacity: 30
-    },
-    {
-      id: 'B002',
-      title: 'CFA Level 1 Intensive Batch',
-      course: 'Corporate Finance',
-      trainer: 'Sara Joshi',
-      status: 'Ongoing',
-      scheduleType: 'Weekends',
-      days: 'Sat, Sun',
-      time: '10:00 AM - 02:00 PM',
-      studentsCount: 35,
-      maxCapacity: 40
-    },
-    {
-      id: 'B003',
-      title: 'DSA & Tech Support - Batch 01',
-      course: 'DSA',
-      trainer: 'Rohan Sharma',
-      status: 'Upcoming',
-      scheduleType: 'Weekdays',
-      days: 'Tue, Thu, Sat',
-      time: '06:00 PM - 08:00 PM',
-      studentsCount: 18,
-      maxCapacity: 25
-    },
-    {
-      id: 'B004',
-      title: 'Equity Research Masterclass',
-      course: 'Equity Research',
-      trainer: 'Priya Verma',
-      status: 'Ongoing',
-      scheduleType: 'Weekends',
-      days: 'Sat, Sun',
-      time: '02:00 PM - 06:00 PM',
-      studentsCount: 30,
-      maxCapacity: 30
-    }
-  ]);
+  // Helper function to generate SVG Pie Chart paths dynamically based on headcount values
+  const renderPieChart = (metrics, total) => {
+    const compVal = metrics.completed / total;
+    const mockVal = metrics.mockGiven / total;
+    const regVal = metrics.regular / total;
+    const absVal = metrics.absent / total;
 
-  // Handle New Batch Creation
-  const handleCreateBatch = (e) => {
-    e.preventDefault();
-    if (!newBatch.title || !newBatch.trainer) return;
-
-    const created = {
-      id: `B00${batches.length + 1}`,
-      ...newBatch,
-      status: 'Upcoming',
-      studentsCount: 0
+    const getCoordinatesForPercent = (percent) => {
+      const x = Math.cos(2 * Math.PI * percent);
+      const y = Math.sin(2 * Math.PI * percent);
+      return [x, y];
     };
 
-    setBatches([created, ...batches]);
-    setIsModalOpen(false);
-    setNewBatch({
-      title: '',
-      course: 'Financial Modeling',
-      trainer: '',
-      scheduleType: 'Weekdays',
-      days: 'Mon, Wed, Fri',
-      time: '08:00 AM - 10:00 AM',
-      maxCapacity: 30
-    });
-  };
+    let cumulativePercent = 0;
+    const getSlicePath = (percent) => {
+      if (percent <= 0) return '';
+      const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
+      cumulativePercent += percent;
+      const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
+      const largeArcFlag = percent > 0.5 ? 1 : 0;
+      return `M 0 0 L ${startX} ${startY} A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY} Z`;
+    };
 
-  // Multi-level filtering
-  const filteredBatches = batches.filter((b) => {
-    const matchesSearch =
-      b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.trainer.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusTab === 'All' || b.status === statusTab;
-    const matchesSchedule = scheduleType === 'All' || b.scheduleType === scheduleType;
-    const matchesCourse = courseFilter === 'All' || b.course === courseFilter;
-
-    return matchesSearch && matchesStatus && matchesSchedule && matchesCourse;
-  });
-
-  return (
-    <div className="space-y-6 max-w-7xl mx-auto p-6 bg-slate-50/50 min-h-screen">
-      
-      {/* 1. TOP HEADER BANNER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Student Batches</h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Manage active, upcoming, and completed course-wise student batches.
-          </p>
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-around gap-4 py-2">
+        {/* Huge SVG Donut Chart with Total Headcount in Center */}
+        <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
+          <svg viewBox="-1.2 -1.2 2.4 2.4" className="w-full h-full -rotate-90 drop-shadow-sm">
+            {/* Completed Course Slice */}
+            <path d={getSlicePath(compVal)} fill="#10B981" className="transition-all hover:opacity-90" />
+            {/* Giving Mocks Slice */}
+            <path d={getSlicePath(mockVal)} fill="#3B82F6" className="transition-all hover:opacity-90" />
+            {/* Regular to Classes Slice */}
+            <path d={getSlicePath(regVal)} fill="#8B5CF6" className="transition-all hover:opacity-90" />
+            {/* Absent / Needs Attention Slice */}
+            <path d={getSlicePath(absVal)} fill="#F59E0B" className="transition-all hover:opacity-90" />
+            {/* Inner Hollow Circle for Donut Effect */}
+            <circle cx="0" cy="0" r="0.65" fill="white" />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Total</span>
+            <span className="text-sm font-bold text-slate-800">{total} Students</span>
+          </div>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 hover:brightness-105 text-white text-xs font-bold px-5 py-3 rounded-xl transition shadow-md shadow-blue-500/20 active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create New Batch</span>
+        {/* Headcount Legend Grid */}
+        <div className="grid grid-cols-1 gap-2 w-full">
+          <div className="flex items-center justify-between bg-emerald-50/60 px-3 py-1.5 rounded-xl border border-emerald-100">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm" />
+              <span className="text-xs font-semibold text-slate-700">Completed Course</span>
+            </div>
+            <span className="text-xs font-bold text-emerald-700">{metrics.completed} / {total}</span>
+          </div>
+
+          <div className="flex items-center justify-between bg-blue-50/60 px-3 py-1.5 rounded-xl border border-blue-100">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-blue-500 shadow-sm" />
+              <span className="text-xs font-semibold text-slate-700">Giving Mocks</span>
+            </div>
+            <span className="text-xs font-bold text-blue-700">{metrics.mockGiven} / {total}</span>
+          </div>
+
+          <div className="flex items-center justify-between bg-purple-50/60 px-3 py-1.5 rounded-xl border border-purple-100">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-purple-500 shadow-sm" />
+              <span className="text-xs font-semibold text-slate-700">Regular to Classes</span>
+            </div>
+            <span className="text-xs font-bold text-purple-700">{metrics.regular} / {total}</span>
+          </div>
+
+          <div className="flex items-center justify-between bg-amber-50/60 px-3 py-1.5 rounded-xl border border-amber-100">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-amber-500 shadow-sm" />
+              <span className="text-xs font-semibold text-slate-700">Absent / Irregular</span>
+            </div>
+            <span className="text-xs font-bold text-amber-700">{metrics.absent} / {total}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="p-8 bg-[#F8FAFC] min-h-screen">
+      {/* Top Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Student Batches</h1>
+          <p className="text-sm text-slate-500 mt-1">Track student attendance, mock participation, and course completion headcount.</p>
+        </div>
+        <button className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-lg shadow-blue-500/20 hover:opacity-95 transition">
+          <Plus size={18} />
+          Create New Batch
         </button>
       </div>
 
-      {/* 2. STATS OVERVIEW CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-400">Total Batches</p>
-            <h2 className="text-2xl font-extrabold text-slate-800 mt-1">{batches.length}</h2>
+            <p className="text-sm text-slate-400 font-medium">Total Batches</p>
+            <h3 className="text-3xl font-bold text-slate-800 mt-1">12</h3>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-            <Users className="w-5 h-5" />
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+            <Users size={22} />
           </div>
         </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-400">Ongoing Batches</p>
-            <h2 className="text-2xl font-extrabold text-slate-800 mt-1">
-              {batches.filter((b) => b.status === 'Ongoing').length}
-            </h2>
+            <p className="text-sm text-slate-400 font-medium">Weekday Batches</p>
+            <h3 className="text-3xl font-bold text-slate-800 mt-1">8</h3>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            <Clock className="w-5 h-5" />
+          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+            <Calendar size={22} />
           </div>
         </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-400">Upcoming Batches</p>
-            <h2 className="text-2xl font-extrabold text-slate-800 mt-1">
-              {batches.filter((b) => b.status === 'Upcoming').length}
-            </h2>
+            <p className="text-sm text-slate-400 font-medium">Weekend Batches</p>
+            <h3 className="text-3xl font-bold text-slate-800 mt-1">4</h3>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-            <Calendar className="w-5 h-5" />
+          <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+            <Clock size={22} />
           </div>
         </div>
       </div>
 
-      {/* 3. CONTROLS BAR (Search, Schedule Toggle, Course, and Status Filters) */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-        
-        {/* Search Input */}
-        <div className="relative flex-1 max-w-sm">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-          <input
-            type="text"
-            placeholder="Search batch name or trainer..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs font-medium text-slate-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition"
+      {/* Search and Weekday/Weekend Filter Toolbar */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3.5 top-3 text-slate-400" size={18} />
+          <input 
+            type="text" 
+            placeholder="Search by code, batch or trainer..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 transition"
           />
         </div>
 
-        {/* Filters Group */}
-        <div className="flex flex-wrap items-center gap-3">
-          
-          {/* Weekdays / Weekends Toggle Bar */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-medium">
-            <span className="text-[10px] font-bold text-slate-400 px-2 uppercase">Schedule:</span>
-            {['All', 'Weekdays', 'Weekends'].map((type) => (
-              <button
-                key={type}
-                onClick={() => setScheduleType(type)}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  scheduleType === type
-                    ? 'bg-white text-blue-600 font-bold shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-
-          {/* Course Selector Dropdown */}
-          <select
-            value={courseFilter}
-            onChange={(e) => setCourseFilter(e.target.value)}
-            className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-700 outline-none transition cursor-pointer"
-          >
-            <option value="All">Course: All</option>
-            <option value="Financial Modeling">Financial Modeling</option>
-            <option value="Corporate Finance">Corporate Finance</option>
-            <option value="DSA">DSA</option>
-            <option value="Equity Research">Equity Research</option>
-          </select>
-
-          {/* Status Tabs */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-medium">
-            {['All', 'Ongoing', 'Upcoming', 'Completed'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setStatusTab(tab)}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  statusTab === tab
-                    ? 'bg-blue-600 text-white font-bold shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-        </div>
-      </div>
-
-      {/* 4. BATCH CARDS GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-5">
-        {filteredBatches.length > 0 ? (
-          filteredBatches.map((batch) => (
-            <div
-              key={batch.id}
-              className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition space-y-4 relative group"
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
+          {['All', 'Weekday', 'Weekend'].map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setScheduleFilter(filter)}
+              className={`px-5 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap ${
+                scheduleFilter === filter 
+                  ? 'bg-slate-900 text-white shadow-sm' 
+                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+              }`}
             >
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2">
-                  {/* Status Badge */}
-                  <span
-                    className={`px-2.5 py-1 font-bold text-[10px] rounded-md border ${
-                      batch.status === 'Ongoing'
-                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                        : batch.status === 'Upcoming'
-                        ? 'bg-amber-50 text-amber-600 border-amber-100'
-                        : 'bg-slate-100 text-slate-600 border-slate-200'
-                    }`}
-                  >
-                    {batch.status}
-                  </span>
-
-                  {/* Weekdays / Weekends Badge */}
-                  <span
-                    className={`px-2.5 py-1 font-bold text-[10px] rounded-md border ${
-                      batch.scheduleType === 'Weekends'
-                        ? 'bg-purple-50 text-purple-600 border-purple-100'
-                        : 'bg-blue-50 text-blue-600 border-blue-100'
-                    }`}
-                  >
-                    {batch.scheduleType}
-                  </span>
-                </div>
-
-                <button className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div>
-                <h3 className="text-base font-bold text-slate-800 group-hover:text-blue-600 transition">
-                  {batch.title}
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Trainer: <span className="font-semibold text-slate-700">{batch.trainer}</span>
-                </p>
-              </div>
-
-              {/* Progress / Enrollment Bar */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[11px] font-semibold text-slate-500">
-                  <span>Capacity</span>
-                  <span>
-                    {batch.studentsCount} / {batch.maxCapacity} Enrolled
-                  </span>
-                </div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-300"
-                    style={{ width: `${(batch.studentsCount / batch.maxCapacity) * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Card Footer Meta */}
-              <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-2">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{batch.days}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{batch.time}</span>
-                </div>
-                <div className="flex items-center gap-1 text-blue-600 font-bold hover:underline cursor-pointer">
-                  <span>Manage</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </div>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="col-span-2 py-12 text-center text-slate-400 font-medium bg-white rounded-2xl border border-slate-100">
-            No batches found for the selected filters.
-          </div>
-        )}
+              {filter === 'All' ? 'All Batches' : `${filter}s`}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* 5. CREATE NEW BATCH MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-fadeIn">
-            
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-              <h2 className="text-base font-bold text-slate-800">Create New Student Batch</h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* Batches Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {filteredBatches.map((batch) => {
+          const statusColor = 
+            batch.status === 'Ongoing' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+            batch.status === 'Upcoming' ? 'bg-amber-50 text-amber-600 border-amber-100' : 
+            'bg-slate-100 text-slate-600 border-slate-200';
 
-            <form onSubmit={handleCreateBatch} className="space-y-4 text-xs">
+          const typeColor = batch.type === 'Weekday' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600';
+
+          return (
+            <div key={batch.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 hover:shadow-md transition flex flex-col justify-between">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Batch Name / Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Financial Modeling - Batch 05"
-                  value={newBatch.title}
-                  onChange={(e) => setNewBatch({ ...newBatch, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Course</label>
-                  <select
-                    value={newBatch.course}
-                    onChange={(e) => setNewBatch({ ...newBatch, course: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="Financial Modeling">Financial Modeling</option>
-                    <option value="Corporate Finance">Corporate Finance</option>
-                    <option value="DSA">DSA</option>
-                    <option value="Equity Research">Equity Research</option>
-                  </select>
+                {/* Header with Batch Code & Status */}
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                      {batch.code}
+                    </span>
+                    <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${typeColor}`}>
+                      {batch.type}
+                    </span>
+                    <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${statusColor}`}>
+                      {batch.status}
+                    </span>
+                  </div>
+                  <button className="text-slate-400 hover:text-slate-600 p-1">
+                    <MoreVertical size={18} />
+                  </button>
                 </div>
 
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Trainer Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Arjun Mehta"
-                    value={newBatch.trainer}
-                    onChange={(e) => setNewBatch({ ...newBatch, trainer: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-              </div>
+                <h3 className="text-lg font-bold text-slate-800 mt-2">{batch.name}</h3>
+                <p className="text-sm text-slate-500 mb-4">Trainer: <span className="font-medium text-slate-700">{batch.trainer}</span></p>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Schedule Type</label>
-                  <select
-                    value={newBatch.scheduleType}
-                    onChange={(e) =>
-                      setNewBatch({
-                        ...newBatch,
-                        scheduleType: e.target.value,
-                        days: e.target.value === 'Weekends' ? 'Sat, Sun' : 'Mon, Wed, Fri'
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="Weekdays">Weekdays</option>
-                    <option value="Weekends">Weekends</option>
-                  </select>
+                {/* Schedule info */}
+                <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl text-xs text-slate-600 mb-5">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} className="text-slate-400" />
+                    <span>{batch.schedule}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} className="text-slate-400" />
+                    <span>{batch.time}</span>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Days</label>
-                  <input
-                    type="text"
-                    value={newBatch.days}
-                    onChange={(e) => setNewBatch({ ...newBatch, days: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
+                {/* Pie Chart Section with Student Headcounts */}
+                <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-5 mb-4">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-700 mb-2">
+                    <PieIcon size={16} className="text-blue-600" />
+                    <span>Student Status Breakdown (Headcount)</span>
+                  </div>
+                  {renderPieChart(batch.metrics, batch.totalStudents)}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Time Slot</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 08:00 AM - 10:00 AM"
-                    value={newBatch.time}
-                    onChange={(e) => setNewBatch({ ...newBatch, time: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Max Capacity</label>
-                  <input
-                    type="number"
-                    value={newBatch.maxCapacity}
-                    onChange={(e) => setNewBatch({ ...newBatch, maxCapacity: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 mt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 font-medium text-slate-600 hover:bg-slate-100 rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md"
-                >
-                  Save & Launch Batch
+              {/* Card Footer */}
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                <span className="text-xs text-slate-400">Overall Batch Health: Optimal</span>
+                <button className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
+                  View Batch Details <ChevronRight size={14} />
                 </button>
               </div>
-            </form>
-
-          </div>
-        </div>
-      )}
-
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
