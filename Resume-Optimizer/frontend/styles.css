@@ -1246,6 +1246,15 @@ body {
   margin-bottom: 20px;
 }
 
+.template-category-label {
+  grid-column: 1 / -1;
+  margin: 4px 0 -8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+
 .template-card {
   border: 2px solid var(--border-light);
   border-radius: var(--radius-md);
@@ -1334,6 +1343,57 @@ body {
   background: #253D55;
   margin: 6px 0;
 }
+
+.mini-resume-preview.theme-finance {
+  font-family: Calibri, 'Segoe UI', Candara, sans-serif;
+  text-align: left;
+}
+
+.mini-resume-preview.theme-finance .mini-name {
+  font-weight: 700;
+  font-size: 12px;
+  color: #17365D;
+}
+
+.mini-resume-preview.theme-finance .mini-rule {
+  height: 2px;
+  background: #17365D;
+  margin: 6px 0;
+}
+
+.mini-resume-preview.theme-fresher {
+  font-family: var(--font-sans);
+  border-top: 3px solid #6B4C7A;
+  text-align: center;
+}
+
+.mini-resume-preview.theme-fresher .mini-name {
+  font-weight: 700;
+  font-size: 12px;
+  color: #6B4C7A;
+}
+
+.mini-resume-preview.theme-fresher .mini-rule {
+  height: 1px;
+  background: #E9D5FF;
+  margin: 6px 0;
+}
+
+.mini-resume-preview.theme-sidebar,
+.mini-resume-preview.theme-sidebar_corporate {
+  position: relative;
+  padding-left: 36%;
+  text-align: left;
+}
+.mini-resume-preview.theme-sidebar::before,
+.mini-resume-preview.theme-sidebar_corporate::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 31%;
+  background: #F3F5F7;
+}
+.mini-resume-preview.theme-sidebar_corporate::before { background: #17365D; }
 
 .mini-line {
   height: 4px;
@@ -1478,6 +1538,45 @@ body {
   padding-bottom: 4px;
 }
 
+.resume-preview-sheet.theme-finance {
+  font-family: Calibri, 'Segoe UI', Candara, sans-serif;
+}
+
+.resume-preview-sheet.theme-finance header {
+  text-align: left;
+  border-bottom: 2px solid #17365D;
+  padding-bottom: 8px;
+}
+
+.resume-preview-sheet.theme-finance header h2 {
+  color: #17365D;
+}
+
+.resume-preview-sheet.theme-finance h3 {
+  color: #17365D;
+  border-bottom: 1px solid #CBD5E1;
+  padding-bottom: 4px;
+}
+
+.resume-preview-sheet.theme-fresher {
+  font-family: var(--font-sans);
+  border-top: 4px solid #6B4C7A;
+}
+
+.resume-preview-sheet.theme-fresher header {
+  text-align: center;
+}
+
+.resume-preview-sheet.theme-fresher header h2 {
+  color: #6B4C7A;
+}
+
+.resume-preview-sheet.theme-fresher h3 {
+  color: #6B4C7A;
+  border-bottom: 1px solid #E9D5FF;
+  padding-bottom: 4px;
+}
+
 .resume-preview-sheet .resume-entry {
   margin-bottom: 12px;
 }
@@ -1571,6 +1670,51 @@ body {
 .resume-preview-sheet.theme-corporate .project-heading span {
   color: #1E3A5F;
 }
+
+.resume-preview-sheet.theme-finance .project-heading span {
+  color: #17365D;
+}
+
+.resume-preview-sheet.theme-fresher .project-heading span {
+  color: #6B4C7A;
+}
+
+.resume-preview-container { overflow-x: auto; }
+.resume-live-selection-preview { margin: 18px 0; overflow-x: auto; }
+.resume-preview-sheet.theme-sidebar,
+.resume-preview-sheet.theme-sidebar_corporate {
+  display: grid;
+  grid-template-columns: 30% 70%;
+  width: 794px;
+  min-height: 1123px;
+  max-width: none;
+  padding: 0;
+  border-radius: 0;
+  overflow: hidden;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  line-height: 1.45;
+  border-top: 0;
+}
+.resume-preview-sheet.theme-sidebar_corporate { grid-template-columns: 30% 70%; }
+.resume-sidebar { padding: 40px 20px; background: #F3F5F7; color: #222; overflow-wrap: anywhere; }
+.theme-sidebar_corporate .resume-sidebar { background: #17365D; color: #D9E2F3; }
+.resume-identity h2 { color: #222; font-size: 25px; line-height: 1.08; overflow-wrap: anywhere; margin-bottom: 9px; }
+.theme-sidebar_corporate .resume-identity h2 { color: #fff; }
+.resume-target-role { margin-bottom: 22px; color: #17365D; font-weight: 700; font-size: 10px; text-transform: uppercase; }
+.theme-sidebar_corporate .resume-target-role { color: #D9E2F3; }
+.resume-side-section { margin: 20px 0; }
+.resume-side-section h3 { margin: 0 0 8px; padding-bottom: 5px; border-bottom: 1px solid rgba(23,54,93,.22); color: #17365D; font-size: 10px; letter-spacing: 1px; }
+.theme-sidebar_corporate .resume-side-section h3 { color: #D9E2F3; border-color: rgba(217,226,243,.38); }
+.resume-side-section ul { list-style: none; padding: 0; margin: 0; }
+.resume-side-section li { margin: 0 0 7px; overflow-wrap: anywhere; }
+.theme-sidebar_corporate .resume-side-section li { color: #D9E2F3; }
+.resume-main-column { min-width: 0; padding: 40px 38px; background: #fff; color: #222; }
+.resume-main-column h3 { color: #17365D; border-bottom: 1px solid #C9D3DE; padding-bottom: 5px; margin: 16px 0 8px; font-size: 11px; letter-spacing: 1px; break-after: avoid; }
+.resume-main-column .resume-entry { break-inside: avoid; }
+.resume-main-column p, .resume-main-column li { overflow-wrap: anywhere; }
+.resume-preview-sheet.theme-sidebar .project-heading span,
+.resume-preview-sheet.theme-sidebar_corporate .project-heading span { color: #17365D; }
 
 /* Toast */
 .toast-notification {

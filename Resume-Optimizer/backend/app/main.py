@@ -3,7 +3,7 @@ import uuid
 import logging
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -13,7 +13,7 @@ from .services.jobs import get_job_description, list_jobs, JobNotFoundError
 from .services.jobs import normalize_job_dict
 from .services.matcher import match_resume
 from .services.quality_analyzer import analyze_resume_quality
-from .services.resume_generator import render_docx, render_pdf, preview_text
+from .services.resume_generator import TEMPLATES, render_docx, render_pdf, preview_text
 from .services.resume_parser import extract_text, parse_resume
 from .services.resume_validation import validate_optimized_resume, ResumeValidationError
 
@@ -23,6 +23,18 @@ UPLOADS = ROOT / "uploads"; OUTPUTS = ROOT / "outputs"
 UPLOADS.mkdir(exist_ok=True); OUTPUTS.mkdir(exist_ok=True)
 MAX_BYTES = 8 * 1024 * 1024
 app = FastAPI(title="FINXL AI Resume Optimizer", version="0.1.0")
+
+
+@app.middleware("http")
+async def add_no_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.endswith((".js", ".css", ".html")) or request.url.path in {"", "/"}:
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+
 SESSIONS: dict[str, dict] = {}
 
 
@@ -118,10 +130,16 @@ def job(job_id: str):
 
 @app.get("/api/templates")
 def templates():
-    return [{"id": "professional", "name": "Professional", "description": "Modern, warm accent color, airy spacing, centered name."},
-            {"id": "corporate", "name": "Corporate", "description": "Formal navy styling, compact spacing, left-aligned name."},
-            {"id": "finance", "name": "Finance", "description": "Conservative navy hierarchy with focused section spacing."},
-            {"id": "fresher", "name": "Fresher", "description": "Education and project-forward layout with centered header."}]
+    descriptions = {
+        "professional": "Modern, warm accent color, airy spacing, centered name.",
+        "corporate": "Formal navy styling, compact spacing, left-aligned name.",
+        "finance": "Conservative navy hierarchy with focused section spacing.",
+        "fresher": "Education and project-forward layout with centered header.",
+        "sidebar": "Light sidebar with a professional two-column layout.",
+        "sidebar_corporate": "Dark navy sidebar with a corporate two-column layout.",
+    }
+    return [{"id": template_id, "name": template["name"], "description": descriptions[template_id]}
+            for template_id, template in TEMPLATES.items()]
 
 
 @app.post("/api/optimize-resume")
@@ -266,7 +284,7 @@ def generate(resume_id: str, template_id: str = Form("professional")):
     session = SESSIONS.get(resume_id)
     if not session: raise HTTPException(404, "Resume session expired. Please upload again.")
     if not session.get("resume"): raise HTTPException(409, "Optimize the resume before generating documents.")
-    if template_id not in {"professional", "corporate", "finance", "fresher"}: raise HTTPException(400, "Unknown template.")
+    if template_id not in TEMPLATES: raise HTTPException(400, "Unknown template.")
     session["template_id"] = template_id
     safe_base = _safe_output_stem(session.get("original_filename", "resume"))
     docx = OUTPUTS / f"{safe_base}_Optimized.docx"; pdf = OUTPUTS / f"{safe_base}_Optimized.pdf"
@@ -276,7 +294,7 @@ def generate(resume_id: str, template_id: str = Form("professional")):
         collision += 1
     try:
         render_docx(session["resume"], docx, template_id)
-        render_pdf(session["resume"], pdf, template_id)
+        render_pdf(session["resume"], pdf, template_id, session.get("job", {}).get("title", ""))
         if not docx.is_file() or docx.stat().st_size == 0 or not pdf.is_file() or pdf.stat().st_size == 0:
             raise OSError("Generated document is missing or empty.")
     except Exception:

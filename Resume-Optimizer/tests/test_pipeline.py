@@ -832,6 +832,56 @@ Fuel Agency Management System"""
         self.assertIn("Alex Morgan", optimized["personal_info"]["name"])
         self.assertEqual(optimized["education"][0]["institution"], "Crestview University")
 
+    def test_all_six_templates_generate_valid_docx_and_pdf(self):
+        """Verify all six templates (professional, corporate, finance, fresher, sidebar, sidebar_corporate)
+        generate valid non-empty DOCX and PDF files and can be generated via the API."""
+        resume = parse_resume(SAMPLE)
+        all_templates = ("professional", "corporate", "finance", "fresher", "sidebar", "sidebar_corporate")
+        with tempfile.TemporaryDirectory() as tmp:
+            for template in all_templates:
+                docx_path = Path(tmp) / f"{template}.docx"
+                pdf_path = Path(tmp) / f"{template}.pdf"
+                render_docx(resume, docx_path, template)
+                render_pdf(resume, pdf_path, template, "Financial Analyst")
+                self.assertTrue(docx_path.is_file() and docx_path.stat().st_size > 0, f"{template} DOCX failed")
+                self.assertTrue(pdf_path.is_file() and pdf_path.stat().st_size > 0, f"{template} PDF failed")
+
+        # Test API generation and downloads for all 6 templates
+        client = TestClient(app)
+        sid = "f" * 32
+        dummy_upload = Path("backend/uploads") / f"{sid}_test.docx"
+        dummy_upload.parent.mkdir(parents=True, exist_ok=True)
+        main_module.SESSIONS[sid] = {
+            "job": {"title": "Financial Analyst"},
+            "original": resume,
+            "resume": resume,
+            "analysis": {},
+            "match": {},
+            "quality": {},
+            "source_path": dummy_upload,
+            "original_filename": "sample_resume.docx",
+            "template_id": "professional",
+        }
+        try:
+            for template in all_templates:
+                dummy_upload.touch()
+                resp = client.post(f"/api/resumes/{sid}/generate", data={"template_id": template})
+                self.assertEqual(resp.status_code, 200, f"Generate failed for {template}: {resp.text}")
+                data = resp.json()
+                self.assertIn("docx_url", data)
+                self.assertIn("pdf_url", data)
+                docx_res = client.get(data["docx_url"])
+                self.assertEqual(docx_res.status_code, 200)
+                self.assertGreater(len(docx_res.content), 0)
+                pdf_res = client.get(data["pdf_url"])
+                self.assertEqual(pdf_res.status_code, 200)
+                self.assertGreater(len(pdf_res.content), 0)
+        finally:
+            if dummy_upload.exists():
+                dummy_upload.unlink()
+            main_module.SESSIONS.pop(sid, None)
+
 
 if __name__ == "__main__":
     unittest.main()
+

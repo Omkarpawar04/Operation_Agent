@@ -16,6 +16,57 @@ let resultData = null;
 let generatedData = null;
 let templateId = 'professional';
 
+const RESUME_TEMPLATES = [
+  {
+    id: 'professional',
+    number: 1,
+    name: 'Professional',
+    category: 'SINGLE COLUMN',
+    description: 'Existing resume layout',
+    theme: 'professional'
+  },
+  {
+    id: 'corporate',
+    number: 2,
+    name: 'Corporate',
+    category: 'SINGLE COLUMN',
+    description: 'Formal navy styling',
+    theme: 'corporate'
+  },
+  {
+    id: 'finance',
+    number: 3,
+    name: 'Finance',
+    category: 'SINGLE COLUMN',
+    description: 'Conservative navy hierarchy',
+    theme: 'finance'
+  },
+  {
+    id: 'fresher',
+    number: 4,
+    name: 'Fresher',
+    category: 'SINGLE COLUMN',
+    description: 'Education and projects forward',
+    theme: 'fresher'
+  },
+  {
+    id: 'sidebar',
+    number: 5,
+    name: 'Sidebar',
+    category: 'TWO COLUMN',
+    description: 'Light sidebar · Professional',
+    theme: 'sidebar'
+  },
+  {
+    id: 'sidebar_corporate',
+    number: 6,
+    name: 'Sidebar Two-Column',
+    category: 'TWO COLUMN',
+    description: 'Dark navy sidebar · Corporate',
+    theme: 'sidebar_corporate'
+  }
+];
+
 // Elements
 const fileInput = $('#resumeFile');
 const analyzeBtn = $('#analyzeBtn');
@@ -126,6 +177,7 @@ function removeResumeFile() {
   dropzone.classList.remove('hidden');
   analyzeBtn.disabled = true;
   clearError();
+  templateId = 'professional';
   setWorkflowStep(0);
 }
 
@@ -952,11 +1004,11 @@ function renderProjects(projectsData) {
 /**
  * Render Resume Document Preview
  */
-function renderResumeDocument(resume, theme) {
+function renderResumeDocument(resume, theme, targetRole = '') {
   const info = resume.personal_info || {};
-  const headerContacts = [info.email, info.phone, info.location, info.linkedin, info.github]
+  const headerContacts = [info.email, info.phone, info.location, info.linkedin, info.github, info.portfolio]
     .filter(Boolean).map((value) => String(value).trim().toLowerCase());
-  const contact = [info.email, info.phone, info.location, info.linkedin, info.github]
+  const contact = [info.email, info.phone, info.location, info.linkedin, info.github, info.portfolio]
     .filter(Boolean)
     .map(escapeHtml)
     .join(' · ');
@@ -1027,7 +1079,7 @@ function renderResumeDocument(resume, theme) {
       body += `<h3>${title}</h3><ul>${values.map((item) => `<li>${formatInlineMarkdown(item)}</li>`).join('')}</ul>`;
     }
   }
-  const previewInternal = new Set(['personal_info','summary','experience','internships','projects','education','skills','certifications','achievements','languages','source_lines','format_signals','normalized_skills','legacy_skills','skill_category_labels','section_order','section_heading_labels','sections_detected']);
+  const previewInternal = new Set(['personal_info','summary','experience','internships','projects','education','skills','certifications','achievements','languages','source_lines','format_signals','normalized_skills','legacy_skills','skill_category_labels','section_order','section_heading_labels','sections_detected','headline','contact_details']);
   Object.entries(resume || {}).forEach(([key, value]) => {
     if (previewInternal.has(key) || value == null || value === '' || (Array.isArray(value) && !value.length)) return;
     let values = Array.isArray(value) ? value : [value];
@@ -1046,6 +1098,13 @@ function renderResumeDocument(resume, theme) {
     if (lines.length) body += '<h3>' + escapeHtml(label) + '</h3><ul>' + lines.map((line) => '<li>' + line + '</li>').join('') + '</ul>';
   });
 
+  if (theme === 'sidebar' || theme === 'sidebar_corporate') {
+    const skills = skillGroups(resume.skills).flatMap(([, values]) => values);
+    const sideList = (title, values) => values.length ? `<section class="resume-side-section"><h3>${title}</h3><ul>${values.map((value) => `<li>${formatInlineMarkdown(value)}</li>`).join('')}</ul></section>` : '';
+    const sideContact = [['Email', info.email], ['Phone', info.phone], ['Location', info.location], ['LinkedIn', info.linkedin], ['GitHub', info.github], ['Portfolio', info.portfolio]].filter(([, value]) => value && String(value).trim());
+    const sidebar = `<aside class="resume-sidebar"><div class="resume-identity"><h2>${escapeHtml(info.name || 'Candidate')}</h2>${targetRole ? `<p class="resume-target-role">${escapeHtml(targetRole)}</p>` : ''}</div>${sideContact.length ? `<section class="resume-side-section"><h3>Contact</h3><ul>${sideContact.map(([label, value]) => `<li><strong>${label}</strong><br>${escapeHtml(value)}</li>`).join('')}</ul></section>` : ''}${sideList(theme === 'sidebar_corporate' ? 'Core Skills' : 'Skills', skills)}${sideList('Certifications', list(resume.certifications).map((item) => String(item ?? '').trim()).filter(Boolean))}${sideList('Languages', list(resume.languages).map((item) => String(item ?? '').trim()).filter(Boolean))}</aside>`;
+    return `<article class="resume-preview-sheet theme-${theme}">${sidebar}<div class="resume-main-column">${body}</div></article>`;
+  }
   return `
     <article class="resume-preview-sheet theme-${theme}">
       <header>
@@ -1057,6 +1116,102 @@ function renderResumeDocument(resume, theme) {
   `;
 }
 
+
+function renderMiniPreview(tpl, candidateName) {
+  const safeName = escapeHtml(candidateName || 'Alex Morgan');
+  let lines = '';
+  switch (tpl.id) {
+    case 'professional':
+      lines = `
+        <div class="mini-rule"></div>
+        <div class="mini-line mid" style="margin: 0 auto 6px;"></div>
+        <div class="mini-line long"></div>
+        <div class="mini-line mid"></div>
+        <div class="mini-line short"></div>
+      `;
+      break;
+    case 'corporate':
+      lines = `
+        <div class="mini-rule"></div>
+        <div class="mini-line mid"></div>
+        <div class="mini-line long"></div>
+        <div class="mini-line mid"></div>
+        <div class="mini-line short"></div>
+      `;
+      break;
+    case 'finance':
+      lines = `
+        <div class="mini-rule"></div>
+        <div class="mini-line long"></div>
+        <div class="mini-line mid"></div>
+        <div class="mini-line long"></div>
+        <div class="mini-line short"></div>
+      `;
+      break;
+    case 'fresher':
+      lines = `
+        <div class="mini-rule"></div>
+        <div class="mini-line mid" style="margin: 0 auto 6px;"></div>
+        <div class="mini-line long"></div>
+        <div class="mini-line short"></div>
+        <div class="mini-line mid"></div>
+      `;
+      break;
+    case 'sidebar':
+      lines = `
+        <div class="mini-rule"></div>
+        <div class="mini-line long"></div>
+        <div class="mini-line long"></div>
+        <div class="mini-line mid"></div>
+        <div class="mini-line short"></div>
+      `;
+      break;
+    case 'sidebar_corporate':
+      lines = `
+        <div class="mini-rule"></div>
+        <div class="mini-line long"></div>
+        <div class="mini-line mid"></div>
+        <div class="mini-line short"></div>
+      `;
+      break;
+    default:
+      lines = `
+        <div class="mini-rule"></div>
+        <div class="mini-line long"></div>
+        <div class="mini-line mid"></div>
+        <div class="mini-line short"></div>
+      `;
+  }
+  return `
+    <div class="mini-resume-preview theme-${escapeHtml(tpl.theme || tpl.id)}">
+      <div class="mini-name">${safeName}</div>
+      ${lines}
+    </div>
+  `;
+}
+
+function renderTemplateCards(selectedId, candidateName) {
+  let currentCategory = '';
+  return RESUME_TEMPLATES.map((tpl) => {
+    let categoryHtml = '';
+    if (tpl.category !== currentCategory) {
+      currentCategory = tpl.category;
+      categoryHtml = `<div class="template-category-label">${escapeHtml(currentCategory)}</div>`;
+    }
+    const isSelected = tpl.id === (selectedId || 'professional');
+    return `
+      ${categoryHtml}
+      <div class="template-card ${isSelected ? 'selected' : ''}" data-template="${tpl.id}">
+        <div class="template-card-header">
+          <span class="template-card-title">Template ${tpl.number} — ${escapeHtml(tpl.name)}</span>
+          <input type="radio" name="templateRadio" ${isSelected ? 'checked' : ''}>
+        </div>
+        <p class="template-card-desc">${escapeHtml(tpl.description)}</p>
+        ${renderMiniPreview(tpl, candidateName)}
+      </div>
+    `;
+  }).join('');
+}
 
 /**
  * Step 5: Optimization & Template Selection
@@ -1091,71 +1246,9 @@ async function runOptimizationFlow() {
       <div class="template-selection-container">
         <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">Choose Document Template</h4>
         <div class="template-cards-row">
-          <!-- Professional Template -->
-          <div class="template-card selected" data-template="professional">
-            <div class="template-card-header">
-              <span class="template-card-title">Professional</span>
-              <input type="radio" name="templateRadio" checked>
-            </div>
-            <p class="template-card-desc">Modern sans-serif typography, teal headings, airy spacing.</p>
-            <div class="mini-resume-preview theme-professional">
-              <div class="mini-name">${escapeHtml(resultData.resume_analysis.personal_info?.name || 'Alex Morgan')}</div>
-              <div class="mini-rule"></div>
-              <div class="mini-line mid" style="margin: 0 auto 6px;"></div>
-              <div class="mini-line long"></div>
-              <div class="mini-line mid"></div>
-              <div class="mini-line short"></div>
-            </div>
-          </div>
-
-          <!-- Corporate Template -->
-          <div class="template-card" data-template="corporate">
-            <div class="template-card-header">
-              <span class="template-card-title">Corporate</span>
-              <input type="radio" name="templateRadio">
-            </div>
-            <p class="template-card-desc">Formal executive serif styling, navy divider rules, compact layout.</p>
-            <div class="mini-resume-preview theme-corporate">
-              <div class="mini-name">${escapeHtml(resultData.resume_analysis.personal_info?.name || 'Alex Morgan')}</div>
-              <div class="mini-rule"></div>
-              <div class="mini-line long"></div>
-              <div class="mini-line long"></div>
-              <div class="mini-line mid"></div>
-              <div class="mini-line short"></div>
-            </div>
-          </div>
-          <!-- Finance Template -->
-          <div class="template-card" data-template="finance">
-            <div class="template-card-header">
-              <span class="template-card-title">Finance</span>
-              <input type="radio" name="templateRadio">
-            </div>
-            <p class="template-card-desc">Navy styling, compact spacing, and finance focused section ordering.</p>
-            <div class="mini-resume-preview theme-corporate">
-              <div class="mini-name">${escapeHtml(resultData.resume_analysis.personal_info?.name || 'Alex Morgan')}</div>
-              <div class="mini-rule"></div>
-              <div class="mini-line long"></div>
-              <div class="mini-line mid"></div>
-              <div class="mini-line short"></div>
-            </div>
-          </div>
-
-          <!-- Fresher Template -->
-          <div class="template-card" data-template="fresher">
-            <div class="template-card-header">
-              <span class="template-card-title">Fresher</span>
-              <input type="radio" name="templateRadio">
-            </div>
-            <p class="template-card-desc">Education and projects first, with a centered header.</p>
-            <div class="mini-resume-preview theme-fresher">
-              <div class="mini-name">${escapeHtml(resultData.resume_analysis.personal_info?.name || 'Alex Morgan')}</div>
-              <div class="mini-rule"></div>
-              <div class="mini-line mid"></div>
-              <div class="mini-line long"></div>
-              <div class="mini-line short"></div>
-            </div>
-          </div>
+          ${renderTemplateCards(templateId, resultData.resume_analysis?.personal_info?.name || 'Alex Morgan')}
         </div>
+        <div class="resume-live-selection-preview">${renderResumeDocument(resultData.optimized_resume, templateId, resultData.job?.title || '')}</div>
 
         <button class="app-btn primary-btn" id="generateDocBtn">
           <span>Generate Selected Version</span>
@@ -1171,6 +1264,8 @@ async function runOptimizationFlow() {
         card.classList.add('selected');
         card.querySelector('input').checked = true;
         templateId = card.dataset.template;
+        const livePreview = $('.resume-live-selection-preview');
+        if (livePreview) livePreview.innerHTML = renderResumeDocument(resultData.optimized_resume, templateId, resultData.job?.title || '');
       });
     });
 
@@ -1231,16 +1326,17 @@ async function generateFinalDocuments() {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
           <div>
             <h3 style="font-size: 16px; font-weight: 700;">Document Preview</h3>
-            <p style="font-size: 12px; color: var(--text-muted);">Formatted with ${escapeHtml(templateId.toUpperCase())} template</p>
+            <p style="font-size: 12px; color: var(--text-muted);">Formatted with ${escapeHtml((RESUME_TEMPLATES.find((t) => t.id === templateId)?.name || templateId).toUpperCase())} template</p>
           </div>
         </div>
-        ${renderResumeDocument(data.preview, templateId)}
+        ${renderResumeDocument(data.preview, templateId, data.job_title || '')}
       </div>
     `;
 
     // Handle "Create another resume"
     $('#newResumeBtn').onclick = () => {
       removeResumeFile();
+      templateId = 'professional';
       $('#results').classList.add('hidden');
       $('#workspace').classList.remove('hidden');
       setWorkflowStep(0);

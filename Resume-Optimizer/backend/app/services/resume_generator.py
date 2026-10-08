@@ -10,16 +10,19 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
-from reportlab.lib.pagesizes import LETTER
+from reportlab.lib.pagesizes import A4, LETTER
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import HRFlowable, KeepTogether, ListFlowable, ListItem, Paragraph, SimpleDocTemplate, Spacer
+from reportlab.platypus import BaseDocTemplate, Frame, HRFlowable, KeepTogether, ListFlowable, ListItem, PageTemplate, Paragraph, SimpleDocTemplate, Spacer
+from reportlab.pdfbase.pdfmetrics import stringWidth
 
 TEMPLATES = {
     "professional": {"name": "Professional", "accent": "#0d766e", "docx_accent": RGBColor(13, 118, 110), "font": "Arial", "pdf_font": "Helvetica", "pdf_bold": "Helvetica-Bold", "name_align": "center", "font_size": 9.5, "space": 7, "heading_case": "title"},
     "corporate": {"name": "Corporate", "accent": "#253d55", "docx_accent": RGBColor(37, 61, 85), "font": "Times New Roman", "pdf_font": "Times-Roman", "pdf_bold": "Times-Bold", "name_align": "left", "font_size": 10, "space": 4, "heading_case": "upper"},
     "finance": {"name": "Finance", "accent": "#17365d", "docx_accent": RGBColor(23, 54, 93), "font": "Calibri", "pdf_font": "Helvetica", "pdf_bold": "Helvetica-Bold", "name_align": "left", "font_size": 9.5, "space": 8, "heading_case": "upper"},
     "fresher": {"name": "Fresher", "accent": "#6b4c7a", "docx_accent": RGBColor(107, 76, 122), "font": "Arial", "pdf_font": "Helvetica", "pdf_bold": "Helvetica-Bold", "name_align": "center", "font_size": 10, "space": 9, "heading_case": "title"},
+    "sidebar": {"name": "Sidebar", "accent": "#17365d", "docx_accent": RGBColor(23, 54, 93), "font": "Arial", "pdf_font": "Helvetica", "pdf_bold": "Helvetica-Bold", "name_align": "left", "font_size": 9.5, "space": 7, "heading_case": "upper"},
+    "sidebar_corporate": {"name": "Sidebar Two-Column", "accent": "#17365d", "docx_accent": RGBColor(23, 54, 93), "font": "Arial", "pdf_font": "Helvetica", "pdf_bold": "Helvetica-Bold", "name_align": "left", "font_size": 9.5, "space": 7, "heading_case": "upper"},
 }
 
 SECTION_ORDER = [
@@ -285,7 +288,7 @@ def render_docx(resume: dict, path: Path, template_id: str = "professional") -> 
     doc.save(path)
 
 
-def render_pdf(resume: dict, path: Path, template_id: str = "professional") -> None:
+def render_pdf(resume: dict, path: Path, template_id: str = "professional", target_role: str = "") -> None:
     if template_id not in TEMPLATES: raise ValueError("Unknown resume template.")
     theme = TEMPLATES[template_id]
     data = _structured_resume(resume)
@@ -301,12 +304,58 @@ def render_pdf(resume: dict, path: Path, template_id: str = "professional") -> N
     styles.add(ParagraphStyle(name="ResumeSmall", parent=styles["ResumeEntry"], fontSize=8, textColor=colors.HexColor("#65757a")))
     story = []
     info = data.get("personal_info", {})
-    story.append(Paragraph(escape(_safe(info.get("name")) or "Candidate"), styles["ResumeName"]))
-    contact = _contact_line(info)
-    if contact: story.append(Paragraph(_contact_markup(info), styles["ResumeContact"]))
-    if template_id == "corporate": story.append(HRFlowable(width="100%", thickness=1.2, color=accent, spaceAfter=3))
+    sidebar_template = template_id in {"sidebar", "sidebar_corporate"}
+    if sidebar_template:
+        dark_sidebar = template_id == "sidebar_corporate"
+        side_bg = colors.HexColor("#17365d" if dark_sidebar else "#F3F5F7")
+        side_text = colors.white if dark_sidebar else colors.HexColor("#222222")
+        side_muted = colors.HexColor("#D9E2F3" if dark_sidebar else "#555555")
+        side_title = colors.HexColor("#D9E2F3" if dark_sidebar else "#17365D")
+        side_width = 0.30 * A4[0]
+        side_left = 0.48 * inch
+        main_left = side_left + side_width + 0.27 * inch
+        main_right = 0.48 * inch
+        main_width = A4[0] - main_left - main_right
+        sections = []
+        candidate_name = _safe(info.get("name")) or "Candidate"
+        sections.append((candidate_name, theme["pdf_bold"], 19, side_text, 22, 0))
+        if target_role:
+            sections.append((_safe(target_role).upper(), theme["pdf_bold"], 8, side_title, 11, 7))
+        contacts = [(label, info.get(key)) for label, key in (("EMAIL", "email"), ("PHONE", "phone"), ("LOCATION", "location"), ("LINKEDIN", "linkedin"), ("GITHUB", "github"), ("PORTFOLIO", "portfolio"))]
+        contacts = [(label, _safe(value)) for label, value in contacts if _safe(value)]
+        skills = data.get("skills", {})
+        skill_items = [skill for values in (skills.values() if isinstance(skills, dict) else [skills]) for skill in _as_list(values) if _safe(skill)]
+        sidebar_groups = [("CONTACT", [f"{label}: {value}" for label, value in contacts]), ("CORE SKILLS" if dark_sidebar else "SKILLS", skill_items), ("CERTIFICATIONS", [_safe(x) for x in _as_list(data.get("certifications")) if _safe(x)]), ("LANGUAGES", [_safe(x) for x in _as_list(data.get("languages")) if _safe(x)])]
+        for heading, values in sidebar_groups:
+            if values:
+                sections.append((heading, theme["pdf_bold"], 8, side_title, 10, 11))
+                sections.extend(("- " + value, theme["pdf_font"], 7.5, side_muted, 10, 2) for value in values)
+        def paint_sidebar(canvas, doc):
+            canvas.saveState()
+            canvas.setFillColor(side_bg)
+            canvas.rect(0, 0, side_left + side_width, A4[1], stroke=0, fill=1)
+            y = A4[1] - 0.55 * inch
+            max_width = side_width - 0.36 * inch
+            for text, face, size, color, leading, before in sections:
+                y -= before
+                para = Paragraph(escape(text), ParagraphStyle(f"side-{size}-{face}", fontName=face, fontSize=size, leading=leading, textColor=color))
+                _, height = para.wrap(max_width, max(0, y))
+                para.drawOn(canvas, side_left + 0.18 * inch, y - height)
+                y -= height + (4 if size == 8 and face == theme["pdf_bold"] else 3)
+            canvas.restoreState()
+        sidebar_doc = BaseDocTemplate(str(path), pagesize=A4, leftMargin=main_left, rightMargin=main_right, topMargin=0.55*inch, bottomMargin=0.55*inch)
+        main_frame = Frame(main_left, 0.55*inch, main_width, A4[1] - 1.1*inch, id="main", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
+        sidebar_doc.addPageTemplates(PageTemplate(id="sidebar", frames=[main_frame], onPage=paint_sidebar))
+    else:
+        sidebar_doc = None
+    if not sidebar_template:
+        story.append(Paragraph(escape(_safe(info.get("name")) or "Candidate"), styles["ResumeName"]))
+        contact = _contact_line(info)
+        if contact: story.append(Paragraph(_contact_markup(info), styles["ResumeContact"]))
+        if template_id == "corporate": story.append(HRFlowable(width="100%", thickness=1.2, color=accent, spaceAfter=3))
 
     for key, label in _ordered_sections(data, template_id):
+        if sidebar_template and key in {"skills", "certifications", "languages"}: continue
         value = _visible_section_value(key, data.get(key), info)
         if not _has_section_content(value): continue
         title = label.upper() if theme["heading_case"] == "upper" else label.title()
@@ -346,9 +395,12 @@ def render_pdf(resume: dict, path: Path, template_id: str = "professional") -> N
             bullet_items = [ListItem(Paragraph(escape(_safe(item)), styles["ResumeEntry"]), leftIndent=10) for item in _generic_values(value) if _safe(item)]
             if bullet_items: story.append(ListFlowable(bullet_items, bulletType="bullet", leftIndent=15, bulletFontName=font, bulletFontSize=6))
     path.parent.mkdir(parents=True, exist_ok=True)
-    SimpleDocTemplate(str(path), pagesize=LETTER, rightMargin=.68*inch, leftMargin=.68*inch,
-                      topMargin=.55*inch if template_id == "corporate" else .62*inch,
-                      bottomMargin=.55*inch if template_id == "corporate" else .62*inch).build(story)
+    if sidebar_doc:
+        sidebar_doc.build(story)
+    else:
+        SimpleDocTemplate(str(path), pagesize=LETTER, rightMargin=.68*inch, leftMargin=.68*inch,
+                          topMargin=.55*inch if template_id == "corporate" else .62*inch,
+                          bottomMargin=.55*inch if template_id == "corporate" else .62*inch).build(story)
 
 
 def preview_text(resume: dict) -> dict:
