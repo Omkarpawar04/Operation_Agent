@@ -1,0 +1,83 @@
+{
+  "software engineer|": {
+    "status": "FAILED",
+    "title": "Software Engineer",
+    "company": "",
+    "location": "Hyderabad, Telangana, India",
+    "url": "",
+    "reason": "JOB_URL_NOT_FOUND",
+    "timestamp": "2026-10-07T16:31:55.862994"
+  },
+  "software developer intern/ trainee|": {
+    "status": "FAILED",
+    "title": "Software Developer Intern/ Trainee",
+    "company": "",
+    "location": "Gandhinagar, Gujarat, India",
+    "url": "",
+    "reason": "JOB_URL_NOT_FOUND",
+    "timestamp": "2026-10-07T16:31:57.398034"
+  },
+  "ui developer software engineer|": {
+    "status": "FAILED",
+    "title": "Ui Developer Software Engineer",
+    "company": "",
+    "location": "Tamil Nadu, India",
+    "url": "",
+    "reason": "JOB_URL_NOT_FOUND",
+    "timestamp": "2026-10-07T16:31:59.019907"
+  },
+  "software/embedded developer||bengaluru, karnataka, india": {
+    "status": "APPLIED",
+    "title": "Software/embedded Developer",
+    "company": "",
+    "location": "Bengaluru, Karnataka, India",
+    "url": "",
+    "reason": "APPLICATION_SUBMITTED",
+    "timestamp": "2026-10-08T12:03:20.595693"
+  },
+  "software developer - php||vadodara, gujarat, india": {
+    "status": "APPLIED",
+    "title": "Software Developer - Php",
+    "company": "",
+    "location": "Vadodara, Gujarat, India",
+    "url": "",
+    "reason": "APPLICATION_SUBMITTED",
+    "timestamp": "2026-10-08T12:04:04.849484"
+  },
+  "sr. software developer (nodejs)||mumbai, maharashtra, india": {
+    "status": "APPLIED",
+    "title": "Sr. Software Developer (nodejs)",
+    "company": "",
+    "location": "Mumbai, Maharashtra, India",
+    "url": "",
+    "reason": "APPLICATION_SUBMITTED",
+    "timestamp": "2026-10-08T12:04:27.489787"
+  },
+  "staff full stack software engineer - security||": {
+    "status": "APPLIED",
+    "title": "Staff Full Stack Software Engineer - Security",
+    "company": "",
+    "location": "",
+    "url": "",
+    "reason": "APPLICATION_SUBMITTED",
+    "timestamp": "2026-10-08T12:06:38.226290"
+  },
+  ".net software engineer, senior||hyderabad, telangana, india": {
+    "status": "APPLIED",
+    "title": ".net Software Engineer, Senior",
+    "company": "",
+    "location": "Hyderabad, Telangana, India",
+    "url": "",
+    "reason": "APPLICATION_SUBMITTED",
+    "timestamp": "2026-10-08T12:08:10.599571"
+  },
+  "software engineer - gpu performance||bengaluru, karnataka, india": {
+    "status": "APPLIED",
+    "title": "Software Engineer - Gpu Performance",
+    "company": "",
+    "location": "Bengaluru, Karnataka, India",
+    "url": "",
+    "reason": "APPLICATION_SUBMITTED",
+    "timestamp": "2026-10-08T12:10:24.697328"
+  }
+}

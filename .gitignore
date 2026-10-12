@@ -1,0 +1,6 @@
+
+# Private credentials and user data
+.env
+**/.env
+data/users.xlsx
+**/data/users.xlsx
