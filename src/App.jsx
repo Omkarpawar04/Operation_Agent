@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Users, Video, UserCheck, BookOpen, Briefcase, BarChart2, FileText, Building2, Search, Bell, Plus, CheckCircle2, Clock, ChevronRight, TrendingUp, Award, UploadCloud, FileDown, Sparkles, PlayCircle, CheckCircle, XCircle, HelpCircle, LogOut, SlidersHorizontal, MapPin, DollarSign, Calendar, Eye, Send, MessageSquare, AlertCircle, Pencil, Download, Check, X, Loader2, RefreshCw, Mail, Phone, Printer, ChevronDown, User, Settings, Lock, Repeat, ShieldAlert, HelpCircle as QnAIcon } from 'lucide-react';
+import { LayoutDashboard, Users, Video, UserCheck, BookOpen, Briefcase, BarChart2, FileText, Building2, Search, Bell, Plus, CheckCircle2, Clock, ChevronRight, TrendingUp, Award, UploadCloud, FileDown, Sparkles, PlayCircle, CheckCircle, XCircle, HelpCircle, LogOut, SlidersHorizontal, MapPin, DollarSign, Calendar, Eye, EyeOff, Send, MessageSquare, AlertCircle, Pencil, Download, Check, X, Loader2, RefreshCw, Mail, Phone, Printer, ChevronDown, User, Settings, Lock, Repeat, ShieldAlert, HelpCircle as QnAIcon } from 'lucide-react';
 import OverviewPage from './components/OverviewPage.jsx';
 import StudentListPage from './components/StudentListPage.jsx';
 import Batches from './components/Batches.jsx';
@@ -8,7 +8,7 @@ import StudentProfilePage from './components/StudentProfilePage.jsx';
 import LearningModulesPage from './components/LearningModulesPage.jsx';
 import JobPortalPage from './components/JobPortalPage.jsx';
 import ProgressReportsPage from './components/ProgressReportsPage.jsx';
-import ResumeBuilderPage from './components/ResumeBuilderPage.jsx';
+import ResumeOptimizerPage from './components/ResumeOptimizerPage.jsx';
 import JobsCompanyDetailsSection from './components/JobsCompanyDetailsSection.jsx';
 import QNAGeneratorPage from './components/QnAGeneratorPage.jsx';
 
@@ -18,6 +18,12 @@ export default function App() {
   const [userRole, setUserRole] = useState('Admin'); // 'Admin' | 'Trainer' | 'Student'
   const [activeTab, setActiveTab] = useState('Overview');
   const [selectedStudent, setSelectedStudent] = useState('Riya Joshi');
+
+  // Login Form States
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailInput, setEmailInput] = useState('john12@gmail.com');
+  const [passwordInput, setPasswordInput] = useState('••••••••');
+  const [isLoadingLogin, setIsLoadingLogin] = useState(false);
 
   // Job Portal States
   const [jobSearch, setJobSearch] = useState('');
@@ -45,103 +51,185 @@ export default function App() {
     setNotifications(notifications.map(n => ({ ...n, unread: false })));
   };
 
-  // Handle Login Flow
+  // Handle Login Flow with smooth loading state
+  const handleLogin = (e) => {
+    e.preventDefault();
+    setIsLoadingLogin(true);
+    setTimeout(() => {
+      setIsLoadingLogin(false);
+      setIsAuthenticated(true);
+    }, 800);
+  };
+
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex flex-col md:flex-row bg-slate-50/60 font-sans text-slate-800">
-        {/* Left Dark Hero Section */}
-        <div className="w-full md:w-1/2 bg-gradient-to-br from-blue-50 via-white to-sky-50 text-slate-900 p-8 md:p-12 flex flex-col justify-between min-h-[300px] md:min-h-screen border-r border-slate-200/80">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-blue-500/20">
+      <div className="min-h-screen flex flex-col lg:flex-row bg-[#030712] font-sans text-white relative overflow-hidden selection:bg-cyan-500 selection:text-white">
+        
+        {/* Dynamic Glowing Aurora Background Orbs */}
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/30 rounded-full blur-[140px] pointer-events-none animate-pulse" style={{ animationDuration: '6s' }} />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-600/30 rounded-full blur-[140px] pointer-events-none animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute top-[30%] left-[40%] w-[400px] h-[400px] bg-purple-600/20 rounded-full blur-[160px] pointer-events-none animate-pulse" style={{ animationDuration: '8s' }} />
+
+        {/* Left Immersive Animated Hero Section */}
+        <div className="w-full lg:w-1/2 bg-gradient-to-br from-indigo-950/40 via-slate-950/60 to-blue-950/50 backdrop-blur-3xl p-8 lg:p-16 flex flex-col justify-between min-h-[450px] lg:min-h-screen border-b lg:border-b-0 lg:border-r border-indigo-500/20 relative z-10">
+          
+          {/* Brand Header */}
+          <div className="flex items-center space-x-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 text-white flex items-center justify-center font-extrabold text-2xl shadow-lg shadow-cyan-500/30 ring-2 ring-cyan-400/30 animate-bounce" style={{ animationDuration: '4s' }}>
               F
             </div>
-            <span className="font-semibold text-sm tracking-wide">Finxl Placement Platform</span>
+            <div>
+              <span className="font-extrabold text-sm tracking-wide text-white block">Finxl Placement Platform</span>
+              <span className="text-[10px] text-cyan-400 font-bold tracking-widest uppercase">Autonomous AI Career Suite</span>
+            </div>
           </div>
 
-          <div className="my-auto max-w-lg py-12">
-            <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4">
-              Get every student Job ready automatically.
+          {/* Center Hero Content with Live Floating Cards */}
+          <div className="my-auto max-w-lg py-12 space-y-8">
+            
+            {/* Glowing Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-semibold backdrop-blur-md shadow-lg shadow-cyan-500/10">
+              <Sparkles className="w-4 h-4 text-cyan-400 animate-spin" style={{ animationDuration: '5s' }} />
+              <span>AI-Powered Automated Placement Engine</span>
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1]">
+              Get every student <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-300 animate-pulse">Job ready</span> automatically.
             </h1>
-            <p className="text-slate-600 text-sm md:text-base font-normal">
-              JD to resume, AI mock interviews and mentor scheduling - all in one platform.
+            
+            <p className="text-slate-300 text-sm sm:text-base font-normal leading-relaxed">
+              Transform JD to resume instantly, conduct AI mock interviews, and streamline mentor scheduling — all in one unified autonomous ecosystem.
             </p>
+
+            {/* Floating Live Stats Card with Glow */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-900/40 via-indigo-900/40 to-purple-900/40 border border-indigo-500/30 backdrop-blur-xl shadow-xl flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-[11px] text-cyan-300 font-semibold uppercase tracking-wider">Placement Rate</p>
+                  <p className="text-lg font-black text-white">98.4% Automated Match</p>
+                </div>
+              </div>
+              <span className="flex h-3 w-3 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"></span>
+              </span>
+            </div>
+
           </div>
 
-          <div className="text-xs text-slate-500">
-            © 2026 Finxl Placement Platform. All rights reserved.
+          {/* Footer Copyright */}
+          <div className="text-xs text-slate-400 flex items-center justify-between border-t border-indigo-500/20 pt-4 font-medium">
+            <span>© 2026 Finxl Placement Platform. All rights reserved.</span>
+            <span className="text-cyan-400 font-bold">Secure AI Node v3.2</span>
           </div>
         </div>
 
-        {/* Right Authentication Form */}
-        <div className="w-full md:w-1/2 flex items-center justify-center p-6 md:p-12">
-          <div className="w-full max-w-md space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Welcome Back</h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Sign-in to your Finxl Placement account
+        {/* Right Authentication Form with High-Gloss Glassmorphism Card */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative z-10">
+          <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/30 rounded-3xl p-8 sm:p-10 shadow-2xl shadow-indigo-950/80 space-y-6 relative overflow-hidden">
+            
+            {/* Subtle Top Inner Glow Line */}
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+
+            <div className="space-y-1.5">
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">Welcome Back</h2>
+              <p className="text-xs text-slate-300 font-medium">
+                Sign-in to your Finxl Placement secure portal
               </p>
             </div>
 
-            {/* Input Form */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setIsAuthenticated(true);
-              }}
-              className="space-y-4"
-            >
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-cyan-300 tracking-wide uppercase">
                   Email or User ID
                 </label>
-                <input
-                  type="email"
-                  defaultValue="john12@gmail.com"
-                  required
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/30"
-                />
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-cyan-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    required
+                    className="w-full bg-slate-950/90 border border-indigo-500/30 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 transition shadow-inner"
+                    placeholder="john12@gmail.com"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-cyan-300 tracking-wide uppercase">
                   Password
                 </label>
-                <input
-                  type="password"
-                  defaultValue="••••••••"
-                  required
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/30"
-                />
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-cyan-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    required
+                    className="w-full bg-slate-950/90 border border-indigo-500/30 rounded-xl pl-10 pr-10 py-3 text-xs text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 transition shadow-inner"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input type="checkbox" className="rounded border-slate-300 text-blue-600" />
-                  <span>Remember me</span>
+              <div className="flex items-center justify-between text-xs text-slate-300 pt-1">
+                <label className="flex items-center space-x-2 cursor-pointer group">
+                  <input type="checkbox" className="rounded bg-slate-950 border-indigo-500 text-cyan-500 focus:ring-cyan-400/30" />
+                  <span className="group-hover:text-cyan-300 transition font-medium">Remember me</span>
                 </label>
-                <a href="#forgot" className="text-slate-500 hover:underline">
+                <a href="#forgot" onClick={(e) => { e.preventDefault(); alert("Password reset link sent to registered email."); }} className="text-cyan-400 hover:text-cyan-300 transition font-semibold">
                   Forgot Password?
                 </a>
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 hover:brightness-105 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-md shadow-blue-500/20"
+                disabled={isLoadingLogin}
+                className="w-full bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:brightness-110 active:scale-[0.99] text-white font-bold py-3.5 rounded-xl text-xs transition duration-200 shadow-lg shadow-cyan-500/30 flex items-center justify-center space-x-2 group cursor-pointer"
               >
-                Sign In
+                {isLoadingLogin ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Signing in securely...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Sign In</span>
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+                  </>
+                )}
               </button>
             </form>
             
             <div className="relative my-4 flex items-center justify-center">
-              <div className="border-t border-slate-200 w-full" />
-              <span className="bg-slate-50 px-3 text-[10px] text-slate-400 font-bold uppercase tracking-wider absolute">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-indigo-500/30" />
+              </div>
+              <div className="relative px-3 bg-[#0c1222] text-[10px] text-cyan-400 font-black tracking-widest uppercase">
                 OR
-              </span>
+              </div>
             </div>
 
             <button
-              onClick={() => setIsAuthenticated(true)}
-              className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-sm"
+              onClick={() => {
+                setIsLoadingLogin(true);
+                setTimeout(() => {
+                  setIsLoadingLogin(false);
+                  setIsAuthenticated(true);
+                }, 600);
+              }}
+              className="w-full bg-white hover:bg-slate-100 text-slate-800 font-bold py-3.5 rounded-xl text-xs flex items-center justify-center space-x-2.5 transition shadow-md cursor-pointer"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path
@@ -169,7 +257,7 @@ export default function App() {
     );
   }
 
-  // Navigation Items Sidebar (Fixed syntax)
+  // Navigation Items Sidebar
   const navigationItems = [
     { name: 'Overview', icon: LayoutDashboard },
     { name: 'Student List', icon: Users },
@@ -179,7 +267,7 @@ export default function App() {
     { name: 'Learning Modules', icon: BookOpen },
     { name: 'Job Portal', icon: Briefcase },
     { name: 'Progress Reports', icon: BarChart2 },
-    { name: 'Resume Builder', icon: FileText },
+    { name: 'Resume Optimizer', icon: Sparkles },
     { name: 'QnA Generator', icon: QnAIcon },
     { name: 'Company', icon: Building2 },
   ];
@@ -240,7 +328,7 @@ export default function App() {
           </div>
           <button
             onClick={() => setShowLogoutConfirm(true)}
-            className="text-slate-400 hover:text-blue-600 transition p-1"
+            className="text-slate-400 hover:text-blue-600 transition p-1 cursor-pointer"
             title="Sign Out"
           >
             <LogOut className="w-4 h-4" />
@@ -252,7 +340,6 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {/* Top Navbar */}
         <header className="sticky top-0 z-30 h-16 bg-white/70 backdrop-blur-md border-b border-slate-200/60 px-6 py-4 flex items-center justify-between shrink-0 shadow-sm">
-          {/* Search Bar Input */}
           <div className="relative w-full max-w-md">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -262,17 +349,14 @@ export default function App() {
             />
           </div>
 
-          {/* Top Actions */}
           <div className="flex items-center space-x-4 relative">
-            
-            {/* Notification Dropdown Component */}
             <div className="relative">
               <button 
                 onClick={() => {
                   setShowNotifications(!showNotifications);
                   setShowProfileModal(false);
                 }}
-                className="relative text-slate-500 hover:text-blue-700 transition p-1.5 rounded-lg hover:bg-blue-50 shadow-sm"
+                className="relative text-slate-500 hover:text-blue-700 transition p-1.5 rounded-lg hover:bg-blue-50 shadow-sm cursor-pointer"
               >
                 <Bell className="w-4 h-4" />
                 {notifications.some(n => n.unread) && (
@@ -312,14 +396,14 @@ export default function App() {
               )}
             </div>
 
-            {/* User Profile Avatar Dropdown Component */}
+            {/* User Profile Avatar Dropdown */}
             <div className="relative pl-2 border-l border-slate-200/80">
               <button 
                 onClick={() => {
                   setShowProfileModal(!showProfileModal);
                   setShowNotifications(false);
                 }}
-                className="flex items-center gap-2 focus:outline-none rounded-full ring-2 ring-transparent hover:ring-blue-500/30 transition"
+                className="flex items-center gap-2 focus:outline-none rounded-full ring-2 ring-transparent hover:ring-blue-500/30 transition cursor-pointer"
               >
                 <img
                   src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80"
@@ -366,7 +450,7 @@ export default function App() {
                         setShowProfileModal(false);
                         setShowLogoutConfirm(true);
                       }}
-                      className="w-full flex items-center justify-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold py-2 rounded-xl transition"
+                      className="w-full flex items-center justify-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold py-2 rounded-xl transition cursor-pointer"
                     >
                       <LogOut className="w-3.5 h-3.5" /> Logout
                     </button>
@@ -400,16 +484,7 @@ export default function App() {
             />
           )}
           {activeTab === 'Progress Reports' && <ProgressReportsPage />}
-          {activeTab === 'Resume Builder' && (
-            <ResumeBuilderPage
-              jdText={jdText}
-              setJdText={setJdText}
-              isGeneratingResume={isGeneratingResume}
-              setIsGeneratingResume={setIsGeneratingResume}
-              resumeGenerated={resumeGenerated}
-              setResumeGenerated={setResumeGenerated}
-            />
-          )}
+          {activeTab === 'Resume Optimizer' && <ResumeOptimizerPage />}
           {activeTab === 'QnA Generator' && <QNAGeneratorPage />}
           {activeTab === 'Company' && <JobsCompanyDetailsSection setActiveTab={setActiveTab} />}
         </main>
@@ -431,7 +506,7 @@ export default function App() {
             <div className="flex gap-2.5 pt-2">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-xl transition"
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-xl transition cursor-pointer"
               >
                 Cancel
               </button>
@@ -440,7 +515,7 @@ export default function App() {
                   setShowLogoutConfirm(false);
                   setIsAuthenticated(false);
                 }}
-                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-sm shadow-rose-600/20"
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-sm shadow-rose-600/20 cursor-pointer"
               >
                 Yes, Logout
               </button>

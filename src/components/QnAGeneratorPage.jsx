@@ -36,7 +36,7 @@ export default function QnAGeneratorPage() {
     e.target.value = '';
   };
 
-    const handleGenerate = async (e) => {
+  const handleGenerate = async (e) => {
     e.preventDefault();
     if (!jdText.trim() && !jdFile) return;
 
@@ -82,22 +82,21 @@ export default function QnAGeneratorPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12 font-sans">
-      {/* Top Tag Header */}
-      <div className="flex justify-end">
-        <span className="bg-blue-50 text-blue-600 font-semibold text-xs px-3.5 py-1.5 rounded-full border border-blue-100 shadow-sm">
-          AI Interview Preparation
-        </span>
-      </div>
-
+    <div className="max-w-full mx-auto space-y-6 pb-12 font-sans">
+      
       {/* Top Banner Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left Blue Banner */}
         <div className="lg:col-span-7 bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-900 text-white rounded-3xl p-8 shadow-sm flex flex-col justify-between space-y-6">
           <div className="space-y-3">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-blue-300">
-              Financial Career Intelligence
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-blue-300">
+                Financial Career Intelligence
+              </span>
+              <span className="bg-blue-500/20 text-blue-300 font-semibold text-[10px] px-3 py-1 rounded-full border border-blue-400/30">
+                AI Interview Preparation
+              </span>
+            </div>
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight leading-tight">
               Turn Financial JDs into <span className="text-blue-400">Interview Preparation</span>
             </h1>
@@ -189,10 +188,7 @@ export default function QnAGeneratorPage() {
               />
             </label>
             <span className="text-[11px] text-slate-400">
-              Supported formats: TXT, PDF, DOCX
-              <span className="text-[11px] text-slate-400">
-             {jdFile ? `Selected: ${jdFile.name}` : 'Supported formats: TXT, PDF, DOCX'}
-            </span>
+              {jdFile ? `Selected: ${jdFile.name}` : 'Supported formats: TXT, PDF, DOCX'}
             </span>
           </div>
 
@@ -200,10 +196,10 @@ export default function QnAGeneratorPage() {
             <button
               type="button"
               onClick={() => {
-              setJdText('');
-              setJdFile(null);
-              setError('');
-              setGeneratedData(null);
+                setJdText('');
+                setJdFile(null);
+                setError('');
+                setGeneratedData(null);
               }}
               className="bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold px-4 py-2.5 rounded-xl transition"
             >
@@ -213,7 +209,8 @@ export default function QnAGeneratorPage() {
             <button
               type="button"
               onClick={handleGenerate}
-              disabled={isGenerating || (!jdText.trim() && !jdFile)}              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold px-6 py-2.5 rounded-xl transition shadow-sm flex items-center gap-2"
+              disabled={isGenerating || (!jdText.trim() && !jdFile)}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold px-6 py-2.5 rounded-xl transition shadow-sm flex items-center gap-2"
             >
               {isGenerating ? (
                 <>
@@ -235,7 +232,6 @@ export default function QnAGeneratorPage() {
 
       {/* Output Results */}
       {generatedData && (
-        
         <div className="space-y-5 animate-in fade-in duration-300">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-bold text-slate-800">

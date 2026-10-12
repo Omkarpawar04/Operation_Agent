@@ -14,7 +14,7 @@ BASE_DIR = os.path.dirname(
 )
 
 ENV_FILE = os.path.join(
-    BASE_DIR,
+    os.path.dirname(BASE_DIR),
     ".env"
 )
 
@@ -32,6 +32,14 @@ MODEL = os.getenv(
     "gemini-3.8-flash"
 )
 
+FALLBACK_MODELS = [
+    m.strip()
+    for m in os.getenv("AI_FALLBACK_MODELS", "").split(",")
+    if m.strip()
+]
+
+MODELS_TO_TRY = [MODEL] + FALLBACK_MODELS
+
 
 if not API_KEY:
 
@@ -44,7 +52,37 @@ client = genai.Client(
     api_key=API_KEY
 )
 
+def call_gemini(prompt):
 
+    last_error = None
+
+    for model_name in MODELS_TO_TRY:
+
+        for attempt in range(2):
+
+            try:
+
+                print(f"Trying {model_name} (attempt {attempt + 1}/2)")
+
+                return client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+
+            except Exception as e:
+
+                last_error = e
+                msg = str(e)
+
+                print("Gemini error:", msg)
+
+                if "503" in msg or "UNAVAILABLE" in msg or "429" in msg:
+                    time.sleep(3 * (attempt + 1))
+                    continue
+
+                break  # other error, move to the next model
+
+    raise last_error
 # =========================================================
 # GEMINI GENERATOR
 # =========================================================
@@ -206,13 +244,7 @@ Generate 60+ questions before returning the response.
                 f"Gemini attempt {attempt + 1}/{max_retries}"
             )
 
-            response = client.models.generate_content(
-
-                model=MODEL,
-
-                contents=prompt
-
-            )
+            response = call_gemini(prompt)
 
 
             # -------------------------------------------------

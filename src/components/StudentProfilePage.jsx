@@ -77,7 +77,7 @@ export default function StudentProfilePage({ studentName }) {
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10 px-4 sm:px-6">
+    <div className="space-y-6 max-w-full mx-auto pb-10">
       
       {/* ================= TOP PROFILE BANNER ================= */}
       <div className="bg-white border border-slate-200/80 p-4 sm:p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
