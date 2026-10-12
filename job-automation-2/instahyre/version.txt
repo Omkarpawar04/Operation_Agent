@@ -1,0 +1,761 @@
+import os
+import time
+import re
+
+from dotenv import load_dotenv
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+load_dotenv()
+
+EMAIL = os.getenv("INSTAHYRE_EMAIL")
+PASSWORD = os.getenv("INSTAHYRE_PASSWORD")
+
+if not EMAIL or not PASSWORD:
+    raise Exception(
+        "INSTAHYRE_EMAIL or INSTAHYRE_PASSWORD is missing in .env"
+    )
+
+
+# ------------------------------------------------------------
+# JOB TITLES
+# ------------------------------------------------------------
+
+TARGET_JOB_TITLES = [
+    "Financial Analyst",
+    "Investment Banking Analyst",
+    "Equity Research Analyst",
+    "FP&A Analyst",
+    "FP&A Executive",
+    "Credit Analyst",
+    "Risk Analyst",
+    "Business Analyst",
+    "Financial Consultant",
+    "Finance Consultant",
+    "Consultant",
+    "Finance Manager",
+    "Finance Associate",
+    "Finance Executive",
+    "Valuation Analyst",
+    "Financial Modelling Analyst",
+    "Financial Modeling Analyst",
+    "Portfolio Management Analyst",
+    "Wealth Management Executive",
+    "Wealth Manager",
+    "Banking Executive",
+    "FinTech Analyst",
+    "FinTech Professional",
+    "Project Finance Analyst",
+    "M&A Analyst",
+    "Mergers and Acquisitions Analyst",
+    "Private Equity Analyst",
+    "MIS Analyst",
+    "Strategic Finance Analyst",
+    "Strategic Finance Executive"
+]
+
+
+# ------------------------------------------------------------
+# LOCATIONS
+# ------------------------------------------------------------
+
+TARGET_LOCATIONS = [
+    "Pune",
+    "Mumbai",
+    "Hyderabad",
+    "Bangalore",
+    "Bengaluru",
+    "Chennai",
+    "Delhi",
+    "Gurgaon",
+    "Gurugram",
+    "Noida",
+    "Kolkata",
+    "Ahmedabad",
+    "Jaipur",
+    "Indore",
+    "Chandigarh",
+    "Kochi",
+    "Remote",
+    "Work From Home"
+]
+
+
+# ------------------------------------------------------------
+# EXPERIENCE
+# ------------------------------------------------------------
+
+MIN_EXPERIENCE = 0
+MAX_EXPERIENCE = 2
+
+
+# ------------------------------------------------------------
+# APPLICATION LIMIT
+# ------------------------------------------------------------
+
+MAX_APPLICATIONS = 5
+
+
+# ============================================================
+# DRIVER SETUP
+# ============================================================
+
+driver = webdriver.Chrome()
+driver.maximize_window()
+
+wait = WebDriverWait(driver, 20)
+
+
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
+
+def normalize_text(text):
+    """Convert text to lowercase and remove extra spaces."""
+    return " ".join(text.lower().split())
+
+
+def title_matches(job_title):
+    """
+    Check whether the job title matches one of the
+    target finance-related job titles.
+    """
+
+    title = normalize_text(job_title)
+
+    for target in TARGET_JOB_TITLES:
+        target_normalized = normalize_text(target)
+
+        if target_normalized in title:
+            return True
+
+    return False
+
+
+def location_matches(location_text):
+    """
+    Check whether the job location matches one of
+    the target Indian locations.
+    """
+
+    location = normalize_text(location_text)
+
+    for target in TARGET_LOCATIONS:
+        target_normalized = normalize_text(target)
+
+        if target_normalized in location:
+            return True
+
+    return False
+
+
+def extract_experience(text):
+    """
+    Try to extract experience range from job text.
+
+    Examples:
+        0 - 2 years
+        1 - 3 years
+        2 years
+        0-1 yrs
+    """
+
+    text = normalize_text(text)
+
+    patterns = [
+        r"(\d+)\s*-\s*(\d+)\s*years?",
+        r"(\d+)\s*-\s*(\d+)\s*yrs?",
+        r"(\d+)\s*years?",
+        r"(\d+)\s*yrs?"
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text)
+
+        if match:
+            numbers = match.groups()
+
+            if len(numbers) == 2:
+                min_exp = int(numbers[0])
+                max_exp = int(numbers[1])
+
+                return min_exp, max_exp
+
+            if len(numbers) == 1:
+                exp = int(numbers[0])
+
+                return exp, exp
+
+    return None
+
+
+def experience_matches(job_text):
+    """
+    Check whether the job experience overlaps
+    with our desired 0-2 years range.
+    """
+
+    experience = extract_experience(job_text)
+
+    # If experience isn't visible on the card,
+    # don't automatically reject the job.
+    if experience is None:
+        return True
+
+    job_min, job_max = experience
+
+    # Check whether the job's experience range
+    # overlaps our target range.
+    if job_max >= MIN_EXPERIENCE and job_min <= MAX_EXPERIENCE:
+        return True
+
+    return False
+
+
+# ============================================================
+# MAIN AUTOMATION
+# ============================================================
+
+try:
+
+    # ========================================================
+    # STEP 1 — OPEN INSTAHYRE
+    # ========================================================
+
+    print("\n[1/9] Opening Instahyre...")
+
+    driver.get("https://www.instahyre.com/")
+
+    print("Instahyre opened.")
+
+
+    # ========================================================
+    # STEP 2 — CONTINUE WITH EMAIL
+    # ========================================================
+
+    print("\n[2/9] Clicking 'Continue with email'...")
+
+    continue_email = wait.until(
+        EC.element_to_be_clickable(
+            (
+                By.CSS_SELECTOR,
+                "a.email-login-btn"
+            )
+        )
+    )
+
+    continue_email.click()
+
+    print("'Continue with email' clicked.")
+
+    time.sleep(3)
+
+    print("Current URL:", driver.current_url)
+
+
+    # ========================================================
+    # STEP 3 — LOG IN HERE
+    # ========================================================
+
+    print("\n[3/9] Looking for 'Log in here'...")
+
+    login_here = wait.until(
+        EC.element_to_be_clickable(
+            (
+                By.XPATH,
+                "//a[contains(normalize-space(.), 'Log in here')]"
+            )
+        )
+    )
+
+    login_here.click()
+
+    print("'Log in here' clicked.")
+
+    time.sleep(3)
+
+    print("Current URL:", driver.current_url)
+
+
+    # ========================================================
+    # STEP 4 — FILL LOGIN EMAIL
+    # ========================================================
+
+    print("\n[4/9] Filling login email...")
+
+    email_field = wait.until(
+        EC.visibility_of_element_located(
+            (
+                By.XPATH,
+                "//input["
+                "@type='email' or "
+                "contains("
+                "translate(@placeholder,"
+                "'ABCDEFGHIJKLMNOPQRSTUVWXYZ',"
+                "'abcdefghijklmnopqrstuvwxyz'),"
+                "'email')]"
+            )
+        )
+    )
+
+    email_field.clear()
+    email_field.send_keys(EMAIL)
+
+    print("Email filled.")
+
+
+    # ========================================================
+    # STEP 5 — FILL LOGIN PASSWORD
+    # ========================================================
+
+    print("\n[5/9] Filling login password...")
+
+    password_field = wait.until(
+        EC.visibility_of_element_located(
+            (
+                By.XPATH,
+                "//input[@type='password']"
+            )
+        )
+    )
+
+    password_field.clear()
+    password_field.send_keys(PASSWORD)
+
+    print("Password filled.")
+
+
+    # ========================================================
+    # STEP 6 — CLICK LOGIN
+    # ========================================================
+
+    print("\n[6/9] Clicking 'Log in'...")
+
+    login_button = wait.until(
+        EC.element_to_be_clickable(
+            (
+                By.XPATH,
+                "//button[normalize-space()='Log in']"
+            )
+        )
+    )
+
+    login_button.click()
+
+    print("'Log in' clicked.")
+
+    time.sleep(5)
+
+    print("Current URL:", driver.current_url)
+
+
+    # ========================================================
+    # STEP 7 — OPEN OPPORTUNITIES
+    # ========================================================
+
+    print("\n[7/9] Opening 'Opportunities'...")
+
+    opportunities = wait.until(
+        EC.element_to_be_clickable(
+            (
+                By.XPATH,
+                "//*[normalize-space()='Opportunities']"
+            )
+        )
+    )
+
+    opportunities.click()
+
+    print("'Opportunities' clicked.")
+
+    time.sleep(4)
+
+    print("Current URL:", driver.current_url)
+
+
+    # ========================================================
+    # STEP 8 — SEARCH FINANCE
+    # ========================================================
+
+    print("\n[8/9] Searching for finance jobs...")
+
+    search_box = wait.until(
+        EC.visibility_of_element_located(
+            (
+                By.CSS_SELECTOR,
+                ".search-bar-wrapper input"
+            )
+        )
+    )
+
+    search_box.click()
+    search_box.clear()
+    search_box.send_keys("finance")
+
+    print("'finance' entered.")
+
+
+    # ========================================================
+    # STEP 9 — CLICK SEARCH
+    # ========================================================
+
+    print("\n[9/9] Clicking Search...")
+
+    search_button = wait.until(
+        EC.element_to_be_clickable(
+            (
+                By.CSS_SELECTOR,
+                "button.skills-search-btn"
+            )
+        )
+    )
+
+    search_button.click()
+
+    print("'Search' clicked.")
+
+    time.sleep(5)
+
+
+    # ========================================================
+    # FIND JOB RESULTS
+    # ========================================================
+
+    print("\n" + "=" * 60)
+    print("SEARCH RESULTS")
+    print("=" * 60)
+
+    jobs = driver.find_elements(
+        By.CSS_SELECTOR,
+        "a#employer-profile-opportunity"
+    )
+
+    print(f"Total job results found: {len(jobs)}")
+
+
+    # ========================================================
+    # FILTER JOBS
+    # ========================================================
+
+    matching_jobs = []
+
+    print("\nFiltering jobs...")
+
+    for index, job in enumerate(jobs, start=1):
+
+        try:
+
+            job_text = job.text.strip()
+
+            if not job_text:
+                continue
+
+
+            # ------------------------------------------------
+            # GET JOB TITLE
+            # ------------------------------------------------
+
+            try:
+
+                job_title = job.find_element(
+                    By.CSS_SELECTOR,
+                    ".employer-job-name"
+                ).text.strip()
+
+            except:
+
+                # Fallback: use first line of card
+                job_title = job_text.split("\n")[0].strip()
+
+
+            # ------------------------------------------------
+            # CHECK TITLE
+            # ------------------------------------------------
+
+            title_ok = title_matches(job_title)
+
+
+            # ------------------------------------------------
+            # CHECK LOCATION
+            # ------------------------------------------------
+
+            location_ok = location_matches(job_text)
+
+
+            # ------------------------------------------------
+            # CHECK EXPERIENCE
+            # ------------------------------------------------
+
+            experience_ok = experience_matches(job_text)
+
+
+            # ------------------------------------------------
+            # PRINT RESULT
+            # ------------------------------------------------
+
+            print(
+                f"\nJob {index}: {job_title}"
+            )
+
+            print(
+                f"Title match: {title_ok}"
+            )
+
+            print(
+                f"Location match: {location_ok}"
+            )
+
+            print(
+                f"Experience match: {experience_ok}"
+            )
+
+
+            # ------------------------------------------------
+            # ADD MATCHING JOB
+            # ------------------------------------------------
+
+            if title_ok and location_ok and experience_ok:
+
+                matching_jobs.append(
+                    {
+                        "element": job,
+                        "title": job_title,
+                        "text": job_text
+                    }
+                )
+
+                print(">>> MATCHED")
+
+
+        except Exception as e:
+
+            print(
+                f"Could not process job {index}: {e}"
+            )
+
+
+    # ========================================================
+    # SHOW MATCHES
+    # ========================================================
+
+    print("\n" + "=" * 60)
+    print("MATCHING JOBS")
+    print("=" * 60)
+
+    print(
+        f"Matching jobs found: {len(matching_jobs)}"
+    )
+
+
+    for index, job in enumerate(
+        matching_jobs,
+        start=1
+    ):
+
+        print(
+            f"{index}. {job['title']}"
+        )
+
+
+    # ========================================================
+    # APPLY TO JOBS
+    # ========================================================
+
+    applications_done = 0
+
+    print("\n" + "=" * 60)
+    print("STARTING APPLICATIONS")
+    print("=" * 60)
+
+
+    for job_number, job_data in enumerate(
+        matching_jobs,
+        start=1
+    ):
+
+        if applications_done >= MAX_APPLICATIONS:
+            break
+
+
+        try:
+
+            print(
+                f"\nOpening matching job {job_number}..."
+            )
+
+            job = job_data["element"]
+
+            job_title = job_data["title"]
+
+            print(
+                f"Job: {job_title}"
+            )
+
+
+            # ------------------------------------------------
+            # SCROLL TO JOB
+            # ------------------------------------------------
+
+            driver.execute_script(
+                "arguments[0].scrollIntoView({block: 'center'});",
+                job
+            )
+
+            time.sleep(1)
+
+
+            # ------------------------------------------------
+            # CLICK JOB
+            # ------------------------------------------------
+
+            driver.execute_script(
+                "arguments[0].click();",
+                job
+            )
+
+            print("Job opened.")
+
+            time.sleep(4)
+
+
+            # ------------------------------------------------
+            # FIND APPLY BUTTON
+            # ------------------------------------------------
+
+            print("Looking for Apply button...")
+
+            apply_buttons = driver.find_elements(
+                By.XPATH,
+                "//*[normalize-space()='Apply']"
+            )
+
+
+            apply_button = None
+
+            for button in apply_buttons:
+
+                try:
+
+                    if (
+                        button.is_displayed()
+                        and button.is_enabled()
+                    ):
+
+                        apply_button = button
+                        break
+
+                except:
+                    pass
+
+
+            # ------------------------------------------------
+            # APPLY
+            # ------------------------------------------------
+
+            if apply_button:
+
+                print("Apply button found.")
+
+                driver.execute_script(
+                    "arguments[0].scrollIntoView({block: 'center'});",
+                    apply_button
+                )
+
+                time.sleep(1)
+
+                apply_button.click()
+
+                print(
+                    f"Applied to: {job_title}"
+                )
+
+                applications_done += 1
+
+                time.sleep(3)
+
+            else:
+
+                print(
+                    f"No Apply button found for: {job_title}"
+                )
+
+
+            # ------------------------------------------------
+            # GO BACK TO RESULTS
+            # ------------------------------------------------
+
+            print("Returning to job results...")
+
+            driver.back()
+
+            time.sleep(5)
+
+
+        except Exception as e:
+
+            print(
+                f"Error processing {job_title}: {e}"
+            )
+
+            try:
+
+                driver.back()
+
+                time.sleep(4)
+
+            except:
+                pass
+
+
+    # ========================================================
+    # FINAL REPORT
+    # ========================================================
+
+    print("\n" + "=" * 60)
+    print("AUTOMATION FINISHED")
+    print("=" * 60)
+
+    print(
+        f"Applications completed: "
+        f"{applications_done}/{MAX_APPLICATIONS}"
+    )
+
+    print(
+        "Target experience: "
+        f"{MIN_EXPERIENCE}-{MAX_EXPERIENCE} years"
+    )
+
+    print(
+        "Target locations:"
+    )
+
+    print(
+        ", ".join(TARGET_LOCATIONS)
+    )
+
+    print("=" * 60)
+
+
+except Exception as e:
+
+    print("\nAUTOMATION ERROR:")
+    print(e)
+
+
+finally:
+
+    print("\nBrowser will remain open.")
+
+    # Keep browser open so you can inspect it.
+    input(
+        "\nPress ENTER to close the browser..."
+    )
+
+    driver.quit()

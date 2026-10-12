@@ -1,0 +1,19 @@
+# Credentials
+.env
+**/.env
+users.xlsx
+**/users.xlsx
+
+# Personal or generated files
+**/applied_jobs.json
+**/logs/
+**/__pycache__/
+*.py[cod]
+instahyre_search_results.html
+**/instahyre_search_results.html
+Aditya Sajeev Financial Analyst Resume.pdf
+**/Aditya Sajeev Financial Analyst Resume.pdf
+successfully_applied_*.png
+**/successfully_applied_*.png
+*_error*.png
+**/*_error*.png
