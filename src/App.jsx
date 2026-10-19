@@ -19,9 +19,19 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('Overview');
   const [selectedStudent, setSelectedStudent] = useState('Riya Joshi');
 
+  // ---> ADD THIS ROLE PERMISSIONS MAP HERE <---
+  const ROLE_PERMISSIONS = {
+    Operations: ['Overview', 'Student List', 'Batches', 'Student Profile','Live Mocks','Learning Modules', 'Progress Reports','Job Portal', 'Company', 'Resume Optimizer', 'QnA Generator'],
+    Trainer: ['Overview', 'Student List', 'Batches', 'Live Mocks', 'Student Profile', 'Learning Modules', 'Progress Reports'],
+    Placement: ['Overview', 'Student List', 'Job Portal', 'Company', 'Resume Optimizer'],
+    Student: ['Overview', 'Live Mocks', 'Student Profile', 'Learning Modules', 'Job Portal', 'Progress Reports', 'Resume Optimizer', 'QnA Generator']
+  };
+
+  const allowedModules = ROLE_PERMISSIONS[userRole] || [];
+
   // Login Form States
   const [showPassword, setShowPassword] = useState(false);
-  const [emailInput, setEmailInput] = useState('john12@gmail.com');
+  const [emailInput, setEmailInput] = useState('ops@finxl.com');
   const [passwordInput, setPasswordInput] = useState('••••••••');
   const [isLoadingLogin, setIsLoadingLogin] = useState(false);
 
@@ -52,14 +62,39 @@ export default function App() {
   };
 
   // Handle Login Flow with smooth loading state
-  const handleLogin = (e) => {
-    e.preventDefault();
-    setIsLoadingLogin(true);
-    setTimeout(() => {
-      setIsLoadingLogin(false);
+const handleLogin = async (e) => {
+  if (e && e.preventDefault) e.preventDefault();
+  setIsLoadingLogin(true);
+
+  try {
+    const response = await fetch('http://localhost:5000/api/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        email: emailInput, 
+        password: passwordInput 
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
       setIsAuthenticated(true);
-    }, 800);
-  };
+      setUserRole(data.user.role); // Sets role to 'Operations', 'Trainer', 'Placement', or 'Student'
+      setActiveTab('Overview');
+      console.log('Logged in as:', data.user.name, 'Role:', data.user.role);
+    } else {
+      alert(data.message || 'Invalid email or password');
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    alert('Failed to connect to the backend server.');
+  } finally {
+    setIsLoadingLogin(false);
+  }
+};
 
   if (!isAuthenticated) {
     return (
@@ -154,7 +189,7 @@ export default function App() {
                     onChange={(e) => setEmailInput(e.target.value)}
                     required
                     className="w-full bg-slate-950/90 border border-indigo-500/30 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 transition shadow-inner"
-                    placeholder="john12@gmail.com"
+                    placeholder="ops@finxl.com"
                   />
                 </div>
               </div>
@@ -292,7 +327,9 @@ export default function App() {
 
           {/* Navigation Links */}
           <nav className="p-3 space-y-1">
-            {navigationItems.map((item) => {
+            {navigationItems
+            .filter(item => allowedModules.includes(item.name))
+            .map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.name;
               return (
@@ -464,29 +501,36 @@ export default function App() {
 
         {/* Dynamic Main Workspace Content */}
         <main className="app-content flex-1 overflow-y-auto p-6 md:p-8">
-          {activeTab === 'Overview' && <OverviewPage setActiveTab={setActiveTab} />}
-          {activeTab === 'Student List' && (
-            <StudentListPage
-              setActiveTab={setActiveTab}
-              setSelectedStudent={setSelectedStudent}
-            />
-          )}
-          {activeTab === 'Batches' && <Batches />}
-          {activeTab === 'Live Mocks' && <LiveMocksPage />}
-          {activeTab === 'Student Profile' && (
-            <StudentProfilePage studentName={selectedStudent} />
-          )}
-          {activeTab === 'Learning Modules' && <LearningModulesPage />}
-          {activeTab === 'Job Portal' && (
-            <JobPortalPage
-              setSelectedJob={setSelectedJob}
-              selectedJob={selectedJob}
-            />
-          )}
-          {activeTab === 'Progress Reports' && <ProgressReportsPage />}
-          {activeTab === 'Resume Optimizer' && <ResumeOptimizerPage />}
-          {activeTab === 'QnA Generator' && <QNAGeneratorPage />}
-          {activeTab === 'Company' && <JobsCompanyDetailsSection setActiveTab={setActiveTab} />}
+        {/* If current activeTab is NOT allowed for user's role, fallback to Overview */}
+        {!allowedModules.includes(activeTab) ? (
+        <OverviewPage setActiveTab={setActiveTab} />
+        ) : (
+        <>
+        {activeTab === 'Overview' && <OverviewPage setActiveTab={setActiveTab} />}
+        {activeTab === 'Student List' && (
+        <StudentListPage
+          setActiveTab={setActiveTab}
+          setSelectedStudent={setSelectedStudent}
+        />
+        )}
+        {activeTab === 'Batches' && <Batches />}
+        {activeTab === 'Live Mocks' && <LiveMocksPage />}
+        {activeTab === 'Student Profile' && (
+        <StudentProfilePage studentName={selectedStudent} />
+        )}
+        {activeTab === 'Learning Modules' && <LearningModulesPage />}
+        {activeTab === 'Job Portal' && (
+        <JobPortalPage
+          setSelectedJob={setSelectedJob}
+          selectedJob={selectedJob}
+        />
+        )}
+        {activeTab === 'Progress Reports' && <ProgressReportsPage />}
+        {activeTab === 'Resume Optimizer' && <ResumeOptimizerPage />}
+        {activeTab === 'QnA Generator' && <QNAGeneratorPage />}
+        {activeTab === 'Company' && <JobsCompanyDetailsSection setActiveTab={setActiveTab} />}
+      </>
+        )}
         </main>
       </div>
 

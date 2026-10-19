@@ -16,7 +16,10 @@
     "vite": "^8.3.0"
   },
   "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.7",
     "lucide-react": "^1.48.0",
+    "pg": "^8.23.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   }
