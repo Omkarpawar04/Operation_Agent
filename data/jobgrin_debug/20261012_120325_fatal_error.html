@@ -1,0 +1,837 @@
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <!-- perf-hints -->
+    <link rel="preconnect" href="https://analytics.jilesh.com" crossorigin="">
+    <link rel="dns-prefetch" href="https://www.clarity.ms">
+
+    <script defer="" data-domain="jobgrin.co.in" src="https://analytics.jilesh.com/js/script.js">
+    </script>
+
+    
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sign in to JobGrin to apply for jobs, track applications, and manage your profile. Quick and secure login.">
+    <title>Candidate Login - Access Your Job Search Dashboard</title>
+   <style>
+    [x-cloak] { display: none !important; }
+    html.auth-pending body { opacity: 0; }
+</style>
+    <link rel="icon" type="image/x-icon" href="/images/favicon-jobgrin.ico">
+
+    <link rel="canonical" href="https://jobgrin.co.in/candidate/login">
+    <meta property="og:title" content="Candidate Login - Access Your Job Search Dashboard">
+    <meta property="og:description" content="Sign in to JobGrin to apply for jobs, track applications, and manage your profile. Quick and secure login.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://jobgrin.co.in/candidate/login">
+    <meta property="og:image" content="https://jobgrin.co.in/images/jobgrin-logo.png">
+<link rel="preconnect" href="https://analytics.jilesh.com" crossorigin="">
+
+
+    <link rel="preload" href="/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin="">
+    <link rel="preload" href="/webfonts/fa-brands-400.woff2" as="font" type="font/woff2" crossorigin="">
+  <script type="module" crossorigin="" src="/assets/js/jobseeker-login-DYTUVggv.js"></script>
+  <link rel="modulepreload" crossorigin="" href="/assets/js/auth-DnuOKgMQ.js">
+  <link rel="modulepreload" crossorigin="" href="/assets/js/vendor-alpine-T4fGneNa.js">
+  <link rel="modulepreload" crossorigin="" href="/assets/js/built-resume-sync-CYhHvIHI.js">
+  <link rel="modulepreload" crossorigin="" href="/assets/js/main-refactored-F-_ap04q.js">
+  <link rel="modulepreload" crossorigin="" href="/assets/js/auth-guard-BblVR6rN.js">
+  <link rel="stylesheet" crossorigin="" href="/assets/css/auth-Crv223nv.css">
+
+    <style>
+      #preloader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+      }
+      #preloader.preloader-hidden {
+        opacity: 0;
+        visibility: hidden;
+      }
+      .loader-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .loader-spinner {
+        width: 50px;
+        height: 50px;
+        border: 3px solid rgba(76, 175, 79, 0.1);
+        border-top-color: #4caf4f;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+      .loader-logo {
+        height: 40px;
+        opacity: 0.8;
+        animation: heartbeat 1.5s ease-in-out infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes heartbeat {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+      [x-cloak] {
+        display: none !important;
+      }
+    </style>
+      
+<link rel="modulepreload" as="script" crossorigin="" href="/assets/js/jobseeker-login-DjrHJtMM.js"></head>
+<body class="font-sans antialiased auth-guard-pending h-screen m-0" x-data="jobseekerLogin">
+
+  
+    <div id="site-header" data-header="guest" data-loaded-header-variant="default"><header class="bg-white shadow-sm sticky top-0 z-50" x-data="siteHeader">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <nav class="flex items-center justify-between h-16">
+            <a href="/" class="flex items-center gap-2 text-xl font-bold text-primary-500">
+                <img src="/images/jobgrin-logo.png" alt="JobGrin" title="JobGrin" class="h-[20px] md:h-[30px] lg:h-[30px] xl:h-[30px] w-auto" fetchpriority="high">
+            </a>
+            <ul class="hidden lg:flex items-center gap-8 -mb-1 lg:mb-0 flex-nowrap">
+                <li>
+                    <a href="/jobs" class="text-gray-700 hover:text-primary-500 font-medium transition-colors">
+                        Find Jobs
+                    </a>
+                </li>
+                <li>
+                    <a href="/resume-builder" class="text-gray-700 hover:text-primary-500 font-medium transition-colors">
+                        Resume Builder
+                    </a>
+                </li>
+                <li>
+                    <a href="/about-us" class="text-gray-700 hover:text-primary-500 font-medium transition-colors">
+                        About Us
+                    </a>
+                </li>
+                <li>
+                    <a href="/contact-us" class="text-gray-700 hover:text-primary-500 font-medium transition-colors">
+                        Contact
+                    </a>
+                </li>
+            </ul>
+            <div class="hidden lg:flex items-center gap-3" x-show="!isLoggedIn">
+                <a href="/candidate/login" class="px-5 py-2 border-2 border-primary-900 text-primary-900 rounded-lg font-semibold hover:bg-primary-50 transition-all flex items-center gap-2 text-sm">
+                    <span>Jobseeker</span>
+                </a>
+                <a href="/employer/login" class="px-5 py-2 bg-primary-900 text-white rounded-lg font-semibold hover:bg-primary-600 transition-all flex items-center gap-2 text-sm">
+                    <span>Employer</span>
+                </a>
+            </div>
+            <div class="hidden lg:flex items-center gap-3" x-show="isLoggedIn" style="display: none;">
+                <div class="relative" @click.away="closeProfileMenu">
+                    <button type="button" @click="toggleProfileMenu" class="px-5 py-2 border-2 border-primary-900 text-primary-900 rounded-lg font-semibold hover:bg-primary-50 transition-all flex items-center gap-2 text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"></path>
+                            <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"></path>
+                        </svg>
+                        <span x-text="displayName"></span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"></path>
+                        </svg>
+                    </button>
+                    <div x-show="profileMenuOpen" x-transition="" class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50" style="display: none;">
+                        <template x-if="isEmployer()">
+                            <div>
+                                <button type="button" @click="goToJobPost" class="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-primary-50">
+                                    Post a Job
+                                </button>
+                                <button type="button" @click="goToJobPosts" class="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-primary-50">
+                                    Manage Jobs
+                                </button>
+                            </div>
+                        </template>
+                        <template x-if="isJobseeker()">
+                            <div>
+                                <button type="button" @click="goToDashboard" class="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-primary-50">
+                                    Dashboard
+                                </button>
+                                <button type="button" @click="goToApplications" class="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-primary-50">
+                                    My Applications
+                                </button>
+                                <button type="button" @click="goToSavedJobs" class="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-primary-50">
+                                    Saved Jobs
+                                </button>
+                                <button type="button" @click="goToProfile" class="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-primary-50">
+                                    My Profile
+                                </button>
+                                <button type="button" @click="goToResume" class="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-primary-50">
+                                    Resume
+                                </button>
+                                <button type="button" @click="goToSettings" class="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-primary-50">
+                                    Settings
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <button type="button" @click="logout" class="px-5 py-2 bg-primary-900 text-white rounded-lg font-semibold hover:bg-primary-800 transition-all flex items-center gap-2 text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"></path>
+                        <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"></path>
+                    </svg>
+                    <span>Logout</span>
+                </button>
+            </div>
+            <button type="button" @click="mobileMenuOpen = !mobileMenuOpen; profileMenuOpen = false" class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors" :aria-expanded="mobileMenuOpen.toString()" aria-label="Toggle menu" aria-expanded="false">
+                <template x-if="!mobileMenuOpen">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="text-gray-700" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"></path>
+                    </svg>
+                </template><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="text-gray-700" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"></path>
+                    </svg>
+                <template x-if="mobileMenuOpen">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="text-gray-700" viewBox="0 0 16 16">
+                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"></path>
+                    </svg>
+                </template>
+            </button>
+        </nav>
+    </div>
+    <div x-show="mobileMenuOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2" class="lg:hidden bg-white border-t border-gray-200" @click.away="mobileMenuOpen = false" style="display: none;">
+        <div class="px-4 py-4 space-y-3">
+            <a href="/jobs" class="block px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-primary-900 transition-colors">
+                Find Jobs
+            </a>
+            <a href="/resume-builder" class="block px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-primary-900 transition-colors">
+                Resume Builder
+            </a>
+            <a href="/about-us" class="block px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-primary-900 transition-colors">
+                About Us
+            </a>
+            <a href="/contact-us" class="block px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-primary-900 transition-colors">
+                Contact
+            </a>
+            <hr class="my-3">
+            <div x-show="!isLoggedIn">
+                <a href="/candidate/login" class="block px-4 py-3 border-2 border-primary-900 text-primary-900 rounded-lg font-semibold text-center">
+                    Jobseeker Login
+                </a>
+                <a href="/employer/login" class="mt-3 block px-4 py-3 bg-primary-900 text-white rounded-lg font-semibold text-center">
+                    Employer Login
+                </a>
+            </div>
+            <div x-show="isLoggedIn" class="space-y-3" style="display: none;">
+                <button type="button" @click="toggleProfileMenu" class="w-full px-4 py-3 border-2 border-primary-500 text-primary-500 rounded-lg font-semibold text-center flex items-center justify-center gap-2">
+                    <i class="fas fa-user-circle"></i>
+                    <span x-text="displayName"></span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </button>
+                <div x-show="profileMenuOpen" x-transition="" class="space-y-2" style="display: none;">
+                    <template x-if="isEmployer()">
+                        <div class="space-y-2">
+                            <button type="button" @click="goToJobPost" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-700 font-semibold text-center">
+                                Post a Job
+                            </button>
+                            <button type="button" @click="goToJobPosts" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-700 font-semibold text-center">
+                                Manage Jobs
+                            </button>
+                        </div>
+                    </template>
+                    <template x-if="isJobseeker()">
+                        <div class="space-y-2">
+                            <button type="button" @click="goToDashboard" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-700 font-semibold text-center">
+                                Dashboard
+                            </button>
+                            <button type="button" @click="goToApplications" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-700 font-semibold text-center">
+                                My Applications
+                            </button>
+                            <button type="button" @click="goToSavedJobs" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-700 font-semibold text-center">
+                                Saved Jobs
+                            </button>
+                            <button type="button" @click="goToProfile" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-700 font-semibold text-center">
+                                My Profile
+                            </button>
+                            <button type="button" @click="goToResume" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-700 font-semibold text-center">
+                                Resume
+                            </button>
+                            <button type="button" @click="goToSettings" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-700 font-semibold text-center">
+                                Settings
+                            </button>
+                        </div>
+                    </template>
+                </div>
+                <button type="button" @click="logout" class="w-full px-4 py-3 bg-primary-500 text-white rounded-lg font-semibold text-center">
+                    Logout
+                </button>
+            </div>
+        </div>
+    </div>
+</header></div>
+
+    <div class="min-h-screen flex items-stretch p-0">
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 w-full">
+
+            <div class="hidden lg:flex items-center justify-center bg-[#4bb050] px-10 py-12">
+                <div class="w-full max-w-[350px]">
+                    <div class="mx-auto mb-6 flex items-center">
+                        <picture>
+  <source type="image/webp" srcset="/images/jobgrin-face-1x.webp 480w, /images/jobgrin-face-2x.webp 960w, /images/jobgrin-face-3x.webp 1440w" sizes="100vw">
+  <img src="/images/jobgrin-face.png" alt="logo" loading="eager" fetchpriority="high" decoding="sync">
+</picture>
+                    </div>
+                    <h2 class="text-white font-light text-[46px] leading-[45px]">
+                        "Your dream job <br> is waiting."
+                    </h2>
+                    <hr class="w-[100px] h-[5px] bg-white border-0 my-5">
+                    <p class="text-white/85 text-lg mb-8">Start your career journey today</p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-center bg-white px-6 py-10">
+                <div class="w-full max-w-lg">
+                    <div class="bg-white p-5 md:p-10 lg:p-10 xl:p-10">
+
+                        <div class="text-center mb-8">
+
+                            <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-2">
+                                Candidate Login
+                            </h1>
+                            <p class="text-gray-600">
+                                Enter your credentials to access your account
+                            </p>
+                        </div>
+
+                        <form @submit.prevent="handleLogin" novalidate="" class="space-y-5">
+
+                            <div>
+                                <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Email Address <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <i class="fas fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                    <input type="email" id="email" x-model="formData.email" @blur="validateField('email')" class="form-input pl-12 jobseeker-input" :class="{ 'border-red-500': errors.email }" placeholder="your.email@example.com" autocomplete="username" required="">
+                                </div>
+                                <p x-show="errors.email" class="form-error" x-text="errors.email" style="display: none;"></p>
+                            </div>
+
+                            <div>
+                                <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Password <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                    <input :type="showPassword ? 'text' : 'password'" id="password" x-model="formData.password" @blur="validateField('password')" class="form-input pl-12 pr-12 jobseeker-input" :class="{ 'border-red-500': errors.password }" placeholder="Enter your password" autocomplete="current-password" required="" type="password">
+                                    <button type="button" @click="showPassword = !showPassword" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                        <i class="fas fa-eye" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                    </button>
+                                </div>
+                                <p x-show="errors.password" class="form-error" x-text="errors.password" style="display: none;"></p>
+                            </div>
+
+                            <div class="flex items-center justify-between">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" x-model="formData.remember_me" class="w-4 h-4 text-primary-500 border-gray-300 rounded focus:ring-primary-500">
+                                    <span class="text-sm text-gray-700">Remember me</span>
+                                </label>
+                                <a :href="`/forgot-password/?type=jobseeker&amp;email=${encodeURIComponent((formData.email || '').trim())}`" class="text-sm text-primary-900 hover:text-primary-800 font-semibold" href="/forgot-password/?type=jobseeker&amp;email=">
+                                    Forgot Password?
+                                </a>
+                            </div>
+
+                            <div x-show="loginError" class="bg-red-50 border border-red-200 rounded-lg p-3" style="display: none;">
+                                <div class="flex gap-2">
+                                    <i class="fas fa-exclamation-circle text-red-500 mt-0.5"></i>
+                                    <p class="text-sm text-red-700" x-text="loginError"></p>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary bg-primary-900 hover:bg-primary-800 w-full btn-lg" :disabled="loading" :class="{ 'opacity-50 cursor-not-allowed': loading }">
+                                <span x-show="!loading">
+                                    <i class="fas fa-sign-in-alt"></i>
+                                    Login to Account
+                                </span>
+                                <span x-show="loading" class="flex items-center justify-center gap-2" style="display: none;">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    Logging in...
+                                </span>
+                            </button>
+                        </form>
+
+                        <div class="relative my-6">
+                            <div class="absolute inset-0 flex items-center">
+                                <div class="w-full border-t border-gray-200"></div>
+                            </div>
+                            <div class="relative flex justify-center text-sm">
+                                <span class="px-4 bg-white text-gray-500">Or continue with</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <button type="button" @click="startOauth('google')" :disabled="socialLoading.google" class="flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium" :class="{ 'opacity-50 cursor-not-allowed': socialLoading.google }">
+
+                                <picture class="h-[18px]">
+  <source type="image/webp" srcset="/images/google-1x.webp 480w, /images/google-2x.webp 960w, /images/google-3x.webp 1440w" sizes="100vw">
+  <img src="/images/google.png" alt="logo" class="h-[18px]" loading="lazy" decoding="async">
+</picture>
+
+                                <span class="text-gray-700" x-show="!socialLoading.google">  Google</span>
+                                <i class="fas fa-spinner fa-spin text-gray-500" x-show="socialLoading.google" style="display: none;"></i>
+                                <span class="text-gray-700" x-show="socialLoading.google" style="display: none;">Redirecting...</span>
+                            </button>
+                            <button type="button" @click="startOauth('linkedin')" :disabled="socialLoading.linkedin" class="flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium" :class="{ 'opacity-50 cursor-not-allowed': socialLoading.linkedin }">
+                                <i class="fab fa-linkedin text-blue-600 text-lg" x-show="!socialLoading.linkedin"></i>
+                                <span class="text-gray-700" x-show="!socialLoading.linkedin">LinkedIn</span>
+                                <i class="fas fa-spinner fa-spin text-gray-500" x-show="socialLoading.linkedin" style="display: none;"></i>
+                                <span class="text-gray-700" x-show="socialLoading.linkedin" style="display: none;">Redirecting...</span>
+                            </button>
+                        </div>
+
+                        <div class="mt-6 text-center">
+                            <p class="text-gray-600">
+                                Don't have an account?
+                                <a :href="getRegisterUrl()" class="font-semibold text-primary-900 hover:text-primary-800" href="/candidate/signup">
+                                    Register here
+                                </a>
+                            </p>
+                        </div>
+
+                        <div class="mt-4 text-center">
+                            <p class="text-sm text-gray-500">
+                                Are you an employer?
+                                <a href="/employer/login" class="font-semibold text-primary-900 hover:text-primary-600">
+                                    Employer Login
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="(socialLoading.google || socialLoading.linkedin || persistentLoader)" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/80 backdrop-blur-sm" style="display: none;">
+        <div class="bg-white/95 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full mx-4 text-center border border-white/20 shadow-2xl">
+            <div class="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <i class="fas fa-spinner fa-spin text-2xl text-white"></i>
+            </div>
+            <div class="space-y-2">
+                <h3 class="text-xl font-bold text-gray-900 mb-1" x-text="getSocialProviderName() + ' Login'">Google Login</h3>
+                <p class="text-gray-600 text-sm" x-text="'Please wait while we complete your login via ' + getSocialProviderName() + '. This may take a few moments.'">Please wait while we complete your login via Google. This may take a few moments.</p>
+                <div class="flex items-center justify-center gap-2 text-xs text-gray-500 mt-4">
+                    <div class="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 0s;"></div>
+                    <div class="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 0.1s;"></div>
+                    <div class="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 0.2s;"></div>
+                </div>
+            </div>
+            <picture class="w-20 h-20 mx-auto mt-6 opacity-80">
+  <source type="image/webp" srcset="/images/jobgrin-face-1x.webp 480w, /images/jobgrin-face-2x.webp 960w, /images/jobgrin-face-3x.webp 1440w" sizes="100vw">
+  <img src="/images/jobgrin-face.png" alt="JobGrin" class="w-20 h-20 mx-auto mt-6 opacity-80" loading="lazy" decoding="async">
+</picture>
+        </div>
+    </div>
+    <footer class="bg-gray-900 text-gray-300 pt-8 pb-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
+
+      <div>
+        <span class="text-white text-2xl font-bold tracking-tight mb-4 block">
+          <picture class="h-[30px]">
+  <source type="image/webp" srcset="/images/jobgrin-white-logo-1x.webp 480w, /images/jobgrin-white-logo-2x.webp 960w, /images/jobgrin-white-logo-3x.webp 1440w" sizes="(max-width: 120px) 100vw, 120px">
+  <img src="/images/jobgrin-white-logo.png" alt="JobGrin" title="JobGrin" class="h-[30px]" width="120" height="36" loading="lazy" decoding="async">
+</picture>
+        </span>
+        <p class="text-gray-400 text-sm mb-5 leading-relaxed">
+          India's fastest growing job portal connecting millions of jobseekers with top employers.
+        </p>
+        <div class="flex gap-2">
+          <a href="https://www.facebook.com/jobgrin.co.in" class="btn-spring w-9 h-9 bg-white/5 hover:bg-primary-dark rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-colors text-sm"><i class="fab fa-facebook-f"></i></a>
+          <a href="https://twitter.com/JobGrin_co" class="btn-spring w-9 h-9 bg-white/5 hover:bg-primary-dark rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-colors text-sm" target="_blank" rel="noopener noreferrer"><i class="fab fa-twitter"></i></a>
+          <a href="https://www.linkedin.com/company/jobgrin" class="btn-spring w-9 h-9 bg-white/5 hover:bg-primary-dark rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-colors text-sm" target="_blank" rel="noopener noreferrer"><i class="fab fa-linkedin-in"></i></a>
+          <a href="https://www.instagram.com/jobgrin.co.in" class="btn-spring w-9 h-9 bg-white/5 hover:bg-primary-dark rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-colors text-sm"><i class="fab fa-instagram"></i></a>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider">For Jobseekers</h3>
+        <ul class="space-y-2.5 text-sm">
+          <li><a href="/jobs" class="footer-link">Browse Jobs</a></li>
+          <li><a href="/resume-builder" class="footer-link">Free Resume Builder</a></li>
+          <li><a href="/candidate/signup" class="footer-link">Create Account</a></li>
+          <li><a href="/candidate/login" class="footer-link">Login</a></li>
+          <li><a href="/candidate/job-alerts/create" class="footer-link">Create Job Alert</a></li>
+          <li><a href="https://jobgrin.co.in/blog" class="footer-link">Career Advice Blog</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider">For Employers</h3>
+        <ul class="space-y-2.5 text-sm">
+          <li><a href="/post-job" class="footer-link">Post a Job</a></li>
+          <li><a href="/employer/login" class="footer-link">Employer Login</a></li>
+          <li><a href="/pricing" class="footer-link">View Pricing Plans</a></li>
+          <li><a href="/employer/search-candidates" class="footer-link">Search Resumes</a></li>
+
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="text-white font-bold mb-4 text-sm uppercase tracking-wider">Company</h3>
+        <ul class="space-y-2.5 text-sm">
+          <li><a href="/about-us" class="footer-link">About Us</a></li>
+          <li><a href="/contact-us" class="footer-link">Contact Us</a></li>
+          <li><a href="/privacy-policy" class="footer-link">Privacy Policy</a></li>
+          <li><a href="/terms-of-service" class="footer-link">Terms of Service</a></li>
+          <li><a href="https://jobgrin.co.in/sitemap.xml" class="footer-link">Sitemap</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+      <p>© 2025 JobGrin. All rights reserved.</p>
+      <div class="flex gap-6">
+        <a href="/privacy-policy" class="footer-link text-gray-500">Privacy</a>
+        <a href="/terms-of-service" class="footer-link text-gray-500">Terms</a>
+        <a href="https://jobgrin.co.in/sitemap.xml" class="footer-link text-gray-500">Sitemap</a>
+      </div>
+    </div>
+
+  </div>
+</footer>
+
+<div id="jobgrin-cookie-consent" class="jobgrin-cookie-consent" role="dialog" aria-live="polite" aria-label="Cookie consent banner">
+  <div class="jobgrin-cookie-consent__panel">
+    <div class="jobgrin-cookie-consent__content">
+      <p class="jobgrin-cookie-consent__lead">
+        We use cookies to improve your experience. By continuing to browse the site, you agree to our
+        <a href="/privacy-policy">Privacy Policy</a> &amp;
+        <a href="/privacy-policy#cookies-and-tracking-technologies">Cookie Policy</a>.
+      </p>
+    </div>
+    <button type="button" class="jobgrin-cookie-consent__button" data-cookie-consent-accept="">
+      <span>Got it</span>
+    </button>
+  </div>
+</div>
+
+<style>
+  .jobgrin-cookie-consent {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    color: #ffffff;
+  }
+
+  .jobgrin-cookie-consent[hidden] {
+    display: none !important;
+  }
+
+  .jobgrin-cookie-consent__panel {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+    padding: 14px 24px;
+    background: #4b5563;
+    box-shadow: 0 -8px 24px rgba(9, 14, 27, 0.18);
+  }
+
+  .jobgrin-cookie-consent__content {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 880px;
+  }
+
+  .jobgrin-cookie-consent__lead,
+  .jobgrin-cookie-consent__copy {
+    margin: 0;
+  }
+
+  .jobgrin-cookie-consent__lead {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    font-weight: 400;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.96);
+  }
+
+  .jobgrin-cookie-consent__lead a,
+  .jobgrin-cookie-consent__copy a {
+    color: rgb(77 176 81);
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .jobgrin-cookie-consent__button {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 999px;
+    background: rgb(77 176 81);
+    color: #ffffff;
+    padding: 10px 22px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .jobgrin-cookie-consent__button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
+  }
+
+  .jobgrin-cookie-consent__button:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.45);
+    outline-offset: 3px;
+  }
+
+  @media (max-width: 640px) {
+    .jobgrin-cookie-consent__panel {
+      flex-direction: column;
+      align-items: stretch;
+      padding: 16px 18px;
+      gap: 14px;
+    }
+
+    .jobgrin-cookie-consent__lead {
+      font-size: 0.9rem;
+    }
+
+    .jobgrin-cookie-consent__button {
+      width: 100%;
+    }
+  }
+</style>
+
+<script>
+  (function () {
+    var storageKey = 'jobgrin_cookie_consent';
+    var consentBanner = document.getElementById('jobgrin-cookie-consent');
+    if (!consentBanner) return;
+
+    var getConsentValue = function () {
+      try {
+        return window.localStorage.getItem(storageKey);
+      } catch (_error) {
+        return document.cookie.split('; ').find(function (entry) {
+          return entry.indexOf(storageKey + '=') === 0;
+        }) || '';
+      }
+    };
+
+    var hasAccepted = function () {
+      var storedValue = getConsentValue();
+      return storedValue === 'accepted' || storedValue === storageKey + '=accepted';
+    };
+
+    if (hasAccepted()) {
+      return;
+    }
+
+    consentBanner.hidden = false;
+
+    var acceptButton = consentBanner.querySelector('[data-cookie-consent-accept]');
+    if (!acceptButton) return;
+
+    acceptButton.addEventListener('click', function () {
+      try {
+        window.localStorage.setItem(storageKey, 'accepted');
+      } catch (_error) { }
+
+      document.cookie = storageKey + '=accepted; path=/; max-age=' + (60 * 60 * 24 * 180) + '; SameSite=Lax';
+      consentBanner.hidden = true;
+    });
+  })();
+</script>
+
+
+    <div x-show="showSocialSmsOtpModal" x-transition="" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="false" @keydown.escape.window="false" style="backdrop-filter: blur(4px); display: none;">
+        <div class="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div class="border-b border-gray-200 px-6 py-5 text-center">
+                <div class="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-3">
+                    <i class="fas text-xl text-blue-600 fa-phone" :class="socialPhoneStep ? 'fa-phone' : 'fa-mobile-alt'"></i>
+                </div>
+
+                <template x-if="socialPhoneStep">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900">Add Phone Number</h2>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Please add a phone number to secure your account linked with
+                            <strong x-text="socialEmail"></strong>
+                        </p>
+                    </div>
+                </template><div>
+                        <h2 class="text-xl font-semibold text-gray-900">Add Phone Number</h2>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Please add a phone number to secure your account linked with
+                            <strong x-text="socialEmail"></strong>
+                        </p>
+                    </div>
+
+                <template x-if="!socialPhoneStep">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900">Verify Your Phone Number</h2>
+                        <p class="mt-1 text-sm text-gray-500">
+                            We've sent a 6-digit OTP to <strong x-text="socialPhone"></strong>
+                        </p>
+                    </div>
+                </template>
+            </div>
+            <div class="space-y-6 px-6 py-6">
+
+                <div x-show="socialPhoneStep" class="rounded-xl border border-gray-200 bg-white p-4">
+                    <div x-show="socialSmsOtpError" class="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" x-text="socialSmsOtpError" style="display: none;"></div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                    <input type="tel" id="social_phone_number" x-model="socialPhone" @input="socialPhone = socialPhone.replace(/\D/g, '').slice(0, 15); persistPendingSocialVerification()" class="w-full rounded-lg border border-gray-300 px-4 py-3 text-base text-gray-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10" placeholder="Enter 10-digit mobile number" maxlength="10" :disabled="savingSocialPhone" inputmode="numeric">
+                    <button @click="submitSocialPhone" :disabled="savingSocialPhone || !isSocialPhoneValid" class="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300" disabled="disabled">
+                        <span x-show="!savingSocialPhone">Send OTP</span>
+                        <span x-show="savingSocialPhone" class="flex items-center gap-2" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i>Sending...
+                        </span>
+                    </button>
+                </div>
+
+                <div x-show="!socialPhoneStep" class="rounded-xl border border-gray-200 bg-white p-4" style="display: none;">
+                    <div class="mb-3 flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <span>📱 Phone Verification</span>
+                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold bg-amber-100 text-amber-700" :class="socialSmsOtpVerified ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'" x-text="socialSmsOtpVerified ? 'Verified' : 'Pending'">Pending</span>
+                        </div>
+                    </div>
+                    <div class="mb-3 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" x-show="socialSmsOtpTimer === 0 &amp;&amp; socialSmsOtpExpiresAt &amp;&amp; !socialSmsOtpVerified" style="display: none;">
+                        <span>⚠️</span>
+                        <span>OTP has expired. Please request a new one.</span>
+                    </div>
+                    <div x-show="socialSmsOtpError" class="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" x-text="socialSmsOtpError" style="display: none;"></div>
+                    <input type="text" id="social_sms_otp" x-model="socialSmsOtpCode" @input="socialSmsOtpCode = socialSmsOtpCode.replace(/\D/g, '').slice(0, 6); socialSmsOtpError = '';" class="w-full rounded-lg border border-gray-300 px-4 py-3 text-center text-base font-semibold tracking-[0.35em] text-gray-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:bg-gray-100" :class="{ 'border-red-400 bg-red-50': socialSmsOtpTimer === 0 &amp;&amp; socialSmsOtpExpiresAt &amp;&amp; !socialSmsOtpVerified }" placeholder="000000" maxlength="6" :disabled="(socialSmsOtpTimer === 0 &amp;&amp; socialSmsOtpExpiresAt) || socialSmsOtpVerified" inputmode="numeric" autocomplete="one-time-code">
+                    <button @click="verifySocialSmsOtp" :disabled="verifyingSocialSmsOtp || !canVerifySocialSmsOtp() || socialSmsOtpVerified" class="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300" disabled="disabled">
+                        <span x-show="!verifyingSocialSmsOtp" x-text="socialSmsOtpVerified ? '✓ Verified' : 'Verify Phone'">Verify Phone</span>
+                        <span x-show="verifyingSocialSmsOtp" class="flex items-center gap-2" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i>Verifying...
+                        </span>
+                    </button>
+                    <div class="mt-3 flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 md:flex-row md:items-center md:justify-between">
+                        <div class="flex items-center gap-2" :class="socialSmsOtpVerified ? 'text-emerald-600 font-semibold' : (socialSmsOtpTimer &lt;= 60 &amp;&amp; socialSmsOtpTimer &gt; 0 ? 'text-amber-600 font-medium' : (socialSmsOtpTimer === 0 &amp;&amp; socialSmsOtpExpiresAt ? 'text-red-600 font-semibold' : ''))">
+                            <span x-text="socialSmsOtpVerified ? '✓' : '⏱️'">⏱️</span>
+                            <span x-text="socialSmsOtpVerified ? 'Verification successful' : (socialSmsOtpTimer === 0 ? (socialSmsOtpExpiresAt ? 'OTP expired' : 'Initialising...') : `OTP expires in ${formatTimer(socialSmsOtpTimer)}`)">Initialising...</span>
+                        </div>
+                        <div class="text-right flex items-center gap-2">
+                            <button @click="socialPhoneStep = true; socialSmsOtpError = ''; socialSmsOtpExpiresAt = null; socialSmsResendAvailableAt = null; persistPendingSocialVerification({ otpExpiresAt: null, resendAvailableAt: null })" :disabled="socialSmsOtpVerified" class="rounded-md px-2 py-1 text-xs font-semibold text-gray-600 transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:text-gray-400">
+                                Change Phone
+                            </button>
+                            <span class="text-gray-300">|</span>
+                            <button @click="resendSocialSmsOtp" :disabled="resendingSocialSmsOtp || socialSmsResendCooldown &gt; 0 || socialSmsOtpVerified" class="rounded-md px-2 py-1 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-gray-400">
+                                <span x-show="socialSmsResendCooldown === 0 &amp;&amp; !resendingSocialSmsOtp &amp;&amp; !socialSmsOtpVerified">Resend OTP</span>
+                                <span x-show="socialSmsResendCooldown &gt; 0 &amp;&amp; !socialSmsOtpVerified" style="display: none;">Resend in <span x-text="formatTimer(socialSmsResendCooldown)">0:00</span></span>
+                                <span x-show="resendingSocialSmsOtp" style="display: none;">Resending...</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<div id="feedback-widget-root" x-data="feedbackForm" x-init="checkVisibility()" x-show="isVisible">
+
+    
+    <div @click.stop="toggle()" @mouseenter="preloadResources()" class="fixed right-0 top-1/2 -translate-y-1/2 z-[10005] cursor-pointer group" x-show="isVisible">
+        <div class="bg-[#4FAD51] group-hover:bg-[#4FAD51] text-white px-2.5 py-4 rounded-l-xl flex flex-col items-center gap-1.5 transition-[padding,background] duration-150 ease-out [writing-mode:vertical-rl]" style="padding-right: 10px;" onmouseenter="this.style.paddingRight='16px'" onmouseleave="this.style.paddingRight='10px'">
+            
+            <span class="text-[10px] font-bold tracking-widest uppercase">Feedback</span>
+        </div>
+    </div>
+
+    
+    <div class="fixed right-5 top-1/2 -translate-y-1/2 z-[10000] w-[375px] max-w-[92vw] bg-white rounded-2xl border border-gray-100 shadow-xl flex flex-col overflow-hidden opacity-0 pointer-events-none" @click.outside="close()" :class="isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'" style="transform: translateY(-50%) translateX(calc(100% + 28px))" :style="isOpen ? 'transform: translateY(-50%) translateX(0)' : 'transform: translateY(-50%) translateX(calc(100% + 28px))'">
+        
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-white">
+            <h2 class="flex items-center gap-2.5 text-[15px] font-bold text-gray-900 m-0">
+                <span class="w-[3px] h-[18px] bg-[#4FAD51] rounded-full block"></span>
+                Share Feedback
+            </h2>
+            <button @click="close()" aria-label="Close" class="w-[30px] h-[30px] flex items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-150">
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="1" y1="1" x2="11" y2="11"></line>
+                    <line x1="11" y1="1" x2="1" y2="11"></line>
+                </svg>
+            </button>
+        </div>
+
+        
+        <div class="p-5 overflow-y-auto max-h-[58vh] flex flex-col gap-3.5 [scrollbar-width:thin]">
+            <form id="feedback-form" @submit.prevent="submitFeedback()" class="flex flex-col gap-3.5">
+
+                
+
+                
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Subject</label>
+                    <input type="text" x-model="formData.subject" placeholder="What's this about?" @input="errors.subject = ''" :class="errors.subject ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 focus:border-indigo-500 focus:ring-indigo-500/10'" class="w-full px-3 py-2 bg-gray-50 border rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none transition-[border-color,box-shadow,background] duration-150 focus:bg-white focus:ring-[3px] border-gray-200 focus:border-indigo-500 focus:ring-indigo-500/10">
+                    <span x-show="errors.subject" x-text="errors.subject" class="text-[10px] text-red-500 font-medium" style="display: none;"></span>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Message</label>
+                    <textarea x-model="formData.message" rows="4" placeholder="Tell us more..." @input="errors.message = ''" :class="errors.message ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-gray-200 focus:border-indigo-500 focus:ring-indigo-500/10'" class="w-full px-3 py-2 bg-gray-50 border rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none resize-none leading-relaxed transition-[border-color,box-shadow,background] duration-150 focus:bg-white focus:ring-[3px] border-gray-200 focus:border-indigo-500 focus:ring-indigo-500/10"></textarea>
+                    <span x-show="errors.message" x-text="errors.message" class="text-[10px] text-red-500 font-medium" style="display: none;"></span>
+                </div>
+
+                <div class="flex flex-col gap-2.5 mt-1">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">How was your experience?</label>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <template x-for="opt in [
+                            {label: 'Poor', emoji: '🙁', color: '#F97316'},
+                            {label: 'Average', emoji: '😐', color: '#FACC15'},
+                            {label: 'Good', emoji: '🙂', color: '#84CC16'},
+                            {label: 'Excellent', emoji: '🤩', color: '#15803D'}
+                        ]">
+                            <button type="button" @click="formData.experience = opt.label; errors.experience = ''" :style="formData.experience === opt.label ? `background-color: ${opt.color}; border-color: ${opt.color}; color: white;` : `border-color: ${opt.color}40; color: ${opt.color};`" :class="errors.experience ? 'border-red-500 ring-1 ring-red-500/20' : ''" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all duration-200 shadow-sm hover:scale-[1.02] active:scale-[0.98]">
+                                <span class="text-[18px] mb-1" x-text="opt.emoji"></span>
+                                <span class="text-[8px] font-bold uppercase tracking-tighter" x-text="opt.label"></span>
+                            </button>
+                        </template><button type="button" @click="formData.experience = opt.label; errors.experience = ''" :style="formData.experience === opt.label ? `background-color: ${opt.color}; border-color: ${opt.color}; color: white;` : `border-color: ${opt.color}40; color: ${opt.color};`" :class="errors.experience ? 'border-red-500 ring-1 ring-red-500/20' : ''" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all duration-200 shadow-sm hover:scale-[1.02] active:scale-[0.98]" style="border-color: #F9731640; color: #F97316;">
+                                <span class="text-[18px] mb-1" x-text="opt.emoji">🙁</span>
+                                <span class="text-[8px] font-bold uppercase tracking-tighter" x-text="opt.label">Poor</span>
+                            </button><button type="button" @click="formData.experience = opt.label; errors.experience = ''" :style="formData.experience === opt.label ? `background-color: ${opt.color}; border-color: ${opt.color}; color: white;` : `border-color: ${opt.color}40; color: ${opt.color};`" :class="errors.experience ? 'border-red-500 ring-1 ring-red-500/20' : ''" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all duration-200 shadow-sm hover:scale-[1.02] active:scale-[0.98]" style="border-color: #FACC1540; color: #FACC15;">
+                                <span class="text-[18px] mb-1" x-text="opt.emoji">😐</span>
+                                <span class="text-[8px] font-bold uppercase tracking-tighter" x-text="opt.label">Average</span>
+                            </button><button type="button" @click="formData.experience = opt.label; errors.experience = ''" :style="formData.experience === opt.label ? `background-color: ${opt.color}; border-color: ${opt.color}; color: white;` : `border-color: ${opt.color}40; color: ${opt.color};`" :class="errors.experience ? 'border-red-500 ring-1 ring-red-500/20' : ''" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all duration-200 shadow-sm hover:scale-[1.02] active:scale-[0.98]" style="border-color: #84CC1640; color: #84CC16;">
+                                <span class="text-[18px] mb-1" x-text="opt.emoji">🙂</span>
+                                <span class="text-[8px] font-bold uppercase tracking-tighter" x-text="opt.label">Good</span>
+                            </button><button type="button" @click="formData.experience = opt.label; errors.experience = ''" :style="formData.experience === opt.label ? `background-color: ${opt.color}; border-color: ${opt.color}; color: white;` : `border-color: ${opt.color}40; color: ${opt.color};`" :class="errors.experience ? 'border-red-500 ring-1 ring-red-500/20' : ''" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all duration-200 shadow-sm hover:scale-[1.02] active:scale-[0.98]" style="border-color: #15803D40; color: #15803D;">
+                                <span class="text-[18px] mb-1" x-text="opt.emoji">🤩</span>
+                                <span class="text-[8px] font-bold uppercase tracking-tighter" x-text="opt.label">Excellent</span>
+                            </button>
+                    </div>
+                    <span x-show="errors.experience" x-text="errors.experience" class="text-[10px] text-red-500 font-medium" style="display: none;"></span>
+                </div>
+
+            </form>
+        </div>
+
+        
+        <div class="px-5 py-4 bg-gray-50 border-t border-gray-100">
+            <button type="submit" form="feedback-form" :disabled="isLoading" class="w-full py-2.5 bg-[#4FAD51] hover:bg-[#4FAD51] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-[background,transform] duration-150">
+                <svg x-show="isLoading" class="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display: none;">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                </svg>
+                <span x-text="isLoading ? 'Sending…' : 'Submit Feedback'">Submit Feedback</span>
+            </button>
+        </div>
+
+    </div>
+</div>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4941250181a3fb4',t:'MTc5MTc4Njc5MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><iframe height="1" width="1" style="position: absolute; top: 0px; left: 0px; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; visibility: hidden;"></iframe><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon="{&quot;version&quot;:&quot;2024.11.0&quot;,&quot;token&quot;:&quot;130f41b7728e4587a8f1cb2bf900bfad&quot;,&quot;r&quot;:1,&quot;spa&quot;:2}" crossorigin="anonymous"></script>
+
+
+</body></html>

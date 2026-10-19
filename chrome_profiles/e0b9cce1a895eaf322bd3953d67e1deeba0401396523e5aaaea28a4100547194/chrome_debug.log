@@ -1,0 +1,13 @@
+[34168:23692:1019/153223.882:INFO:components\enterprise\browser\controller\chrome_browser_cloud_management_controller.cc:241] No machine level policy manager exists.
+[34168:17512:1019/153227.449:ERROR:google_apis\gcm\engine\registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[34168:29456:1019/153242.937:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:76] Failed to open named pipe server process 28680: Access is denied. (0x5)
+[34168:5836:1019/153245.071:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:76] Failed to open named pipe server process 29148: Access is denied. (0x5)
+[34168:29456:1019/153245.177:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:76] Failed to open named pipe server process 7360: Access is denied. (0x5)
+[34168:5836:1019/153245.277:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:76] Failed to open named pipe server process 14600: Access is denied. (0x5)
+[34168:29456:1019/153247.399:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:76] Failed to open named pipe server process 17796: Access is denied. (0x5)
+[34168:17512:1019/153249.234:ERROR:google_apis\gcm\engine\registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[34168:5836:1019/153249.530:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:76] Failed to open named pipe server process 23264: Access is denied. (0x5)
+[34168:17512:1019/153339.724:ERROR:google_apis\gcm\engine\registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[34168:17512:1019/153538.229:ERROR:google_apis\gcm\engine\registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[30420:8064:1019/153604.324:WARNING:net\extras\sqlite\sqlite_persistent_store_backend_base.cc:182] Failed to post task from FlushAndNotifyInBackground@net\extras\sqlite\sqlite_persistent_store_backend_base.cc:232 to client_task_runner_.
+[30420:8064:1019/153604.324:WARNING:net\extras\sqlite\sqlite_persistent_store_backend_base.cc:182] Failed to post task from FlushAndNotifyInBackground@net\extras\sqlite\sqlite_persistent_store_backend_base.cc:232 to client_task_runner_.

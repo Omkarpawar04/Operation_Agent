@@ -1,0 +1,56 @@
+{
+    "schema_version": 1,
+    "students": {
+        "student-15b853d9-c489-4c68-a2b4-318312e5d1f0": {
+            "accounts": {
+                "sha256:61592310e210422b5bb97a31e0321101538ab911d0e8033391362e56f9f93c32": {
+                    "jobs": {
+                        "wellfound:4215318": {
+                            "title": "Financial Analyst-Systems Pune RECRUITER RECENTLY ACTIVE POSTED 1 MONTH AGO",
+                            "url": "https://wellfound.com/jobs/4215318-financial-analyst-systems",
+                            "location": "Pune",
+                            "status": "rejected",
+                            "updated_at": "2026-10-16 16:55:39",
+                            "reason": "not accepting applications from your current location"
+                        },
+                        "wellfound:4511333": {
+                            "title": "Financial Analyst - FP&A-US shift Bengaluru POSTED 2 MONTHS AGO",
+                            "url": "https://wellfound.com/jobs/4511333-financial-analyst-fp-a-us-shift",
+                            "location": "Bengaluru",
+                            "status": "rejected",
+                            "updated_at": "2026-10-16 16:55:53",
+                            "reason": "not accepting applications from your current location"
+                        },
+                        "wellfound:4783613": {
+                            "title": "Financial Analyst - Residential Utilities Division In office$0k – $126k POSTED 2 WEEKS AGO",
+                            "url": "https://wellfound.com/jobs/4783613-financial-analyst-residential-utilities-division",
+                            "location": "Remote",
+                            "status": "failed",
+                            "updated_at": "2026-10-19 15:37:09",
+                            "posted_date": "2026-10-05 15:36:46",
+                            "reason": "Send Application was clicked but successful submission was not confirmed."
+                        },
+                        "wellfound:4706807": {
+                            "title": "Senior Financial Analyst (18-Month Contract) In office POSTED 1 MONTH AGO",
+                            "url": "https://wellfound.com/jobs/4706807-senior-financial-analyst-18-month-contract",
+                            "location": "Remote",
+                            "status": "failed",
+                            "updated_at": "2026-10-19 15:37:37",
+                            "reason": "Send Application was clicked but successful submission was not confirmed."
+                        },
+                        "wellfound:3788018": {
+                            "title": "Financial Analyst",
+                            "url": "https://wellfound.com/jobs/3788018-financial-analyst",
+                            "location": "Remote",
+                            "status": "failed",
+                            "updated_at": "2026-10-16 16:57:29",
+                            "reason": "Send Application was clicked but successful submission was not confirmed."
+                        }
+                    },
+                    "daily_submissions": {},
+                    "daily_attempts": {}
+                }
+            }
+        }
+    }
+}

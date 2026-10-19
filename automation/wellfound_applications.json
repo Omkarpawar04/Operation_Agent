@@ -116,12 +116,12 @@
             "reason": "not accepting applications from your current location"
         },
         "wellfound:4783613": {
-            "title": "Financial Analyst - Residential Utilities Division In office$0k – $126k POSTED 1 WEEK AGO",
+            "title": "Financial Analyst - Residential Utilities Division In office$0k – $126k POSTED 2 WEEKS AGO",
             "url": "https://wellfound.com/jobs/4783613-financial-analyst-residential-utilities-division",
             "location": "Remote",
             "status": "failed",
-            "updated_at": "2026-10-12 10:16:34",
-            "posted_date": "2026-10-05 10:16:10",
+            "updated_at": "2026-10-16 11:41:14",
+            "posted_date": "2026-10-02 11:40:51",
             "reason": "Send Application was clicked but successful submission was not confirmed."
         },
         "wellfound:4706807": {
@@ -129,7 +129,7 @@
             "url": "https://wellfound.com/jobs/4706807-senior-financial-analyst-18-month-contract",
             "location": "Remote",
             "status": "failed",
-            "updated_at": "2026-10-12 10:17:04",
+            "updated_at": "2026-10-16 11:41:44",
             "reason": "Send Application was clicked but successful submission was not confirmed."
         },
         "wellfound:4158160": {
@@ -217,7 +217,7 @@
             "url": "https://wellfound.com/jobs/4123969-senior-manager-valuations-corporate-finance-cbv-cpa",
             "location": "Old Toronto",
             "status": "failed",
-            "updated_at": "2026-10-12 10:11:12",
+            "updated_at": "2026-10-12 12:29:51",
             "reason": "Send Application was clicked but successful submission was not confirmed."
         },
         "wellfound:4165296": {
@@ -291,6 +291,110 @@
             "status": "failed",
             "updated_at": "2026-10-08 14:56:55",
             "reason": "Send Application was clicked but successful submission was not confirmed."
+        },
+        "wellfound:4186194": {
+            "title": "Accounting Advisory Senior Manager",
+            "url": "https://wellfound.com/jobs/4186194-accounting-advisory-senior-manager",
+            "location": "Unknown",
+            "status": "failed",
+            "updated_at": "2026-10-12 12:31:54",
+            "reason": "Job inspection failed: Message: invalid session id: session deleted as the browser has closed the connection\nfrom disconnected: not connected to DevTools\n  (Session info: chrome=154.0.8037.99); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalidsessionidexception\nStacktrace:\n\tchromedriver!GetHandleVerifier [0x7ff7e3a99d55+5a55]\n\tchromedriver!(No symbol) [0x7ff7e39bf540]\n\tchromedriver!(No symbol) [0x7ff7e37e45fd]\n\tchromedriver!(No symbol) [0x7ff7e37cff82]\n\tchromedriver!(No symbol) [0x7ff7e37f5c8c]\n\tchromedriver!(No symbol) [0x7ff7e3870a50]\n\tchromedriver!(No symbol) [0x7ff7e388f5bd]\n\tchromedriver!(No symbol) [0x7ff7e3831a12]\n\tchromedriver!(No symbol) [0x7ff7e3832823]\n\tchromedriver!GetHandleVerifier [0x7ff7e3eb04b1+41c1b1]\n\tchromedriver!GetHandleVerifier [0x7ff7e3ede26b+449f6b]\n\tchromedriver!GetHandleVerifier [0x7ff7e3ed274e+43e44e]\n\tchromedriver!GetHandleVerifier [0x7ff7e3b932fe+feffe]\n\tchromedriver!(No symbol) [0x7ff7e39ccb55]\n\tchromedriver!(No symbol) [0x7ff7e39c7f64]\n\tchromedriver!(No symbol) [0x7ff7e39c80f4]\n\tchromedriver!(No symbol) [0x7ff7e39b2e4c]\n\tKERNEL32!BaseThreadInitThunk [0x7ff95963cd87+17]\n\tntdll!RtlUserThreadStart [0x7ff95a8ccaec+2c]\n"
+        },
+        "wellfound:4187357": {
+            "title": "Strategic Finance & Operations",
+            "url": "https://wellfound.com/jobs/4187357-strategic-finance-operations",
+            "location": "Unknown",
+            "status": "failed",
+            "updated_at": "2026-10-12 12:31:54",
+            "reason": "Could not open job page: Message: invalid session id; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalidsessionidexception\nStacktrace:\n\tchromedriver!GetHandleVerifier [0x7ff7e3a99d55+5a55]\n\tchromedriver!(No symbol) [0x7ff7e39bf540]\n\tchromedriver!(No symbol) [0x7ff7e37e43f6]\n\tchromedriver!(No symbol) [0x7ff7e3830b13]\n\tchromedriver!(No symbol) [0x7ff7e3868ff2]\n\tchromedriver!(No symbol) [0x7ff7e3862dc2]\n\tchromedriver!(No symbol) [0x7ff7e3862552]\n\tchromedriver!(No symbol) [0x7ff7e37ac95b]\n\tchromedriver!(No symbol) [0x7ff7e37acfb2]\n\tchromedriver!(No symbol) [0x7ff7e37ad5e5]\n\tchromedriver!GetHandleVerifier [0x7ff7e3eb04b1+41c1b1]\n\tchromedriver!GetHandleVerifier [0x7ff7e3ede26b+449f6b]\n\tchromedriver!GetHandleVerifier [0x7ff7e3ed274e+43e44e]\n\tchromedriver!GetHandleVerifier [0x7ff7e3b932fe+feffe]\n\tchromedriver!(No symbol) [0x7ff7e39ccb55]\n\tchromedriver!(No symbol) [0x7ff7e37abd9a]\n\tchromedriver!GetHandleVerifier [0x7ff7e3f42b4f+4ae84f]\n\tKERNEL32!BaseThreadInitThunk [0x7ff95963cd87+17]\n\tntdll!RtlUserThreadStart [0x7ff95a8ccaec+2c]\n"
+        },
+        "wellfound:3788018": {
+            "title": "Financial Analyst",
+            "url": "https://wellfound.com/jobs/3788018-financial-analyst",
+            "location": "Remote",
+            "status": "failed",
+            "updated_at": "2026-10-16 11:42:21",
+            "reason": "Send Application was clicked but successful submission was not confirmed."
+        },
+        "wellfound:772804": {
+            "title": "Upwell Water Senior Associate, Vice President",
+            "url": "https://wellfound.com/jobs/772804-upwell-water-senior-associate-vice-president",
+            "location": "Unknown",
+            "status": "failed",
+            "updated_at": "2026-10-16 11:43:34",
+            "reason": "Could not open job page: Message: unknown error: net::ERR_NAME_NOT_RESOLVED\n  (Session info: chrome=155.0.8059.84)\nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t(No symbol) [0x7ff7b20ae745]\n\t(No symbol) [0x7ff7b1c63d00]\n\t(No symbol) [0x7ff7b1a93f3d]\n\t(No symbol) [0x7ff7b1a90d05]\n\t(No symbol) [0x7ff7b1a815f1]\n\t(No symbol) [0x7ff7b1a8343b]\n\t(No symbol) [0x7ff7b1a81b84]\n\t(No symbol) [0x7ff7b1a8135b]\n\t(No symbol) [0x7ff7b1a81011]\n\t(No symbol) [0x7ff7b1a7ecfa]\n\t(No symbol) [0x7ff7b1a7f452]\n\t(No symbol) [0x7ff7b1a98237]\n\t(No symbol) [0x7ff7b1b45914]\n\t(No symbol) [0x7ff7b1b18ada]\n\t(No symbol) [0x7ff7b1b44b5a]\n\t(No symbol) [0x7ff7b1ae1462]\n\t(No symbol) [0x7ff7b1ae2273]\n\t(No symbol) [0x7ff7b21517b1]\n\t(No symbol) [0x7ff7b21887c7]\n\t(No symbol) [0x7ff7b217c85e]\n\t(No symbol) [0x7ff7b1e2884e]\n\t(No symbol) [0x7ff7b1c70415]\n\t(No symbol) [0x7ff7b1c6bdf4]\n\t(No symbol) [0x7ff7b1c6bf84]\n\t(No symbol) [0x7ff7b1c57f7c]\n\t(No symbol) [0x7ffa179adda7]\n\t(No symbol) [0x7ffa18ebee4c]\n"
+        },
+        "wellfound:3274412": {
+            "title": "Strategic Finance Lead",
+            "url": "https://wellfound.com/jobs/3274412-strategic-finance-lead",
+            "location": "Unknown",
+            "status": "failed",
+            "updated_at": "2026-10-16 11:43:37",
+            "reason": "Could not open job page: Message: unknown error: net::ERR_NAME_NOT_RESOLVED\n  (Session info: chrome=155.0.8059.84)\nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t(No symbol) [0x7ff7b20ae745]\n\t(No symbol) [0x7ff7b1c63d00]\n\t(No symbol) [0x7ff7b1a93f3d]\n\t(No symbol) [0x7ff7b1a90d05]\n\t(No symbol) [0x7ff7b1a815f1]\n\t(No symbol) [0x7ff7b1a8343b]\n\t(No symbol) [0x7ff7b1a81b84]\n\t(No symbol) [0x7ff7b1a8135b]\n\t(No symbol) [0x7ff7b1a81011]\n\t(No symbol) [0x7ff7b1a7ecfa]\n\t(No symbol) [0x7ff7b1a7f452]\n\t(No symbol) [0x7ff7b1a98237]\n\t(No symbol) [0x7ff7b1b45914]\n\t(No symbol) [0x7ff7b1b18ada]\n\t(No symbol) [0x7ff7b1b44b5a]\n\t(No symbol) [0x7ff7b1ae1462]\n\t(No symbol) [0x7ff7b1ae2273]\n\t(No symbol) [0x7ff7b21517b1]\n\t(No symbol) [0x7ff7b21887c7]\n\t(No symbol) [0x7ff7b217c85e]\n\t(No symbol) [0x7ff7b1e2884e]\n\t(No symbol) [0x7ff7b1c70415]\n\t(No symbol) [0x7ff7b1c6bdf4]\n\t(No symbol) [0x7ff7b1c6bf84]\n\t(No symbol) [0x7ff7b1c57f7c]\n\t(No symbol) [0x7ffa179adda7]\n\t(No symbol) [0x7ffa18ebee4c]\n"
+        },
+        "wellfound:4099616": {
+            "title": "Accounting Strategy & Policy, Vice President",
+            "url": "https://wellfound.com/jobs/4099616-accounting-strategy-policy-vice-president",
+            "location": "Unknown",
+            "status": "failed",
+            "updated_at": "2026-10-16 11:43:40",
+            "reason": "Could not open job page: Message: unknown error: net::ERR_NAME_NOT_RESOLVED\n  (Session info: chrome=155.0.8059.84)\nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t(No symbol) [0x7ff7b20ae745]\n\t(No symbol) [0x7ff7b1c63d00]\n\t(No symbol) [0x7ff7b1a93f3d]\n\t(No symbol) [0x7ff7b1a90d05]\n\t(No symbol) [0x7ff7b1a815f1]\n\t(No symbol) [0x7ff7b1a8343b]\n\t(No symbol) [0x7ff7b1a81b84]\n\t(No symbol) [0x7ff7b1a8135b]\n\t(No symbol) [0x7ff7b1a81011]\n\t(No symbol) [0x7ff7b1a7ecfa]\n\t(No symbol) [0x7ff7b1a7f452]\n\t(No symbol) [0x7ff7b1a98237]\n\t(No symbol) [0x7ff7b1b45914]\n\t(No symbol) [0x7ff7b1b18ada]\n\t(No symbol) [0x7ff7b1b44b5a]\n\t(No symbol) [0x7ff7b1ae1462]\n\t(No symbol) [0x7ff7b1ae2273]\n\t(No symbol) [0x7ff7b21517b1]\n\t(No symbol) [0x7ff7b21887c7]\n\t(No symbol) [0x7ff7b217c85e]\n\t(No symbol) [0x7ff7b1e2884e]\n\t(No symbol) [0x7ff7b1c70415]\n\t(No symbol) [0x7ff7b1c6bdf4]\n\t(No symbol) [0x7ff7b1c6bf84]\n\t(No symbol) [0x7ff7b1c57f7c]\n\t(No symbol) [0x7ffa179adda7]\n\t(No symbol) [0x7ffa18ebee4c]\n"
+        },
+        "wellfound:4100522": {
+            "title": "Senior Accountant",
+            "url": "https://wellfound.com/jobs/4100522-senior-accountant",
+            "location": "Unknown",
+            "status": "failed",
+            "updated_at": "2026-10-16 11:43:43",
+            "reason": "Could not open job page: Message: unknown error: net::ERR_NAME_NOT_RESOLVED\n  (Session info: chrome=155.0.8059.84)\nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t(No symbol) [0x7ff7b20ae745]\n\t(No symbol) [0x7ff7b1c63d00]\n\t(No symbol) [0x7ff7b1a93f3d]\n\t(No symbol) [0x7ff7b1a90d05]\n\t(No symbol) [0x7ff7b1a815f1]\n\t(No symbol) [0x7ff7b1a8343b]\n\t(No symbol) [0x7ff7b1a81b84]\n\t(No symbol) [0x7ff7b1a8135b]\n\t(No symbol) [0x7ff7b1a81011]\n\t(No symbol) [0x7ff7b1a7ecfa]\n\t(No symbol) [0x7ff7b1a7f452]\n\t(No symbol) [0x7ff7b1a98237]\n\t(No symbol) [0x7ff7b1b45914]\n\t(No symbol) [0x7ff7b1b18ada]\n\t(No symbol) [0x7ff7b1b44b5a]\n\t(No symbol) [0x7ff7b1ae1462]\n\t(No symbol) [0x7ff7b1ae2273]\n\t(No symbol) [0x7ff7b21517b1]\n\t(No symbol) [0x7ff7b21887c7]\n\t(No symbol) [0x7ff7b217c85e]\n\t(No symbol) [0x7ff7b1e2884e]\n\t(No symbol) [0x7ff7b1c70415]\n\t(No symbol) [0x7ff7b1c6bdf4]\n\t(No symbol) [0x7ff7b1c6bf84]\n\t(No symbol) [0x7ff7b1c57f7c]\n\t(No symbol) [0x7ffa179adda7]\n\t(No symbol) [0x7ffa18ebee4c]\n"
+        },
+        "wellfound:4129367": {
+            "title": "Expense and Treasury Finance, Vice President",
+            "url": "https://wellfound.com/jobs/4129367-expense-and-treasury-finance-vice-president",
+            "location": "Unknown",
+            "status": "failed",
+            "updated_at": "2026-10-16 11:43:45",
+            "reason": "Could not open job page: Message: unknown error: net::ERR_NAME_NOT_RESOLVED\n  (Session info: chrome=155.0.8059.84)\nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t(No symbol) [0x7ff7b20ae745]\n\t(No symbol) [0x7ff7b1c63d00]\n\t(No symbol) [0x7ff7b1a93f3d]\n\t(No symbol) [0x7ff7b1a90d05]\n\t(No symbol) [0x7ff7b1a815f1]\n\t(No symbol) [0x7ff7b1a8343b]\n\t(No symbol) [0x7ff7b1a81b84]\n\t(No symbol) [0x7ff7b1a8135b]\n\t(No symbol) [0x7ff7b1a81011]\n\t(No symbol) [0x7ff7b1a7ecfa]\n\t(No symbol) [0x7ff7b1a7f452]\n\t(No symbol) [0x7ff7b1a98237]\n\t(No symbol) [0x7ff7b1b45914]\n\t(No symbol) [0x7ff7b1b18ada]\n\t(No symbol) [0x7ff7b1b44b5a]\n\t(No symbol) [0x7ff7b1ae1462]\n\t(No symbol) [0x7ff7b1ae2273]\n\t(No symbol) [0x7ff7b21517b1]\n\t(No symbol) [0x7ff7b21887c7]\n\t(No symbol) [0x7ff7b217c85e]\n\t(No symbol) [0x7ff7b1e2884e]\n\t(No symbol) [0x7ff7b1c70415]\n\t(No symbol) [0x7ff7b1c6bdf4]\n\t(No symbol) [0x7ff7b1c6bf84]\n\t(No symbol) [0x7ff7b1c57f7c]\n\t(No symbol) [0x7ffa179adda7]\n\t(No symbol) [0x7ffa18ebee4c]\n"
+        },
+        "wellfound:4130746": {
+            "title": "Controller",
+            "url": "https://wellfound.com/jobs/4130746-controller",
+            "location": "Unknown",
+            "status": "failed",
+            "updated_at": "2026-10-16 11:43:48",
+            "reason": "Could not open job page: Message: unknown error: net::ERR_NAME_NOT_RESOLVED\n  (Session info: chrome=155.0.8059.84)\nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t(No symbol) [0x7ff7b20ae745]\n\t(No symbol) [0x7ff7b1c63d00]\n\t(No symbol) [0x7ff7b1a93f3d]\n\t(No symbol) [0x7ff7b1a90d05]\n\t(No symbol) [0x7ff7b1a815f1]\n\t(No symbol) [0x7ff7b1a8343b]\n\t(No symbol) [0x7ff7b1a81b84]\n\t(No symbol) [0x7ff7b1a8135b]\n\t(No symbol) [0x7ff7b1a81011]\n\t(No symbol) [0x7ff7b1a7ecfa]\n\t(No symbol) [0x7ff7b1a7f452]\n\t(No symbol) [0x7ff7b1a98237]\n\t(No symbol) [0x7ff7b1b45914]\n\t(No symbol) [0x7ff7b1b18ada]\n\t(No symbol) [0x7ff7b1b44b5a]\n\t(No symbol) [0x7ff7b1ae1462]\n\t(No symbol) [0x7ff7b1ae2273]\n\t(No symbol) [0x7ff7b21517b1]\n\t(No symbol) [0x7ff7b21887c7]\n\t(No symbol) [0x7ff7b217c85e]\n\t(No symbol) [0x7ff7b1e2884e]\n\t(No symbol) [0x7ff7b1c70415]\n\t(No symbol) [0x7ff7b1c6bdf4]\n\t(No symbol) [0x7ff7b1c6bf84]\n\t(No symbol) [0x7ff7b1c57f7c]\n\t(No symbol) [0x7ffa179adda7]\n\t(No symbol) [0x7ffa18ebee4c]\n"
+        },
+        "wellfound:4184398": {
+            "title": "Senior Manager, Finance & Strategy",
+            "url": "https://wellfound.com/jobs/4184398-senior-manager-finance-strategy",
+            "location": "Unknown",
+            "status": "failed",
+            "updated_at": "2026-10-16 11:43:51",
+            "reason": "Could not open job page: Message: unknown error: net::ERR_NAME_NOT_RESOLVED\n  (Session info: chrome=155.0.8059.84)\nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t(No symbol) [0x7ff7b20ae745]\n\t(No symbol) [0x7ff7b1c63d00]\n\t(No symbol) [0x7ff7b1a93f3d]\n\t(No symbol) [0x7ff7b1a90d05]\n\t(No symbol) [0x7ff7b1a815f1]\n\t(No symbol) [0x7ff7b1a8343b]\n\t(No symbol) [0x7ff7b1a81b84]\n\t(No symbol) [0x7ff7b1a8135b]\n\t(No symbol) [0x7ff7b1a81011]\n\t(No symbol) [0x7ff7b1a7ecfa]\n\t(No symbol) [0x7ff7b1a7f452]\n\t(No symbol) [0x7ff7b1a98237]\n\t(No symbol) [0x7ff7b1b45914]\n\t(No symbol) [0x7ff7b1b18ada]\n\t(No symbol) [0x7ff7b1b44b5a]\n\t(No symbol) [0x7ff7b1ae1462]\n\t(No symbol) [0x7ff7b1ae2273]\n\t(No symbol) [0x7ff7b21517b1]\n\t(No symbol) [0x7ff7b21887c7]\n\t(No symbol) [0x7ff7b217c85e]\n\t(No symbol) [0x7ff7b1e2884e]\n\t(No symbol) [0x7ff7b1c70415]\n\t(No symbol) [0x7ff7b1c6bdf4]\n\t(No symbol) [0x7ff7b1c6bf84]\n\t(No symbol) [0x7ff7b1c57f7c]\n\t(No symbol) [0x7ffa179adda7]\n\t(No symbol) [0x7ffa18ebee4c]\n"
+        },
+        "wellfound:4196020": {
+            "title": "Senior Finance Manager, Sales Finance & Strategy",
+            "url": "https://wellfound.com/jobs/4196020-senior-finance-manager-sales-finance-strategy",
+            "location": "Unknown",
+            "status": "failed",
+            "updated_at": "2026-10-16 11:43:54",
+            "reason": "Could not open job page: Message: unknown error: net::ERR_NAME_NOT_RESOLVED\n  (Session info: chrome=155.0.8059.84)\nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t(No symbol) [0x7ff7b20ae745]\n\t(No symbol) [0x7ff7b1c63d00]\n\t(No symbol) [0x7ff7b1a93f3d]\n\t(No symbol) [0x7ff7b1a90d05]\n\t(No symbol) [0x7ff7b1a815f1]\n\t(No symbol) [0x7ff7b1a8343b]\n\t(No symbol) [0x7ff7b1a81b84]\n\t(No symbol) [0x7ff7b1a8135b]\n\t(No symbol) [0x7ff7b1a81011]\n\t(No symbol) [0x7ff7b1a7ecfa]\n\t(No symbol) [0x7ff7b1a7f452]\n\t(No symbol) [0x7ff7b1a98237]\n\t(No symbol) [0x7ff7b1b45914]\n\t(No symbol) [0x7ff7b1b18ada]\n\t(No symbol) [0x7ff7b1b44b5a]\n\t(No symbol) [0x7ff7b1ae1462]\n\t(No symbol) [0x7ff7b1ae2273]\n\t(No symbol) [0x7ff7b21517b1]\n\t(No symbol) [0x7ff7b21887c7]\n\t(No symbol) [0x7ff7b217c85e]\n\t(No symbol) [0x7ff7b1e2884e]\n\t(No symbol) [0x7ff7b1c70415]\n\t(No symbol) [0x7ff7b1c6bdf4]\n\t(No symbol) [0x7ff7b1c6bf84]\n\t(No symbol) [0x7ff7b1c57f7c]\n\t(No symbol) [0x7ffa179adda7]\n\t(No symbol) [0x7ffa18ebee4c]\n"
+        },
+        "wellfound:4204960": {
+            "title": "Senior Clinical Research Finance Specialist",
+            "url": "https://wellfound.com/jobs/4204960-senior-clinical-research-finance-specialist",
+            "location": "Unknown",
+            "status": "failed",
+            "updated_at": "2026-10-16 11:43:56",
+            "reason": "Could not open job page: Message: unknown error: net::ERR_NAME_NOT_RESOLVED\n  (Session info: chrome=155.0.8059.84)\nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t(No symbol) [0x7ff7b20ae745]\n\t(No symbol) [0x7ff7b1c63d00]\n\t(No symbol) [0x7ff7b1a93f3d]\n\t(No symbol) [0x7ff7b1a90d05]\n\t(No symbol) [0x7ff7b1a815f1]\n\t(No symbol) [0x7ff7b1a8343b]\n\t(No symbol) [0x7ff7b1a81b84]\n\t(No symbol) [0x7ff7b1a8135b]\n\t(No symbol) [0x7ff7b1a81011]\n\t(No symbol) [0x7ff7b1a7ecfa]\n\t(No symbol) [0x7ff7b1a7f452]\n\t(No symbol) [0x7ff7b1a98237]\n\t(No symbol) [0x7ff7b1b45914]\n\t(No symbol) [0x7ff7b1b18ada]\n\t(No symbol) [0x7ff7b1b44b5a]\n\t(No symbol) [0x7ff7b1ae1462]\n\t(No symbol) [0x7ff7b1ae2273]\n\t(No symbol) [0x7ff7b21517b1]\n\t(No symbol) [0x7ff7b21887c7]\n\t(No symbol) [0x7ff7b217c85e]\n\t(No symbol) [0x7ff7b1e2884e]\n\t(No symbol) [0x7ff7b1c70415]\n\t(No symbol) [0x7ff7b1c6bdf4]\n\t(No symbol) [0x7ff7b1c6bf84]\n\t(No symbol) [0x7ff7b1c57f7c]\n\t(No symbol) [0x7ffa179adda7]\n\t(No symbol) [0x7ffa18ebee4c]\n"
+        },
+        "wellfound:4214779": {
+            "title": "Global Fund Finance - Investor Reporting, Assistant Vice President",
+            "url": "https://wellfound.com/jobs/4214779-global-fund-finance-investor-reporting-assistant-vice-president",
+            "location": "Unknown",
+            "status": "failed",
+            "updated_at": "2026-10-16 11:43:59",
+            "reason": "Could not open job page: Message: unknown error: net::ERR_NAME_NOT_RESOLVED\n  (Session info: chrome=155.0.8059.84)\nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t(No symbol) [0x7ff7b20ae745]\n\t(No symbol) [0x7ff7b1c63d00]\n\t(No symbol) [0x7ff7b1a93f3d]\n\t(No symbol) [0x7ff7b1a90d05]\n\t(No symbol) [0x7ff7b1a815f1]\n\t(No symbol) [0x7ff7b1a8343b]\n\t(No symbol) [0x7ff7b1a81b84]\n\t(No symbol) [0x7ff7b1a8135b]\n\t(No symbol) [0x7ff7b1a81011]\n\t(No symbol) [0x7ff7b1a7ecfa]\n\t(No symbol) [0x7ff7b1a7f452]\n\t(No symbol) [0x7ff7b1a98237]\n\t(No symbol) [0x7ff7b1b45914]\n\t(No symbol) [0x7ff7b1b18ada]\n\t(No symbol) [0x7ff7b1b44b5a]\n\t(No symbol) [0x7ff7b1ae1462]\n\t(No symbol) [0x7ff7b1ae2273]\n\t(No symbol) [0x7ff7b21517b1]\n\t(No symbol) [0x7ff7b21887c7]\n\t(No symbol) [0x7ff7b217c85e]\n\t(No symbol) [0x7ff7b1e2884e]\n\t(No symbol) [0x7ff7b1c70415]\n\t(No symbol) [0x7ff7b1c6bdf4]\n\t(No symbol) [0x7ff7b1c6bf84]\n\t(No symbol) [0x7ff7b1c57f7c]\n\t(No symbol) [0x7ffa179adda7]\n\t(No symbol) [0x7ffa18ebee4c]\n"
         }
     },
     "daily_submissions": {

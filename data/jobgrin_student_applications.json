@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "students": {
+    "student-15b853d9-c489-4c68-a2b4-318312e5d1f0": {
+      "accounts": {
+        "sha256:61592310e210422b5bb97a31e0321101538ab911d0e8033391362e56f9f93c32": {
+          "jobs": {
+            "software engineer||bengaluru, karnataka, india": {
+              "status": "APPLIED",
+              "title": "Software Engineer",
+              "company": "",
+              "location": "Bengaluru, Karnataka, India",
+              "url": "",
+              "reason": "APPLICATION_SUBMITTED",
+              "timestamp": "2026-10-16T13:37:43.218000"
+            }
+          }
+        }
+      }
+    }
+  }
+}

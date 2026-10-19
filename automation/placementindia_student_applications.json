@@ -1,0 +1,286 @@
+{
+  "schema_version": 1,
+  "students": {
+    "student-15b853d9-c489-4c68-a2b4-318312e5d1f0": {
+      "accounts": {
+        "sha256:61592310e210422b5bb97a31e0321101538ab911d0e8033391362e56f9f93c32": {
+          "jobs": {
+            "https://www.placementindia.com/job-detail/software-developer-in-smart-career-at-maharashtra-nagar-mumbai-1420819.htm": {
+              "title": "Fresher hiring for Software Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:31:56.354637"
+            },
+            "https://www.placementindia.com/job-detail/dot-net-software-developer-in-vieva-intech-at-mumbai-1392477.htm": {
+              "title": "Dot Net Software Developer - Freshers",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:32:17.239674"
+            },
+            "https://www.placementindia.com/job-detail/tech-lead-in-global-techhunt-services-at-mumbai-1381180.htm": {
+              "title": "Tech Lead (5-10 Years)",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:32:37.958809"
+            },
+            "https://www.placementindia.com/job-detail/software-developer-in-omizon-llc-at-mumbai-hyderabad-1370247.htm": {
+              "title": "Software Developer (full Time)",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:32:59.422789"
+            },
+            "https://www.placementindia.com/job-detail/java-developer-in-rs-placement-consultancy-at-delhi-ncr-bangalore-mumbai-1358531.htm": {
+              "title": "Java Developer - Full Time - Freshers",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:33:20.482147"
+            },
+            "https://www.placementindia.com/job-detail/java-software-developer-in-netreach-software-pvt-ltd-at-andheri-west-mumbai-1357592.htm": {
+              "title": "Java Software Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:33:41.363814"
+            },
+            "https://www.placementindia.com/job-detail/network-engineer-in-job-bloom-consultant-at-ahmedabad-bangalore-kochi-1362020.htm": {
+              "title": "Openings For Network Engineer || Freshers & Experienced",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:34:02.441336"
+            },
+            "https://www.placementindia.com/job-detail/senior-software-developer-in-varite-india-pvt-ltd-at-delhi-ncr-bangalore-mumbai-1355258.htm": {
+              "title": "Urgent Requirement For Senior Software Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:34:23.231114"
+            },
+            "https://www.placementindia.com/job-detail/software-engineer-in-dpsr-consultancy-solutions-at-patna-surat-gurgaon-bangalore-1358986.htm": {
+              "title": "Face-to-Face Interview For Software Developer Jobs (Freshers)",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:34:44.378469"
+            },
+            "https://www.placementindia.com/job-detail/software-developer-in-vam-dev-consultancy-at-bangalore-mumbai-pune-chennai-1337609.htm": {
+              "title": "Software Developer (Female)",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:35:06.060040"
+            },
+            "https://www.placementindia.com/job-detail/angular-developer-in-edens-staffing-services-at-mumbai-pune-1337814.htm": {
+              "title": "Urgent Requirement For Angular Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:35:27.161751"
+            },
+            "https://www.placementindia.com/job-detail/backend-software-developer-in-qtrac-at-mumbai-1326646.htm": {
+              "title": "Backend Software Developer (Full Time)",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:35:48.415733"
+            },
+            "https://www.placementindia.com/job-detail/software-developer-trainee-in-sl-consulting-at-mumbai-1316067.htm": {
+              "title": "Software Developer Trainee",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:36:10.319561"
+            },
+            "https://www.placementindia.com/job-detail/software-engineer-jobs-in-borivali-west-mumbai-for-irecord-infotech-solutions-pvt-ltd-1280305.htm": {
+              "title": "Software Engineer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:36:32.402935"
+            },
+            "https://www.placementindia.com/job-detail/co-founder-in-kloud-innovisionz-at-mumbai-thane-navi-mumbai-1284480.htm": {
+              "title": "Co Founder (10-20 Years)",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:36:53.996807"
+            },
+            "https://www.placementindia.com/job-detail/senior-software-developer-in-b-m-surface-systems-india-pvt-ltd-at-mumbai-thane-navi-mumbai-1261696.htm": {
+              "title": "Senior Software Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-16T15:37:28.370454"
+            },
+            "https://www.placementindia.com/job-detail/java-developer-in-resourcetree-global-services-at-mumbai-1274844.htm": {
+              "title": "Java Developer (5-10 Years)",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-19T12:24:04.398667"
+            },
+            "https://www.placementindia.com/job-detail/software-developer-trainee-in-riddhi-infosystem-india-private-limited-at-goregaon-east-mumbai-1255124.htm": {
+              "title": "Software Developer Trainee (Female)",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-19T12:24:26.532890"
+            },
+            "https://www.placementindia.com/job-detail/c-developer-in-microworld-software-services-pvt-ltd-at-mumbai-1259630.htm": {
+              "title": "C++ Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-19T12:24:47.688833"
+            },
+            "https://www.placementindia.com/job-detail/java-software-developer-in-the-kiran-academy-at-mumbai-1242173.htm": {
+              "title": "Java Software Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-19T12:25:08.475560"
+            },
+            "https://www.placementindia.com/job-detail/software-web-developer-in-edens-staffing-services-at-mumbai-pune-1336646.htm": {
+              "title": "Software Web Developer (Full Time)",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-19T12:25:29.070343"
+            },
+            "https://www.placementindia.com/job-detail/android-application-developer-jobs-in-marol-midc-andheri-east-for-microworld-software-services-pvt-ltd-1159901.htm": {
+              "title": "Android Application Developer - Fresher to 2 Years",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-19T12:25:51.139105"
+            },
+            "https://www.placementindia.com/job-detail/dot-net-developer-jobs-in-marol-mumbai-for-microworld-software-services-pvt-ltd-1138987.htm": {
+              "title": "Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Mumbai",
+              "timestamp": "2026-10-19T12:26:13.372187"
+            },
+            "https://www.placementindia.com/job-detail/junior-software-developer-in-smarthinking-venture-llp-at-pune-1467114.htm": {
+              "title": "Junior Software Developer - Full Time",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:26:23.049582"
+            },
+            "https://www.placementindia.com/job-detail/software-developer-trainee-in-vs-software-lab-at-baramati-pune-1324301.htm": {
+              "title": "Hiring Fresher / Software Developer Trainee / B.C.A/B.Sc",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:26:43.183892"
+            },
+            "https://www.placementindia.com/job-detail/software-development-manager-in-accenture-at-pune-1376164.htm": {
+              "title": "Walk-in | Software Development Manager",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:27:03.625748"
+            },
+            "https://www.placementindia.com/job-detail/aws-tech-lead-in-the-best-services-enterprise-s-at-gurgaon-bangalore-bhopal-1370203.htm": {
+              "title": "AWS Tech Lead",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:27:24.436083"
+            },
+            "https://www.placementindia.com/job-detail/software-developer-in-wink-career-at-mysore-banglore-highway-mysore-1362861.htm": {
+              "title": "Freshers For Software Developer - Hyderabad/Mysore",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:27:46.900060"
+            },
+            "https://www.placementindia.com/job-detail/software-developer-in-vak-consulting-at-bilaspur-pune-1355373.htm": {
+              "title": "Software Developer (Full Time)",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:28:06.983925"
+            },
+            "https://www.placementindia.com/job-detail/software-web-developer-in-maa-narmada-foundation-at-pune-1362744.htm": {
+              "title": "Software Web Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:28:28.585890"
+            },
+            "https://www.placementindia.com/job-detail/software-development-manager-in-digiwork-online-services-consultancy-llp-at-tilak-road-pune-1352585.htm": {
+              "title": "Walk-In For Software Development Manager (1-5 Years)",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:28:49.098418"
+            },
+            "https://www.placementindia.com/job-detail/software-developer-in-vs-softwrae-lab-at-baramati-pune-1326360.htm": {
+              "title": "Fresher hiring for Software Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:29:09.696126"
+            },
+            "https://www.placementindia.com/job-detail/software-web-developer-in-digitalforge-solutions-at-pune-1324679.htm": {
+              "title": "Looking For Software Web Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:29:30.411080"
+            },
+            "https://www.placementindia.com/job-detail/software-developer-in-radhe-pvt-ltd-at-pune-1308249.htm": {
+              "title": "Opening For Software Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:29:50.564008"
+            },
+            "https://www.placementindia.com/job-detail/java-developer-in-svs-job-consulting-services-at-pune-1294474.htm": {
+              "title": "Software Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:40:39.048549"
+            },
+            "https://www.placementindia.com/job-detail/software-developer-in-white-table-technology-at-pune-1300226.htm": {
+              "title": "Direct Walk-In For Software Developer (Fresher)",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:40:59.696008"
+            },
+            "https://www.placementindia.com/job-detail/software-developer-in-krisha-technology-at-pune-station-road-pune-1283869.htm": {
+              "title": "Looking For Software Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:41:20.104496"
+            },
+            "https://www.placementindia.com/job-detail/angular-developer-in-the-best-enterprises-at-pune-1315452.htm": {
+              "title": "Angular Developer",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:41:40.834392"
+            },
+            "https://www.placementindia.com/job-detail/technical-delivery-manager-in-smarthinking-venture-llp-at-pune-1467057.htm": {
+              "title": "Opening For Technical Delivery Manager",
+              "status": "apply_button_not_found",
+              "posted": "",
+              "city": "Pune",
+              "timestamp": "2026-10-19T15:42:01.746125"
+            }
+          }
+        }
+      }
+    }
+  }
+}

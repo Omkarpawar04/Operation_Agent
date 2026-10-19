@@ -1,12 +1,25 @@
-import os
+﻿import os
 import time
 import re
-import json
 import hashlib
 from datetime import datetime, date, timedelta
 from urllib.parse import urlsplit, urlunsplit
 
-from dotenv import load_dotenv
+from excel_users import get_student_id, get_user
+from wellfound_tracking import (
+    empty_application_log as empty_scoped_application_log,
+    get_today_submission_ids as get_scoped_today_submission_ids,
+    get_today_submitted_count as get_scoped_today_submitted_count,
+    get_today_attempt_count as get_scoped_today_attempt_count,
+    record_application_attempt as record_scoped_application_attempt,
+    has_been_processed as has_scoped_been_processed,
+    load_application_log as load_scoped_application_log,
+    save_application_log as save_scoped_application_log,
+)
+from application_limits import (
+    DAILY_APPLICATION_LIMIT,
+    has_reached_daily_limit,
+)
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -18,9 +31,6 @@ from selenium.common.exceptions import (
     StaleElementReferenceException,
     WebDriverException,
 )
-
-
-load_dotenv()
 
 
 # ============================================================
@@ -72,7 +82,7 @@ FINANCE_KEYWORDS = [
 
 # The automation stops ONLY when this many successful
 # applications have been confirmed for today.
-TARGET_SUCCESSFUL_APPLICATIONS = 5
+TARGET_SUCCESSFUL_APPLICATIONS = DAILY_APPLICATION_LIMIT
 
 
 # ============================================================
@@ -80,10 +90,10 @@ TARGET_SUCCESSFUL_APPLICATIONS = 5
 # ============================================================
 
 # Maximum search-result pages to inspect.
-MAX_SEARCH_PAGES = 100
+MAX_SEARCH_PAGES = 10
 
 # Maximum jobs inspected in one execution.
-MAX_JOBS_TO_INSPECT = 500
+MAX_JOBS_TO_INSPECT = 20
 
 # Only consider jobs posted within this many days.
 # Set to None to disable posting-date filtering.
@@ -94,15 +104,23 @@ MAX_JOB_AGE_DAYS = 30
 # APPLICATION SETTINGS
 # ============================================================
 
-APPLICATION_LOG_FILE = os.path.join(
+LEGACY_APPLICATION_LOG_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "wellfound_applications.json",
 )
+APPLICATION_LOG_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "wellfound_student_applications.json",
+)
+
+STUDENT_ID = ""
+WELLFOUND_EMAIL = ""
+WELLFOUND_PASSWORD = ""
 
 AUTO_SUBMIT_APPLICATIONS = True
 
 DEFAULT_APPLICATION_ANSWER = (
-    "I’m interested in working on practical products, solving business problems "
+    "Iâ€™m interested in working on practical products, solving business problems "
     "with data, and contributing to a team where I can learn and deliver measurable value."
 )
 
@@ -708,102 +726,36 @@ def inspect_job_page(driver, wait):
 # ============================================================
 
 def empty_application_log():
-
-    return {
-        "jobs": {},
-        "daily_submissions": {},
-    }
+    return empty_scoped_application_log()
 
 
 def load_application_log():
-
-    if not os.path.exists(
-        APPLICATION_LOG_FILE
-    ):
-        return empty_application_log()
-
-    try:
-
-        with open(
-            APPLICATION_LOG_FILE,
-            "r",
-            encoding="utf-8",
-        ) as file:
-
-            data = json.load(file)
-
-        if not isinstance(data, dict):
-            return empty_application_log()
-
-        if not isinstance(
-            data.get("jobs"),
-            dict,
-        ):
-            data["jobs"] = {}
-
-        if not isinstance(
-            data.get("daily_submissions"),
-            dict,
-        ):
-            data["daily_submissions"] = {}
-
-        return data
-
-    except Exception as error:
-
-        print(
-            "Warning: application log could not be loaded:",
-            error,
+    if not STUDENT_ID or not WELLFOUND_EMAIL:
+        raise ValueError(
+            "Load the selected student's Wellfound account settings "
+            "before accessing application history."
         )
 
-        return empty_application_log()
+    return load_scoped_application_log(
+        APPLICATION_LOG_FILE,
+        STUDENT_ID,
+        WELLFOUND_EMAIL,
+    )
 
 
 def save_application_log(log):
+    if not STUDENT_ID or not WELLFOUND_EMAIL:
+        raise ValueError(
+            "Load the selected student's Wellfound account settings "
+            "before saving application history."
+        )
 
-    temp_file = (
-        APPLICATION_LOG_FILE
-        + ".tmp"
+    save_scoped_application_log(
+        APPLICATION_LOG_FILE,
+        STUDENT_ID,
+        WELLFOUND_EMAIL,
+        log,
     )
-
-    try:
-
-        with open(
-            temp_file,
-            "w",
-            encoding="utf-8",
-        ) as file:
-
-            json.dump(
-                log,
-                file,
-                indent=4,
-                ensure_ascii=False,
-            )
-
-        os.replace(
-            temp_file,
-            APPLICATION_LOG_FILE,
-        )
-
-    except Exception as error:
-
-        print(
-            "Could not save application log:",
-            error,
-        )
-
-        try:
-
-            if os.path.exists(
-                temp_file
-            ):
-                os.remove(
-                    temp_file
-                )
-
-        except Exception:
-            pass
 
 
 def get_job_record(log, job):
@@ -821,69 +773,38 @@ def get_job_record(log, job):
 
 def has_been_processed(log, job):
 
-    record = get_job_record(
-        log,
-        job,
-    )
-
-    if not record:
+    key = get_job_key(job)
+    if not key:
         return False
 
-    status = record.get(
-        "status"
+    return has_scoped_been_processed(
+        log,
+        key,
+        TERMINAL_APPLICATION_STATUSES,
     )
-
-    return status in TERMINAL_APPLICATION_STATUSES
 
 
 def get_today_submission_ids(log):
-
-    today = date.today().isoformat()
-
-    records = log.get(
-        "daily_submissions",
-        {}
-    ).get(
-        today,
-        [],
-    )
-
-    if not isinstance(
-        records,
-        list,
-    ):
-        return []
-
-    return records
+    return get_scoped_today_submission_ids(log)
 
 
 def get_today_submitted_count(log):
+    return get_scoped_today_submitted_count(log)
 
-    today_ids = get_today_submission_ids(
-        log
-    )
 
-    jobs = log.get(
-        "jobs",
-        {},
-    )
+def get_today_attempt_count(log):
+    return get_scoped_today_attempt_count(log)
 
-    count = 0
 
-    for job_key in today_ids:
+def record_application_attempt(log, job):
+    job_key = get_job_key(job)
+    if not job_key:
+        print("WARNING: Could not record submission attempt: missing job key.")
+        return False
 
-        record = jobs.get(
-            job_key
-        )
-
-        if (
-            isinstance(record, dict)
-            and record.get("status")
-            == "submitted"
-        ):
-            count += 1
-
-    return count
+    record_scoped_application_attempt(log, job_key)
+    save_application_log(log)
+    return True
 
 
 def record_application_status(
@@ -1378,7 +1299,7 @@ def find_apply_button(driver):
 # SUBMIT APPLICATION
 # ============================================================
 
-def submit_application(driver):
+def submit_application(driver, job):
 
     print(
         "\nLooking for Send Application button...",
@@ -1505,6 +1426,21 @@ def submit_application(driver):
             type(error).__name__,
             flush=True,
         )
+
+    # --------------------------------------------------
+    # RECORD ATTEMPT, THEN CLICK
+    # --------------------------------------------------
+
+    application_log = load_application_log()
+    attempts_today = get_today_attempt_count(application_log)
+
+    if has_reached_daily_limit(attempts_today):
+        print("Daily submission-attempt limit already reached.", flush=True)
+        return False
+
+    if not record_application_attempt(application_log, job):
+        print("Could not persist submission attempt; refusing to click.", flush=True)
+        return False
 
     # --------------------------------------------------
     # CLICK
@@ -1913,77 +1849,243 @@ def go_to_next_page(driver, current_page):
 # LOGIN
 # ============================================================
 
-def login_wellfound(driver):
+def load_selected_student_account():
+    global STUDENT_ID
+    global WELLFOUND_EMAIL
+    global WELLFOUND_PASSWORD
 
-    email = os.getenv("WELLFOUND_EMAIL")
-    password = os.getenv("WELLFOUND_PASSWORD")
+    user = get_user()
+    STUDENT_ID = get_student_id(user)
+    normalized_user = {
+        str(key).strip().casefold(): value
+        for key, value in user.items()
+    }
+    WELLFOUND_EMAIL = str(
+        normalized_user.get("wellfound_email") or ""
+    ).strip()
+    WELLFOUND_PASSWORD = str(
+        normalized_user.get("wellfound_password") or ""
+    ).strip()
 
-    if not email or not password:
+    if not WELLFOUND_EMAIL or not WELLFOUND_PASSWORD:
         raise ValueError(
-            "WELLFOUND_EMAIL or WELLFOUND_PASSWORD "
-            "is missing from .env"
+            "The selected Excel student row must contain non-empty "
+            "'wellfound_email' and 'wellfound_password' values."
         )
 
+
+
+def login_wellfound(driver):
+    """
+    Load the selected student's credentials, reuse an authenticated
+    session when available, and otherwise attempt the normal login flow.
+    """
+    load_selected_student_account()
+
+    email = WELLFOUND_EMAIL
+    password = WELLFOUND_PASSWORD
     wait = WebDriverWait(driver, 20)
 
-    # ========================================================
+    # --------------------------------------------------------
     # OPEN WELLFOUND
-    # ========================================================
+    # --------------------------------------------------------
 
-    driver.get("https://wellfound.com/")
+    driver.get("https://wellfound.com/join")
 
-    print("Wellfound opened.", flush=True)
-    print("URL:", driver.current_url, flush=True)
-    print("Title:", driver.title, flush=True)
+    print("[LOGIN] Wellfound opened.", flush=True)
+    print("[LOGIN] URL:", driver.current_url, flush=True)
+    print("[LOGIN] Title:", driver.title, flush=True)
 
-    # ========================================================
-    # LOGIN BUTTON
-    # ========================================================
-
-    login_xpath = (
-        "//a[contains("
-        "translate(normalize-space(.),"
-        "'ABCDEFGHIJKLMNOPQRSTUVWXYZ',"
-        "'abcdefghijklmnopqrstuvwxyz'),"
-        "'log in'"
-        ")]"
-        "|//button[contains("
-        "translate(normalize-space(.),"
-        "'ABCDEFGHIJKLMNOPQRSTUVWXYZ',"
-        "'abcdefghijklmnopqrstuvwxyz'),"
-        "'log in'"
-        ")]"
+    wait.until(
+        EC.presence_of_element_located((By.TAG_NAME, "body"))
     )
 
-    login_button = wait.until(
-        EC.element_to_be_clickable(
-            (By.XPATH, login_xpath)
+    # --------------------------------------------------------
+    # CHECK FOR AN EXISTING AUTHENTICATED SESSION
+    # --------------------------------------------------------
+
+    def has_authenticated_session(d):
+        try:
+            current_url = d.current_url.casefold()
+
+            body_text = clean_text(
+                d.find_element(By.TAG_NAME, "body").text
+            ).casefold()
+
+            # These indicators were observed on the Wellfound
+            # jobs page when the account session was active.
+            authenticated_markers = (
+                "profile",
+                "applied",
+                "messages",
+                "search for jobs",
+            )
+
+            is_jobs_area = (
+                "/jobs" in current_url
+                or "/dashboard" in current_url
+            )
+
+            return (
+                is_jobs_area
+                and all(
+                    marker in body_text
+                    for marker in authenticated_markers
+                )
+            )
+
+        except (WebDriverException, StaleElementReferenceException):
+            return False
+
+    if has_authenticated_session(driver):
+        print(
+            "[LOGIN] Existing authenticated session detected. "
+            "Skipping login form.",
+            flush=True,
         )
-    )
+        print("[LOGIN] Current URL:", driver.current_url, flush=True)
+        return True
+
+    # --------------------------------------------------------
+    # FIND A LOGIN CONTROL
+    # --------------------------------------------------------
+
+    def find_login_button(d):
+        candidates = d.find_elements(
+            By.XPATH,
+            "//a | //button | //*[@role='button']",
+        )
+
+        for element in candidates:
+            try:
+                if not element.is_displayed() or not element.is_enabled():
+                    continue
+
+                labels = [
+                    element.text or "",
+                    element.get_attribute("aria-label") or "",
+                    element.get_attribute("title") or "",
+                    element.get_attribute("href") or "",
+                ]
+
+                label = " ".join(labels).casefold()
+
+                if any(
+                    phrase in label
+                    for phrase in (
+                        "log in",
+                        "login",
+                        "sign in",
+                        "sign-in",
+                    )
+                ):
+                    return element
+
+            except (
+                StaleElementReferenceException,
+                WebDriverException,
+            ):
+                continue
+
+        return False
+
+    login_button = None
+
+    try:
+        login_button = WebDriverWait(
+            driver,
+            8,
+            ignored_exceptions=[StaleElementReferenceException],
+        ).until(find_login_button)
+
+    except TimeoutException:
+        print(
+            "[LOGIN] Login control not found on the initial page. "
+            "Trying the direct login URL.",
+            flush=True,
+        )
+
+        driver.get("https://wellfound.com/login")
+
+        wait.until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
+
+        if has_authenticated_session(driver):
+            print(
+                "[LOGIN] Authenticated session detected after redirect.",
+                flush=True,
+            )
+            return True
+
+        try:
+            login_button = WebDriverWait(
+                driver,
+                10,
+                ignored_exceptions=[StaleElementReferenceException],
+            ).until(find_login_button)
+
+        except TimeoutException:
+            print("[LOGIN] Could not find a login control.", flush=True)
+            print("[LOGIN] URL:", driver.current_url, flush=True)
+            print("[LOGIN] Title:", driver.title, flush=True)
+
+            try:
+                body_text = driver.find_element(
+                    By.TAG_NAME, "body"
+                ).text
+
+                print(
+                    "[LOGIN] Visible page text:",
+                    body_text[:2000],
+                    flush=True,
+                )
+
+                driver.save_screenshot("wellfound_login_failure.png")
+                print(
+                    "[LOGIN] Screenshot saved: wellfound_login_failure.png",
+                    flush=True,
+                )
+
+            except WebDriverException as diagnostic_error:
+                print(
+                    "[LOGIN] Diagnostics failed:",
+                    type(diagnostic_error).__name__,
+                    flush=True,
+                )
+
+            raise RuntimeError(
+                "Wellfound login control was not found. "
+                "Check the printed URL and page text."
+            )
+
+    # --------------------------------------------------------
+    # OPEN THE LOGIN FORM
+    # --------------------------------------------------------
 
     try:
         login_button.click()
+
     except (
         StaleElementReferenceException,
         WebDriverException,
     ):
-        # Re-find the element because Wellfound may re-render it.
-        login_button = wait.until(
-            EC.element_to_be_clickable(
-                (By.XPATH, login_xpath)
-            )
-        )
+        login_button = WebDriverWait(
+            driver,
+            10,
+            ignored_exceptions=[StaleElementReferenceException],
+        ).until(find_login_button)
 
         driver.execute_script(
             "arguments[0].click();",
             login_button,
         )
 
-    print("Login clicked.", flush=True)
+    print("[LOGIN] Login control clicked.", flush=True)
 
-    # ========================================================
-    # EMAIL
-    # ========================================================
+    # --------------------------------------------------------
+    # ENTER EMAIL
+    # --------------------------------------------------------
 
     email_xpath = (
         "//input[@type='email']"
@@ -2004,28 +2106,26 @@ def login_wellfound(driver):
     email_input.clear()
     email_input.send_keys(email)
 
-    print("Email entered.", flush=True)
+    print("[LOGIN] Email entered.", flush=True)
 
-    # ========================================================
-    # PASSWORD
-    # ========================================================
-
-    password_xpath = "//input[@type='password']"
+    # --------------------------------------------------------
+    # ENTER PASSWORD
+    # --------------------------------------------------------
 
     password_input = wait.until(
         EC.visibility_of_element_located(
-            (By.XPATH, password_xpath)
+            (By.XPATH, "//input[@type='password']")
         )
     )
 
     password_input.clear()
     password_input.send_keys(password)
 
-    print("Password entered.", flush=True)
+    print("[LOGIN] Password entered.", flush=True)
 
-    # ========================================================
+    # --------------------------------------------------------
     # SUBMIT LOGIN
-    # ========================================================
+    # --------------------------------------------------------
 
     submit_xpath = (
         "//button[contains("
@@ -2044,24 +2144,14 @@ def login_wellfound(driver):
         "|//input[@type='submit']"
     )
 
-    print("Submitting login...", flush=True)
-
     login_submitted = False
 
-    # Wellfound can re-render the login button after the
-    # password field changes. Therefore we locate the button
-    # immediately before every click attempt.
-
     for attempt in range(1, 4):
-
         try:
-
             submit_button = WebDriverWait(
                 driver,
                 10,
-                ignored_exceptions=[
-                    StaleElementReferenceException
-                ],
+                ignored_exceptions=[StaleElementReferenceException],
             ).until(
                 EC.element_to_be_clickable(
                     (By.XPATH, submit_xpath)
@@ -2075,14 +2165,12 @@ def login_wellfound(driver):
 
             time.sleep(0.5)
 
-            # IMPORTANT:
-            # Find the button again immediately before clicking.
+            # Re-find immediately before clicking in case the
+            # page re-rendered the button.
             submit_button = WebDriverWait(
                 driver,
                 5,
-                ignored_exceptions=[
-                    StaleElementReferenceException
-                ],
+                ignored_exceptions=[StaleElementReferenceException],
             ).until(
                 EC.element_to_be_clickable(
                     (By.XPATH, submit_xpath)
@@ -2091,15 +2179,12 @@ def login_wellfound(driver):
 
             try:
                 submit_button.click()
-            except StaleElementReferenceException:
 
-                # Re-find one more time.
+            except StaleElementReferenceException:
                 submit_button = WebDriverWait(
                     driver,
                     5,
-                    ignored_exceptions=[
-                        StaleElementReferenceException
-                    ],
+                    ignored_exceptions=[StaleElementReferenceException],
                 ).until(
                     EC.element_to_be_clickable(
                         (By.XPATH, submit_xpath)
@@ -2114,11 +2199,9 @@ def login_wellfound(driver):
             login_submitted = True
 
             print(
-                f"Login button clicked successfully "
-                f"on attempt {attempt}.",
+                f"[LOGIN] Submit button clicked on attempt {attempt}.",
                 flush=True,
             )
-
             break
 
         except (
@@ -2126,7 +2209,6 @@ def login_wellfound(driver):
             TimeoutException,
             WebDriverException,
         ) as error:
-
             print(
                 f"[LOGIN] Submit attempt {attempt}/3 failed: "
                 f"{type(error).__name__}",
@@ -2138,118 +2220,77 @@ def login_wellfound(driver):
 
     if not login_submitted:
         raise RuntimeError(
-            "Could not click the Wellfound login button "
-            "after 3 attempts."
+            "Could not submit the Wellfound login form after 3 attempts."
         )
 
-    print("Login submitted.", flush=True)
+    # --------------------------------------------------------
+    # VERIFY LOGIN
+    # --------------------------------------------------------
 
-    # ========================================================
-    # WAIT FOR LOGIN TO COMPLETE
-    # ========================================================
-
-    print(
-        "Waiting for Wellfound login to complete...",
-        flush=True,
-    )
+    print("[LOGIN] Waiting for login to complete...", flush=True)
 
     try:
-
-        WebDriverWait(
-            driver,
-            20,
-        ).until(
+        WebDriverWait(driver, 25).until(
             lambda d: (
-                "/jobs" in d.current_url.lower()
-                or "/dashboard" in d.current_url.lower()
+                has_authenticated_session(d)
+                or any(
+                    marker in d.current_url.casefold()
+                    for marker in ("/jobs", "/dashboard")
+                )
             )
         )
 
     except TimeoutException:
+        pass
 
-        current_url = driver.current_url.lower()
+    current_url = driver.current_url.casefold()
 
-        # Check whether login actually succeeded even if
-        # Wellfound did not redirect exactly as expected.
+    try:
+        body_text = clean_text(
+            driver.find_element(By.TAG_NAME, "body").text
+        ).casefold()
 
-        try:
+    except WebDriverException:
+        body_text = ""
 
-            body_text = clean_text(
-                driver.find_element(
-                    By.TAG_NAME,
-                    "body",
-                ).text
-            ).lower()
+    login_failed_messages = (
+        "invalid email",
+        "invalid password",
+        "incorrect password",
+        "incorrect email",
+        "unable to log in",
+        "couldn't log in",
+        "could not log in",
+        "login failed",
+    )
 
-        except Exception:
-
-            body_text = ""
-
-        login_failed_messages = [
-            "invalid email",
-            "invalid password",
-            "incorrect password",
-            "incorrect email",
-            "unable to log in",
-            "couldn't log in",
-            "could not log in",
-            "login failed",
-        ]
-
-        if any(
-            message in body_text
-            for message in login_failed_messages
-        ):
-
-            raise RuntimeError(
-                "Wellfound login failed. "
-                "Check WELLFOUND_EMAIL and "
-                "WELLFOUND_PASSWORD."
-            )
-
-        if (
-            "/login" in current_url
-            or "/signin" in current_url
-        ):
-
-            raise RuntimeError(
-                "Wellfound login did not complete. "
-                f"Current URL: {driver.current_url}"
-            )
-
-        print(
-            "[WARNING] Login redirect was not detected, "
-            "but no login error was found.",
-            flush=True,
+    if any(
+        message in body_text
+        for message in login_failed_messages
+    ):
+        raise RuntimeError(
+            "Wellfound rejected the login. Check the account credentials "
+            "in the selected Excel student row."
         )
 
-    # ========================================================
-    # LOGIN SUCCESS
-    # ========================================================
+    if has_authenticated_session(driver):
+        print("[LOGIN] Login verified successfully.", flush=True)
+        print("[LOGIN] Post-login URL:", driver.current_url, flush=True)
+        print("[LOGIN] Post-login title:", driver.title, flush=True)
+        return True
 
-    print(
-        "[CHECKPOINT] Login flow completed.",
-        flush=True,
+    if "/login" in current_url or "/signin" in current_url:
+        raise RuntimeError(
+            "Wellfound login could not be verified. "
+            f"Current URL: {driver.current_url}"
+        )
+
+    raise RuntimeError(
+        "Wellfound login could not be confirmed. "
+        f"Current URL: {driver.current_url}. "
+        "Refusing to start job processing without verification."
     )
 
-    print(
-        "[CHECKPOINT] Post-login URL:",
-        driver.current_url,
-        flush=True,
-    )
-
-    print(
-        "[CHECKPOINT] Post-login title:",
-        driver.title,
-        flush=True,
-    )
-
-    # IMPORTANT:
-    # DO NOT call process_wellfound_jobs() here.
-    #
-    # main.py is responsible for starting the job processor.
-
-    return True
 
 
 # ============================================================
@@ -2270,6 +2311,7 @@ def process_wellfound_jobs(driver):
             application_log
         )
     )
+    attempts_today = get_today_attempt_count(application_log)
 
     print(
         "\n======================================================"
@@ -2303,7 +2345,7 @@ def process_wellfound_jobs(driver):
     # TARGET ALREADY REACHED
     # ========================================================
 
-    if submitted_today >= TARGET_SUCCESSFUL_APPLICATIONS:
+    if has_reached_daily_limit(attempts_today):
 
         print(
             "\n======================================================"
@@ -2384,15 +2426,16 @@ def process_wellfound_jobs(driver):
                 application_log
             )
         )
+        attempts_today = get_today_attempt_count(application_log)
 
-        if submitted_today >= TARGET_SUCCESSFUL_APPLICATIONS:
+        if has_reached_daily_limit(attempts_today):
 
             print(
                 "\n======================================================"
             )
 
             print(
-                "5 SUCCESSFUL APPLICATIONS REACHED"
+                "DAILY SUBMISSION-ATTEMPT LIMIT REACHED"
             )
 
             print(
@@ -2491,11 +2534,12 @@ def process_wellfound_jobs(driver):
                     application_log
                 )
             )
+            attempts_today = get_today_attempt_count(application_log)
 
-            if submitted_today >= TARGET_SUCCESSFUL_APPLICATIONS:
+            if has_reached_daily_limit(attempts_today):
 
                 print(
-                    "\nTARGET OF 5 SUCCESSFUL APPLICATIONS REACHED."
+                    "\nDAILY SUBMISSION-ATTEMPT LIMIT REACHED."
                 )
 
                 break
@@ -2551,7 +2595,7 @@ def process_wellfound_jobs(driver):
             ):
 
                 print(
-                    "\nSKIPPED — ALREADY PROCESSED"
+                    "\nSKIPPED â€” ALREADY PROCESSED"
                 )
 
                 print(
@@ -3141,7 +3185,8 @@ def process_wellfound_jobs(driver):
             # =================================================
 
             submitted = submit_application(
-                driver
+                driver,
+                qualified_job,
             )
 
             # =================================================
@@ -3175,6 +3220,7 @@ def process_wellfound_jobs(driver):
                         application_log
                     )
                 )
+                attempts_today = get_today_attempt_count(application_log)
 
                 print(
                     "\n======================================================"
@@ -3210,8 +3256,7 @@ def process_wellfound_jobs(driver):
                 # ------------------------------------------------
 
                 if (
-                    submitted_today
-                    >= TARGET_SUCCESSFUL_APPLICATIONS
+                    has_reached_daily_limit(attempts_today)
                 ):
 
                     print(
@@ -3219,7 +3264,7 @@ def process_wellfound_jobs(driver):
                     )
 
                     print(
-                        "TARGET OF 5 SUCCESSFUL APPLICATIONS REACHED"
+                        "DAILY SUBMISSION-ATTEMPT LIMIT REACHED"
                     )
 
                     print(
@@ -3254,12 +3299,29 @@ def process_wellfound_jobs(driver):
                 "\nSUBMISSION NOT CONFIRMED."
             )
 
+            # submit_application() saved the attempt separately.
+            # Reload before saving failure status to avoid overwriting it.
+            application_log = load_application_log()
+
             record_application_status(
                 application_log,
                 qualified_job,
                 "failed",
                 "Send Application was clicked but successful submission was not confirmed.",
             )
+
+            # Stop immediately if this failed/unconfirmed submission was
+            # the fifth attempt. Do not process another job on this page.
+            application_log = load_application_log()
+            attempts_today = get_today_attempt_count(application_log)
+
+            if has_reached_daily_limit(attempts_today):
+                print(
+                    "\nDAILY SUBMISSION-ATTEMPT LIMIT REACHED. "
+                    "Stopping automation.",
+                    flush=True,
+                )
+                return
 
         # ========================================================
         # TARGET CHECK AFTER CURRENT PAGE
@@ -3272,6 +3334,7 @@ def process_wellfound_jobs(driver):
                 application_log
             )
         )
+        attempts_today = get_today_attempt_count(application_log)
 
         print(
             "\n======================================================"
@@ -3296,7 +3359,7 @@ def process_wellfound_jobs(driver):
         # TARGET REACHED
         # --------------------------------------------------------
 
-        if submitted_today >= TARGET_SUCCESSFUL_APPLICATIONS:
+        if has_reached_daily_limit(attempts_today):
 
             print(
                 "\nTARGET REACHED."
@@ -3393,6 +3456,7 @@ def process_wellfound_jobs(driver):
             application_log
         )
     )
+    final_attempts_today = get_today_attempt_count(application_log)
 
     print(
         "\n\n======================================================"
@@ -3433,7 +3497,7 @@ def process_wellfound_jobs(driver):
         APPLICATION_LOG_FILE,
     )
 
-    if final_submitted_today >= TARGET_SUCCESSFUL_APPLICATIONS:
+    if has_reached_daily_limit(final_attempts_today):
 
         print(
             "\nSTATUS: TARGET REACHED."
@@ -3469,6 +3533,12 @@ def start_browser():
     options.add_argument(
         "--disable-notifications"
     )
+
+    profile_dir = os.environ.get("JOB_AUTOMATION_PROFILE_DIR")
+    if profile_dir:
+        options.add_argument(
+            f"--user-data-dir={profile_dir}"
+        )
 
     driver = webdriver.Chrome(
         options=options
@@ -3558,9 +3628,10 @@ def main():
             "======================================================"
         )
 
-        input(
-            "\nPress ENTER to close browser..."
-        )
+        if not os.environ.get("JOB_AUTOMATION_STUDENT_ID"):
+            input(
+                "\nPress ENTER to close browser..."
+            )
 
     except Exception as error:
 
@@ -3573,9 +3644,13 @@ def main():
 
         traceback.print_exc()
 
-        input(
-            "\nPress ENTER to close..."
-        )
+        if not os.environ.get("JOB_AUTOMATION_STUDENT_ID"):
+            input(
+                "\nPress ENTER to close..."
+            )
+
+        if os.environ.get("JOB_AUTOMATION_STUDENT_ID"):
+            raise
 
     finally:
 

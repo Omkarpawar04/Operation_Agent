@@ -1,10 +1,23 @@
-import json
-import re
+﻿import re
 import time
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 import pandas as pd
+from excel_users import get_student_id, get_user
+from placementindia_tracking import (
+    get_today_application_count,
+    has_submission_confirmation,
+    has_application_record,
+    load_application_history as load_scoped_application_history,
+    save_application_history as save_scoped_application_history,
+)
+from application_limits import (
+    DAILY_APPLICATION_LIMIT,
+    has_reached_daily_limit,
+)
 
 from selenium import webdriver
 from selenium.common.exceptions import (
@@ -12,6 +25,7 @@ from selenium.common.exceptions import (
     NoSuchElementException,
     StaleElementReferenceException,
     TimeoutException,
+    WebDriverException,
 )
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -25,7 +39,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 BASE_URL = "https://www.placementindia.com"
 
-MAX_APPLICATIONS_PER_DAY = 10
+MAX_APPLICATIONS_PER_DAY = DAILY_APPLICATION_LIMIT
 
 # Excel file
 DATA_FILE = (
@@ -34,12 +48,17 @@ DATA_FILE = (
     / "users.xlsx"
 )
 
-# Application history
-APPLICATION_LOG_FILE = (
+# Legacy application history; retained unchanged and never loaded for attribution.
+LEGACY_APPLICATION_LOG_FILE = (
     Path(__file__).resolve().parent
     / "placementindia_applications.json"
 )
 
+# Student- and account-scoped application history.
+APPLICATION_LOG_FILE = (
+    Path(__file__).resolve().parent
+    / "placementindia_student_applications.json"
+)
 
 # ============================================================
 # GLOBAL USER SETTINGS
@@ -47,6 +66,7 @@ APPLICATION_LOG_FILE = (
 
 EMAIL = ""
 PASSWORD = ""
+STUDENT_ID = ""
 
 SEARCH_KEYWORD = ""
 SEARCH_CITY = ""
@@ -99,6 +119,7 @@ def load_user_settings():
 
     global EMAIL
     global PASSWORD
+    global STUDENT_ID
     global SEARCH_KEYWORD
     global SEARCH_CITY
     global JOB_POSTED
@@ -171,7 +192,21 @@ def load_user_settings():
     # FIRST USER
     # ========================================================
 
-    user = df.iloc[0]
+    user = pd.Series(get_user())
+
+    student_id_column = normalized_columns.get("student_id")
+
+    if not student_id_column:
+        raise ValueError(
+            "A 'student_id' column is required in users.xlsx."
+        )
+
+    STUDENT_ID = get_student_id(user.to_dict())
+
+    if not STUDENT_ID:
+        raise ValueError(
+            "The selected student row must have a non-empty student_id."
+        )
 
     # ========================================================
     # PLACEMENTINDIA EMAIL
@@ -244,6 +279,12 @@ def load_user_settings():
     EMAIL = clean_excel_value(
         user[email_column]
     )
+
+    if not EMAIL:
+        raise ValueError(
+            "The selected student row must have a non-empty "
+            "PlacementIndia account email."
+        )
 
     PASSWORD = clean_excel_value(
         user[password_column]
@@ -429,6 +470,10 @@ def start_browser():
     options.add_argument("--disable-notifications")
     options.add_argument("--disable-popup-blocking")
 
+    profile_dir = os.environ.get("JOB_AUTOMATION_PROFILE_DIR")
+    if profile_dir:
+        options.add_argument(f"--user-data-dir={profile_dir}")
+
     driver = webdriver.Chrome(options=options)
 
     driver.set_page_load_timeout(60)
@@ -467,7 +512,7 @@ def open_placementindia(driver):
 def click_login(driver):
     print("\nClicking Login...")
 
-    selectors = [
+    selectors = (
         (
             By.XPATH,
             "//a[contains(translate(normalize-space(.), "
@@ -484,38 +529,147 @@ def click_login(driver):
             By.LINK_TEXT,
             "Login"
         ),
-    ]
+    )
 
-    for by, selector in selectors:
+    def find_visible_login_control(current_driver):
+        for by, selector in selectors:
+            for element in current_driver.find_elements(by, selector):
+                try:
+                    if element.is_displayed() and element.is_enabled():
+                        return element
+                except StaleElementReferenceException:
+                    continue
 
-        try:
+        return False
 
-            elements = driver.find_elements(
-                by,
-                selector
+    try:
+        element = WebDriverWait(driver, 10).until(
+            find_visible_login_control
+        )
+    except TimeoutException:
+        log_login_page_diagnostic(driver)
+        print(
+            "Login control not found: no visible, enabled anchor or "
+            "button matched the existing Login selectors."
+        )
+        return False
+
+    driver.execute_script(
+        "arguments[0].click();",
+        element
+    )
+
+    time.sleep(2)
+
+    print("Login clicked.")
+
+    return True
+
+
+def log_login_page_diagnostic(driver):
+    try:
+        parsed_url = urlsplit(driver.current_url)
+        hostname = parsed_url.hostname or "<unknown-host>"
+        if parsed_url.port:
+            hostname = f"{hostname}:{parsed_url.port}"
+        safe_url = urlunsplit(
+            (
+                parsed_url.scheme,
+                hostname,
+                _safe_diagnostic_value(parsed_url.path),
+                "",
+                "",
             )
+        )
+    except WebDriverException:
+        safe_url = "<unavailable>"
 
-            for element in elements:
+    try:
+        page_title = driver.title
+    except WebDriverException:
+        page_title = "<unavailable>"
 
-                if element.is_displayed():
-
-                    driver.execute_script(
-                        "arguments[0].click();",
-                        element
+    visible_fields = []
+    try:
+        for element in driver.find_elements(
+            By.CSS_SELECTOR,
+            "input, textarea, select",
+        ):
+            try:
+                if not element.is_displayed():
+                    continue
+                visible_fields.append(
+                    "type="
+                    + _safe_diagnostic_value(
+                        element.get_attribute("type")
                     )
+                    + ", name="
+                    + _safe_diagnostic_value(
+                        element.get_attribute("name")
+                    )
+                    + ", placeholder="
+                    + _safe_diagnostic_value(
+                        element.get_attribute("placeholder")
+                    )
+                )
+            except StaleElementReferenceException:
+                continue
+    except WebDriverException:
+        visible_fields = ["<unavailable>"]
 
-                    time.sleep(2)
+    visible_controls = []
+    try:
+        for element in driver.find_elements(
+            By.CSS_SELECTOR,
+            "button, a, [role='button']",
+        ):
+            try:
+                if not element.is_displayed():
+                    continue
+                label = (
+                    element.text
+                    or element.get_attribute("aria-label")
+                    or element.get_attribute("value")
+                    or ""
+                )
+                visible_controls.append(
+                    _safe_diagnostic_value(label)
+                )
+            except StaleElementReferenceException:
+                continue
+    except WebDriverException:
+        visible_controls = ["<unavailable>"]
 
-                    print("Login clicked.")
+    try:
+        iframe_count = len(
+            driver.find_elements(By.TAG_NAME, "iframe")
+        )
+    except WebDriverException:
+        iframe_count = "unavailable"
 
-                    return True
+    print(
+        "[PlacementIndia login diagnostic] "
+        f"URL={safe_url!r}; title={page_title!r}; "
+        f"visible_fields={visible_fields[:20]!r}; "
+        f"visible_buttons_links={visible_controls[:30]!r}; "
+        f"iframe_count={iframe_count}. "
+        "Field values, cookies, and page body text were not logged."
+    )
 
-        except Exception:
-            continue
 
-    print("Login button not found.")
-
-    return False
+def _safe_diagnostic_value(value):
+    value = re.sub(r"\s+", " ", str(value or "")).strip()
+    value = re.sub(
+        r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}",
+        "<redacted-email>",
+        value,
+    )
+    value = re.sub(
+        r"\b[A-Za-z0-9_-]{24,}\b",
+        "<redacted-token>",
+        value,
+    )
+    return value[:120]
 
 
 def enter_email(driver):
@@ -721,45 +875,53 @@ def click_final_login(driver):
 
 
 def verify_login(driver):
-    print("\nVerifying login...")
+    print("\nVerifying login...", flush=True)
 
     time.sleep(3)
 
-    page_text = normalize_text(
-        driver.find_element(
-            By.TAG_NAME,
-            "body"
-        ).text
-    )
+    try:
+        page_text = normalize_text(
+            driver.find_element(By.TAG_NAME, "body").text
+        )
+    except WebDriverException:
+        page_text = ""
 
-    current_url = normalize_text(
-        driver.current_url
-    )
-
+    # Strong indicators that an account session is authenticated.
     login_indicators = [
         "logout",
+        "log out",
         "my profile",
         "dashboard",
         "my account",
     ]
 
     for indicator in login_indicators:
-
         if indicator in page_text:
             print(
-                f"Login verification successful: "
-                f"'{indicator}' found."
+                f"Login verification successful: '{indicator}' found.",
+                flush=True,
             )
             return True
 
-    if "login" not in current_url:
+    # PlacementIndia's account page can show these counters without
+    # displaying the words "Dashboard", "My Account", or "Logout".
+    has_applied_jobs = "applied jobs" in page_text
+    has_profile_views = "profile view" in page_text
+    has_my_messages = "my messages" in page_text
+
+    if has_applied_jobs and (has_profile_views or has_my_messages):
         print(
-            "Login appears successful based on URL."
+            "Login verification successful: account application "
+            "and profile/message counters found.",
+            flush=True,
         )
         return True
 
-    print("Could not verify login.")
-
+    print(
+        "Could not verify an authenticated PlacementIndia session.",
+        flush=True,
+    )
+    log_login_page_diagnostic(driver)
     return False
 
 
@@ -768,6 +930,10 @@ def login_placementindia(driver):
     print("\n" + "=" * 70)
     print("PLACEMENTINDIA LOGIN")
     print("=" * 70)
+
+    if verify_login(driver):
+        print("Existing PlacementIndia session is already authenticated.")
+        return True
 
     if not click_login(driver):
         return False
@@ -1307,20 +1473,20 @@ def search_jobs(driver, keyword, city=""):
             if city_selected:
 
                 print(
-                    f"✓ City selected: {city}"
+                    f"âœ“ City selected: {city}"
                 )
 
             else:
 
                 print(
-                    f"⚠ Could not confirm city "
+                    f"âš  Could not confirm city "
                     f"selection: {city}"
                 )
 
         else:
 
             print(
-                "⚠ City/location field was not found."
+                "âš  City/location field was not found."
             )
 
     else:
@@ -1818,98 +1984,32 @@ def display_jobs(jobs):
 # ============================================================
 
 def load_application_history():
-
-    if not APPLICATION_LOG_FILE.exists():
-
-        return {}
-
-    try:
-
-        with open(
-            APPLICATION_LOG_FILE,
-            "r",
-            encoding="utf-8"
-        ) as file:
-
-            data = json.load(file)
-
-            if isinstance(data, dict):
-                return data
-
-    except Exception as e:
-
-        print(
-            "Could not read application history:",
-            e
+    if not STUDENT_ID or not EMAIL:
+        raise ValueError(
+            "Load the selected student's PlacementIndia settings "
+            "before loading application history."
         )
 
-    return {}
+    return load_scoped_application_history(
+        APPLICATION_LOG_FILE,
+        STUDENT_ID,
+        EMAIL,
+    )
 
 
 def save_application_history(history):
-
-    try:
-
-        with open(
-            APPLICATION_LOG_FILE,
-            "w",
-            encoding="utf-8"
-        ) as file:
-
-            json.dump(
-                history,
-                file,
-                indent=4,
-                ensure_ascii=False
-            )
-
-    except Exception as e:
-
-        print(
-            "Could not save application history:",
-            e
+    if not STUDENT_ID or not EMAIL:
+        raise ValueError(
+            "Load the selected student's PlacementIndia settings "
+            "before saving application history."
         )
 
-
-# ============================================================
-# DAILY APPLICATION COUNT
-# ============================================================
-
-def get_today_application_count(history):
-
-    today = datetime.now().date()
-
-    count = 0
-
-    for url, data in history.items():
-
-        try:
-
-            if data.get("status") != "processed":
-                continue
-
-            timestamp = data.get(
-                "timestamp",
-                ""
-            )
-
-            if not timestamp:
-                continue
-
-            application_date = (
-                datetime.fromisoformat(
-                    timestamp
-                ).date()
-            )
-
-            if application_date == today:
-
-                count += 1
-
-        except Exception:
-            continue
-
-    return count
+    save_scoped_application_history(
+        APPLICATION_LOG_FILE,
+        STUDENT_ID,
+        EMAIL,
+        history,
+    )
 
 
 # ============================================================
@@ -2018,9 +2118,31 @@ def click_apply_button(driver):
             "Apply button clicked."
         )
 
-        time.sleep(4)
+        deadline = time.monotonic() + 15
+        last_error = None
+        while time.monotonic() < deadline:
+            try:
+                body_text = driver.find_element(
+                    By.TAG_NAME,
+                    "body",
+                ).text
+                if has_submission_confirmation(body_text):
+                    print("Application submission confirmed.")
+                    return True
+            except Exception as error:
+                last_error = error
+            time.sleep(1)
 
-        return True
+        if last_error is not None:
+            print(
+                "Could not read submission confirmation:",
+                type(last_error).__name__,
+            )
+        print(
+            "Apply was clicked, but successful submission "
+            "was not confirmed."
+        )
+        return False
 
     except (
         ElementClickInterceptedException,
@@ -2109,7 +2231,7 @@ def process_jobs(
         # DUPLICATE CHECK
         # ----------------------------------------------------
 
-        if job_url in history:
+        if has_application_record(job_url, history):
 
             print(
                 "[SKIP] Already processed."
@@ -2171,7 +2293,7 @@ def process_jobs(
 
             history[job_url] = {
                 "title": job_title,
-                "status": "processed",
+                "status": "submitted",
                 "posted": job.get(
                     "posted",
                     ""
@@ -2195,6 +2317,13 @@ def process_jobs(
                 f"Applications this run: "
                 f"{applications_sent}"
             )
+
+            if has_reached_daily_limit(today_count + applications_sent):
+                print(
+                    "Daily confirmed application limit reached; "
+                    "stopping job processing."
+                )
+                break
 
             time.sleep(3)
 
@@ -2321,6 +2450,17 @@ def main():
         print("\n[PlacementIndia] Loading Excel settings...", flush=True)
         load_user_settings()
 
+        today_count = get_today_application_count(
+            load_application_history()
+        )
+        if has_reached_daily_limit(today_count):
+            print(
+                "[PlacementIndia] Daily confirmed application limit "
+                "already reached; skipping browser startup and job search.",
+                flush=True,
+            )
+            return
+
         # 2. START BROWSER
         print("[PlacementIndia] Starting browser...", flush=True)
         driver = start_browser()
@@ -2335,6 +2475,8 @@ def main():
 
         if not login_success:
             print("[PlacementIndia] Login failed.", flush=True)
+            if os.environ.get("JOB_AUTOMATION_STUDENT_ID"):
+                raise RuntimeError("PlacementIndia login failed.")
             return
 
         print("[PlacementIndia] Login successful.", flush=True)
@@ -2409,6 +2551,8 @@ def main():
             flush=True,
         )
         traceback.print_exc()
+        if os.environ.get("JOB_AUTOMATION_STUDENT_ID"):
+            raise
 
     finally:
         if driver:

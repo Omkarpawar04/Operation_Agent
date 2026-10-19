@@ -1,5 +1,6 @@
-import os
+﻿import os
 import time
+from pathlib import Path
 
 from urllib.parse import urlparse
 
@@ -11,6 +12,18 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from iimjobs_login import login_iimjobs
+from excel_users import get_student_id, get_user
+from iimjobs_tracking import (
+    get_today_submitted_count,
+    has_been_submitted,
+    load_application_log,
+    record_application,
+    save_application_log,
+)
+from application_limits import (
+    DAILY_APPLICATION_LIMIT,
+    has_reached_daily_limit,
+)
 
 
 load_dotenv()
@@ -25,9 +38,17 @@ IIMJOBS_SEARCH_URL = "https://www.iimjobs.com/search"
 
 SEARCH_TERM = "Finance Analyst"
 
-MAX_APPLICATIONS = 5
+MAX_APPLICATIONS = DAILY_APPLICATION_LIMIT
 
 WAIT_TIME = 15
+
+APPLICATION_LOG_FILE = (
+    Path(__file__).resolve().parent.parent
+    / "data"
+    / "iimjobs_student_applications.json"
+)
+STUDENT_ID = ""
+IIMJOBS_ACCOUNT_EMAIL = ""
 
 
 # ============================================================
@@ -1209,20 +1230,35 @@ def apply_to_jobs(driver):
         f"{MAX_APPLICATIONS}"
     )
 
+    application_log = load_application_log(
+        APPLICATION_LOG_FILE,
+        STUDENT_ID,
+        IIMJOBS_ACCOUNT_EMAIL,
+    )
+    submitted_today = get_today_submitted_count(application_log)
     submitted_count = 0
     skipped_count = 0
+    attempted_count = 0
+    print(f"Hard application-attempt limit: {MAX_APPLICATIONS}")
 
     # --------------------------------------------------------
     # PROCESS JOBS
     # --------------------------------------------------------
 
-    for index, job in enumerate(
-        jobs,
-        start=1
-    ):
+    for index, job in enumerate(jobs, start=1):
 
-        if submitted_count >= MAX_APPLICATIONS:
+    # HARD STOP: never attempt more than 5 jobs in this run.
+        if attempted_count >= MAX_APPLICATIONS:
+            print(
+                f"\nHARD LIMIT REACHED: "
+            f"{attempted_count}/{MAX_APPLICATIONS} attempts. "
+            "No more jobs will be processed."
+            )
+            break
 
+    # Preserve the existing daily confirmed-submission limit.
+        if has_reached_daily_limit(submitted_today):
+            print("Daily confirmed application limit reached.")
             break
 
         print("\n" + "=" * 60)
@@ -1242,6 +1278,11 @@ def apply_to_jobs(driver):
             "URL:",
             job["url"]
         )
+
+        if has_been_submitted(application_log, job):
+            print("Already submitted; skipping duplicate.")
+            skipped_count += 1
+            continue
 
         # ----------------------------------------------------
         # OPEN JOB
@@ -1294,9 +1335,26 @@ def apply_to_jobs(driver):
         # APPLY
         # ----------------------------------------------------
 
-        is_internal = (
-            click_apply_and_check(driver)
+        # ----------------------------------------------------
+        # APPLY â€” COUNT BEFORE STARTING THE ATTEMPT
+        # ----------------------------------------------------
+
+        # Increment BEFORE clicking Apply so failed attempts count too.
+        # The loop checks this counter before processing another job.
+        attempted_count += 1
+
+        print(
+        f"\nAPPLICATION ATTEMPT "
+        f"{attempted_count}/{MAX_APPLICATIONS}"
         )
+
+        is_internal = click_apply_and_check(driver)
+
+        if attempted_count >= MAX_APPLICATIONS:
+            print(
+            "\nAttempt limit reached. "
+            "No sixth application attempt will be started."
+                )
 
         if not is_internal:
 
@@ -1317,12 +1375,24 @@ def apply_to_jobs(driver):
         if success:
 
             submitted_count += 1
+            record_application(
+                application_log,
+                job,
+                submitted=True,
+            )
+            save_application_log(
+                APPLICATION_LOG_FILE,
+                STUDENT_ID,
+                IIMJOBS_ACCOUNT_EMAIL,
+                application_log,
+            )
+            submitted_today += 1
 
             print("\n" + "=" * 60)
 
             print(
                 f"APPLICATION SUCCESS "
-                f"{submitted_count}/"
+                f"{submitted_today}/"
                 f"{MAX_APPLICATIONS}"
             )
 
@@ -1333,9 +1403,23 @@ def apply_to_jobs(driver):
 
             print("=" * 60)
 
+            if has_reached_daily_limit(submitted_today):
+                break
+
         else:
 
             skipped_count += 1
+            record_application(
+                application_log,
+                job,
+                submitted=False,
+            )
+            save_application_log(
+                APPLICATION_LOG_FILE,
+                STUDENT_ID,
+                IIMJOBS_ACCOUNT_EMAIL,
+                application_log,
+            )
 
             print(
                 "\nApplication was not submitted."
@@ -1370,17 +1454,12 @@ def apply_to_jobs(driver):
         MAX_APPLICATIONS
     )
 
-    if submitted_count >= MAX_APPLICATIONS:
-
-        print(
-            "\n5 applications completed."
-        )
-
+    if attempted_count >= MAX_APPLICATIONS:
+        print("\nHard limit of 5 application attempts reached.")
     else:
-
         print(
-            "\nCould not reach the target of 5 "
-            "with the available safe applications."
+        f"\nStopped after {attempted_count} attempts. "
+        "Fewer than 5 eligible jobs were attempted."
         )
 
 
@@ -1389,6 +1468,25 @@ def apply_to_jobs(driver):
 # ============================================================
 
 def run_iimjobs(driver):
+    global STUDENT_ID
+    global IIMJOBS_ACCOUNT_EMAIL
+
+    selected_student = get_user()
+    STUDENT_ID = get_student_id(selected_student)
+    IIMJOBS_ACCOUNT_EMAIL = str(
+        selected_student.get("iimjobs_email", "")
+    ).strip()
+    if not IIMJOBS_ACCOUNT_EMAIL:
+        raise ValueError(
+            "The selected Excel student row must have an IIMJobs account email."
+        )
+    for field in ("name", "phone", "location", "experience"):
+        value = selected_student.get(field, "")
+        PROFILE[field] = (
+            str(value).strip()
+            if value is not None
+            else ""
+        )
 
     print("\n")
     print("=" * 60)
@@ -1415,11 +1513,26 @@ def run_iimjobs(driver):
             "\nLogin failed."
         )
 
+        if os.environ.get("JOB_AUTOMATION_STUDENT_ID"):
+            raise RuntimeError("IIMJobs login failed.")
         return
 
     print(
         "\nLogin successful."
     )
+
+    application_log = load_application_log(
+        APPLICATION_LOG_FILE,
+        STUDENT_ID,
+        IIMJOBS_ACCOUNT_EMAIL,
+    )
+    submitted_today = get_today_submitted_count(application_log)
+    if has_reached_daily_limit(submitted_today):
+        print(
+            "\nDaily confirmed application limit already reached. "
+            "Skipping job search."
+        )
+        return
 
     # --------------------------------------------------------
     # AUTOMATIC SEARCH
@@ -1436,6 +1549,8 @@ def run_iimjobs(driver):
             "\nSearch failed."
         )
 
+        if os.environ.get("JOB_AUTOMATION_STUDENT_ID"):
+            raise RuntimeError("IIMJobs job search failed.")
         return
 
     # --------------------------------------------------------
@@ -1472,6 +1587,9 @@ if __name__ == "__main__":
         )
 
         print(error)
+
+        if os.environ.get("JOB_AUTOMATION_STUDENT_ID"):
+            raise
 
     finally:
 

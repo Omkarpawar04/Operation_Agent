@@ -4,3 +4,16 @@
 **/.env
 data/users.xlsx
 **/data/users.xlsx
+
+# Local backups
+backups/
+*.bak
+.env.*
+!.env.example
+chrome_profile/
+logs/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/

@@ -1,0 +1,327 @@
+{
+  "schema_version": 1,
+  "students": {
+    "student-15b853d9-c489-4c68-a2b4-318312e5d1f0": {
+      "accounts": {
+        "sha256:61592310e210422b5bb97a31e0321101538ab911d0e8033391362e56f9f93c32": {
+          "jobs": {
+            "https://www.iimjobs.com/j/solar-square-senior-analyst-assistant-manager-manager-lead-business-finance-and-strategy-1728875?ref=sp_br&jobPos=1": {
+              "title": "Solar Square - Senior Analyst/Assistant Manager/Manager/Lead - Business Finance & Strategy\n2 - 7 yrs\nMumbai\nPosted 1 month ago\nFinance and Accounts\nCosting\nFinancial Planning\nMIS\nFinancial Analysis",
+              "url": "https://www.iimjobs.com/j/solar-square-senior-analyst-assistant-manager-manager-lead-business-finance-and-strategy-1728875?ref=sp_br&jobPos=1",
+              "status": "failed",
+              "updated_at": "2026-10-19T15:31:49.688969"
+            },
+            "https://www.iimjobs.com/j/morningstar-senior-analyst-rmbs-structured-finance-1718720?ref=sp_br&jobPos=2": {
+              "title": "Morningstar - Senior Analyst - RMBS - Structured Finance\n3 - 8 yrs\nMumbai/Navi Mumbai\nPosted 2 months ago\nStructured Finance\nCapital Markets\nCredit Rating\nCredit Analysis\nSecuritization\n+3",
+              "url": "https://www.iimjobs.com/j/morningstar-senior-analyst-rmbs-structured-finance-1718720?ref=sp_br&jobPos=2",
+              "status": "submitted",
+              "updated_at": "2026-10-16T13:27:16.589118"
+            },
+            "https://www.iimjobs.com/j/credit-analyst-construction-finance-1725240?ref=sp&jobPos=3": {
+              "title": "Credit Analyst - Construction Finance\n5 - 10 yrs\n15-25 LPA\nMumbai\nPosted 1 month ago\nCredit Analysis\nProject Finance\nCredit Appraisal\nFinancial Modeling\nConstruction Finance\n+4",
+              "url": "https://www.iimjobs.com/j/credit-analyst-construction-finance-1725240?ref=sp&jobPos=3",
+              "status": "submitted",
+              "updated_at": "2026-10-16T13:27:33.240360"
+            },
+            "https://www.iimjobs.com/j/group-finance-controller-finance-fmcg-manufacturing-1740349?ref=sp&jobPos=4": {
+              "title": "Group Finance Controller - Finance - FMCG/Manufacturing\n6 - 7 yrs\nMumbai\nPosted today\nCA\nFinancial Control\nAccounting\nFinancial Planning\nTreasury",
+              "url": "https://www.iimjobs.com/j/group-finance-controller-finance-fmcg-manufacturing-1740349?ref=sp&jobPos=4",
+              "status": "failed",
+              "updated_at": "2026-10-16T13:27:44.926525"
+            },
+            "https://www.iimjobs.com/j/finance-controller-ca-1739500?ref=sp&jobPos=5": {
+              "title": "Finance Controller - CA\n2 - 5 yrs\nBangalore\n4.5\n18+ Reviews\nPosted 3 days ago\nAccounting\nFinancial Control\nCA\nRecord To Report\nBudgeting\n+2",
+              "url": "https://www.iimjobs.com/j/finance-controller-ca-1739500?ref=sp&jobPos=5",
+              "status": "failed",
+              "updated_at": "2026-10-16T13:27:53.889433"
+            },
+            "https://www.iimjobs.com/j/head-finance-1738544?ref=sp&jobPos=6": {
+              "title": "Head - Finance\n10 - 15 yrs\nMumbai\nPosted 1 week ago\nFinancial Planning\nFinancial Analysis\nFinancial Modeling\nBudgeting\nForecasting\n+6",
+              "url": "https://www.iimjobs.com/j/head-finance-1738544?ref=sp&jobPos=6",
+              "status": "failed",
+              "updated_at": "2026-10-16T13:28:01.487978"
+            },
+            "https://www.iimjobs.com/j/manager-finance-manufacturing-1738536?ref=sp&jobPos=8": {
+              "title": "Manager - Finance - Manufacturing\n10 - 12 yrs\nMumbai\nPosted 1 week ago\nFinance and Accounts\nFinancial Planning\nBudgeting\nTaxation\nCA\n+5",
+              "url": "https://www.iimjobs.com/j/manager-finance-manufacturing-1738536?ref=sp&jobPos=8",
+              "status": "failed",
+              "updated_at": "2026-10-16T13:28:11.990915"
+            },
+            "https://www.iimjobs.com/j/transition-vc-finance-controller-1738221?ref=sp&jobPos=9": {
+              "title": "Transition VC - Finance Controller\n7 - 10 yrs\nCoimbatore/Tamil Nadu\nPosted 1 week ago\nFinance and Accounts\nFinancial Control\nBudgeting\nForecasting\nVariance Analysis\n+4",
+              "url": "https://www.iimjobs.com/j/transition-vc-finance-controller-1738221?ref=sp&jobPos=9",
+              "status": "failed",
+              "updated_at": "2026-10-16T13:28:19.839244"
+            },
+            "https://www.iimjobs.com/j/finance-controller-ca-1736595?ref=sp&jobPos=10": {
+              "title": "Finance Controller - CA\n3 - 5 yrs\nBangalore\nPosted 2 weeks ago\nAccounting\nFinancial Control\nCA\nFinancial Reporting\nFinance and Accounts\n+2",
+              "url": "https://www.iimjobs.com/j/finance-controller-ca-1736595?ref=sp&jobPos=10",
+              "status": "failed",
+              "updated_at": "2026-10-16T13:28:28.373780"
+            },
+            "https://www.iimjobs.com/j/actuarial-analyst-insurance-1737489?ref=sp&jobPos=11": {
+              "title": "Actuarial Analyst - Insurance\n1 - 6 yrs\nBangalore/Mumbai\n5\n15+ Reviews\nPosted 2 weeks ago\nActuarial",
+              "url": "https://www.iimjobs.com/j/actuarial-analyst-insurance-1737489?ref=sp&jobPos=11",
+              "status": "submitted",
+              "updated_at": "2026-10-16T13:28:45.987365"
+            },
+            "https://www.iimjobs.com/j/assistant-finance-controller-plant-ca-icwa-1738515?ref=sp&jobPos=12": {
+              "title": "Assistant Finance Controller - Plant - CA/ICWA\n10 - 20 yrs\n25-33 LPA\nTamil Nadu\nPosted 1 week ago\nFinancial Control\nBudgeting\nForecasting\nCosting\nCA\n+2",
+              "url": "https://www.iimjobs.com/j/assistant-finance-controller-plant-ca-icwa-1738515?ref=sp&jobPos=12",
+              "status": "submitted",
+              "updated_at": "2026-10-16T13:29:04.434138"
+            },
+            "https://www.iimjobs.com/j/manager-tax-and-finance-family-office-1740067?ref=sp&jobPos=14": {
+              "title": "Manager - Tax & Finance - Family Office\n6 - 12 yrs\nMumbai\nPosted 1 day ago\nTaxation\nFinance and Accounts\nDirect Tax\nIndirect Taxation\nCA\n+2",
+              "url": "https://www.iimjobs.com/j/manager-tax-and-finance-family-office-1740067?ref=sp&jobPos=14",
+              "status": "submitted",
+              "updated_at": "2026-10-16T13:29:23.261556"
+            },
+            "https://www.iimjobs.com/j/finance-controller-ca-1739500?ref=sp&jobPos=2": {
+              "title": "Finance Controller - CA\n2 - 5 yrs\nBangalore\n4.5\n18+ Reviews\nPosted 6 days ago\nAccounting\nFinancial Control\nCA\nRecord To Report\nBudgeting\n+2",
+              "url": "https://www.iimjobs.com/j/finance-controller-ca-1739500?ref=sp&jobPos=2",
+              "status": "failed",
+              "updated_at": "2026-10-19T12:39:07.658823"
+            },
+            "https://www.iimjobs.com/j/head-finance-1738544?ref=sp&jobPos=3": {
+              "title": "Head - Finance\n10 - 15 yrs\nMumbai\nPosted 1 week ago\nFinancial Planning\nFinancial Analysis\nFinancial Modeling\nBudgeting\nForecasting\n+6",
+              "url": "https://www.iimjobs.com/j/head-finance-1738544?ref=sp&jobPos=3",
+              "status": "failed",
+              "updated_at": "2026-10-19T12:39:13.326515"
+            },
+            "https://www.iimjobs.com/j/manager-finance-manufacturing-1738536?ref=sp&jobPos=5": {
+              "title": "Manager - Finance - Manufacturing\n10 - 12 yrs\nMumbai\nPosted 1 week ago\nFinance and Accounts\nFinancial Planning\nBudgeting\nTaxation\nCA\n+5",
+              "url": "https://www.iimjobs.com/j/manager-finance-manufacturing-1738536?ref=sp&jobPos=5",
+              "status": "failed",
+              "updated_at": "2026-10-19T15:32:07.241653"
+            },
+            "https://www.iimjobs.com/j/finance-controller-aviation-aerospace-firm-1740378?ref=sp&jobPos=6": {
+              "title": "Finance Controller - Aviation/Aerospace Firm\n12 - 17 yrs\nNoida\n3.9\n8+ Reviews\nDiversity Inclusive\nPosted 3 days ago\nFinance and Accounts\nFinancial Control\nCA\nTreasury\nFinancial Reporting\n+2",
+              "url": "https://www.iimjobs.com/j/finance-controller-aviation-aerospace-firm-1740378?ref=sp&jobPos=6",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:56:15.886959"
+            },
+            "https://www.iimjobs.com/j/transition-vc-finance-controller-1738221?ref=sp&jobPos=7": {
+              "title": "Transition VC - Finance Controller\n7 - 10 yrs\nCoimbatore/Tamil Nadu\nPosted 1 week ago\nFinance and Accounts\nFinancial Control\nBudgeting\nForecasting\nVariance Analysis\n+4",
+              "url": "https://www.iimjobs.com/j/transition-vc-finance-controller-1738221?ref=sp&jobPos=7",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:56:21.473046"
+            },
+            "https://www.iimjobs.com/j/finance-controller-ca-1736595?ref=sp&jobPos=8": {
+              "title": "Finance Controller - CA\n3 - 5 yrs\nBangalore\nPosted 2 weeks ago\nAccounting\nFinancial Control\nCA\nFinancial Reporting\nFinance and Accounts\n+2",
+              "url": "https://www.iimjobs.com/j/finance-controller-ca-1736595?ref=sp&jobPos=8",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:56:30.402021"
+            },
+            "https://www.iimjobs.com/j/finance-controller-mining-industry-1737367?ref=sp&jobPos=9": {
+              "title": "Finance Controller - Mining Industry\n13 - 20 yrs\nAfrica/Overseas/International\nPosted 2 weeks ago\nBudgeting\nCosting\nFinancial Control\nFinancial Operations\nCA\n+2",
+              "url": "https://www.iimjobs.com/j/finance-controller-mining-industry-1737367?ref=sp&jobPos=9",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:56:38.821041"
+            },
+            "https://www.iimjobs.com/j/finance-manager-accounting-and-taxation-1736716?ref=sp&jobPos=10": {
+              "title": "Finance Manager - Accounting & Taxation\n5 - 10 yrs\nAhmedabad\n4.2\n33+ Reviews\nPosted 2 weeks ago\nFinance and Accounts\nFinancial Reporting\nBudgeting\nCA\nFinancial Planning\n+2",
+              "url": "https://www.iimjobs.com/j/finance-manager-accounting-and-taxation-1736716?ref=sp&jobPos=10",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:56:45.338983"
+            },
+            "https://www.iimjobs.com/j/investment-analyst-venture-capital-1737055?ref=sp&jobPos=11": {
+              "title": "Investment Analyst - Venture Capital\n2 - 6 yrs\nBangalore\nPosted 2 weeks ago\nInvestment Banking\nVenture Capital\nInvestment Research\nPrivate Equity",
+              "url": "https://www.iimjobs.com/j/investment-analyst-venture-capital-1737055?ref=sp&jobPos=11",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:56:51.937786"
+            },
+            "https://www.iimjobs.com/j/commercial-finance-manager-ca-1738768?ref=sp&jobPos=12": {
+              "title": "Commercial Finance Manager - CA\n2 - 3 yrs\nMumbai\nPosted 1 week ago\nAccounting\nFinancial Control\nCA\nFinancial Planning\nCorporate Finance\n+3",
+              "url": "https://www.iimjobs.com/j/commercial-finance-manager-ca-1738768?ref=sp&jobPos=12",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:56:58.639561"
+            },
+            "https://www.iimjobs.com/j/head-finance-and-accounts-banking-financial-services-1740511?ref=sp&jobPos=13": {
+              "title": "Head - Finance & Accounts - Banking/Financial Services\n8 - 10 yrs\nDelhi NCR/Haryana\nPosted 2 days ago\nFinance and Accounts\nFinance Head\nFinancial Reporting\nBudgeting\nAccounting",
+              "url": "https://www.iimjobs.com/j/head-finance-and-accounts-banking-financial-services-1740511?ref=sp&jobPos=13",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:57:06.095562"
+            },
+            "https://www.iimjobs.com/j/head-finance-1733903?ref=sp&jobPos=14": {
+              "title": "Head - Finance\n8 - 18 yrs\nBangalore\n4.5\n18+ Reviews\nPosted 1 month ago\nFinance Head\nFinancial Planning\nBudgeting\nFinancial Reporting\nTreasury\n+5",
+              "url": "https://www.iimjobs.com/j/head-finance-1733903?ref=sp&jobPos=14",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:57:12.752282"
+            },
+            "https://www.iimjobs.com/j/financial-analyst-1740314?ref=sp&jobPos=15": {
+              "title": "Financial Analyst\n2 - 6 yrs\nMumbai\nPosted 3 days ago\nFinancial Analysis\nFinancial Reporting\nFinancial Modeling\nIFRS\nGAAP",
+              "url": "https://www.iimjobs.com/j/financial-analyst-1740314?ref=sp&jobPos=15",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:57:21.136795"
+            },
+            "https://www.iimjobs.com/j/finance-controller-head-ca-1738151?ref=sp&jobPos=16": {
+              "title": "Finance Controller Head - CA\n6 - 8 yrs\nBangalore\nPosted 1 week ago\nAccounting\nFinancial Control\nCA\nFinancial Reporting\nFinance and Accounts",
+              "url": "https://www.iimjobs.com/j/finance-controller-head-ca-1738151?ref=sp&jobPos=16",
+              "status": "submitted",
+              "updated_at": "2026-10-19T09:57:32.237580"
+            },
+            "https://www.iimjobs.com/j/analyst-traditional-trade-banking-financial-services-1740233?ref=sp&jobPos=17": {
+              "title": "Analyst - Traditional Trade - Banking/Financial Services\n0 - 2 yrs\nMumbai\nPosted 3 days ago\nBanking\nTrade Finance\nCorporate Banking\nCredit Analysis\nCommercial Banking",
+              "url": "https://www.iimjobs.com/j/analyst-traditional-trade-banking-financial-services-1740233?ref=sp&jobPos=17",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:57:40.953654"
+            },
+            "https://www.iimjobs.com/j/transition-vc-finance-controller-1738221?ref=sp&jobPos=6": {
+              "title": "Transition VC - Finance Controller\n7 - 10 yrs\nCoimbatore/Tamil Nadu\nPosted 1 week ago\nFinance and Accounts\nFinancial Control\nBudgeting\nForecasting\nVariance Analysis\n+4",
+              "url": "https://www.iimjobs.com/j/transition-vc-finance-controller-1738221?ref=sp&jobPos=6",
+              "status": "failed",
+              "updated_at": "2026-10-19T15:32:12.872207"
+            },
+            "https://www.iimjobs.com/j/finance-controller-ca-1736595?ref=sp&jobPos=7": {
+              "title": "Finance Controller - CA\n3 - 5 yrs\nBangalore\nPosted 2 weeks ago\nAccounting\nFinancial Control\nCA\nFinancial Reporting\nFinance and Accounts\n+2",
+              "url": "https://www.iimjobs.com/j/finance-controller-ca-1736595?ref=sp&jobPos=7",
+              "status": "failed",
+              "updated_at": "2026-10-19T13:02:07.320562"
+            },
+            "https://www.iimjobs.com/j/finance-manager-accounting-and-taxation-1736716?ref=sp&jobPos=8": {
+              "title": "Finance Manager - Accounting & Taxation\n5 - 10 yrs\nAhmedabad\n4.2\n33+ Reviews\nPosted 2 weeks ago\nFinance and Accounts\nFinancial Reporting\nBudgeting\nCA\nFinancial Planning\n+2",
+              "url": "https://www.iimjobs.com/j/finance-manager-accounting-and-taxation-1736716?ref=sp&jobPos=8",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:59:31.262429"
+            },
+            "https://www.iimjobs.com/j/investment-analyst-venture-capital-1737055?ref=sp&jobPos=9": {
+              "title": "Investment Analyst - Venture Capital\n2 - 6 yrs\nBangalore\nPosted 2 weeks ago\nInvestment Banking\nVenture Capital\nInvestment Research\nPrivate Equity",
+              "url": "https://www.iimjobs.com/j/investment-analyst-venture-capital-1737055?ref=sp&jobPos=9",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:59:37.046308"
+            },
+            "https://www.iimjobs.com/j/commercial-finance-manager-ca-1738768?ref=sp&jobPos=10": {
+              "title": "Commercial Finance Manager - CA\n2 - 3 yrs\nMumbai\nPosted 1 week ago\nAccounting\nFinancial Control\nCA\nFinancial Planning\nCorporate Finance\n+3",
+              "url": "https://www.iimjobs.com/j/commercial-finance-manager-ca-1738768?ref=sp&jobPos=10",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:59:44.574627"
+            },
+            "https://www.iimjobs.com/j/head-finance-1733903?ref=sp&jobPos=11": {
+              "title": "Head - Finance\n8 - 18 yrs\nBangalore\n4.5\n18+ Reviews\nPosted 1 month ago\nFinance Head\nFinancial Planning\nBudgeting\nFinancial Reporting\nTreasury\n+5",
+              "url": "https://www.iimjobs.com/j/head-finance-1733903?ref=sp&jobPos=11",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:59:51.095067"
+            },
+            "https://www.iimjobs.com/j/senior-finance-manager-ca-1735084?ref=sp&jobPos=12": {
+              "title": "Senior Finance Manager - CA\n2 - 5 yrs\nBangalore\nPosted 3 weeks ago\nFinance and Accounts\nCA\nFinancial Planning\nFinancial Analysis\nBudgeting\n+1",
+              "url": "https://www.iimjobs.com/j/senior-finance-manager-ca-1735084?ref=sp&jobPos=12",
+              "status": "failed",
+              "updated_at": "2026-10-19T09:59:56.587435"
+            },
+            "https://www.iimjobs.com/j/head-finance-media-and-entertainment-business-ca-1736549?ref=sp&jobPos=13": {
+              "title": "Head - Finance - Media & Entertainment Business - CA\n10 - 18 yrs\nMultiple Locations\nPosted 2 weeks ago\nFinance Head\nFinancial Reporting\nFinance and Accounts\nCA\nCPA\n+4",
+              "url": "https://www.iimjobs.com/j/head-finance-media-and-entertainment-business-ca-1736549?ref=sp&jobPos=13",
+              "status": "failed",
+              "updated_at": "2026-10-19T10:00:02.250011"
+            },
+            "https://www.iimjobs.com/j/chartered-accountant-accounts-and-finance-manufacturing-1740267?ref=sp&jobPos=14": {
+              "title": "Chartered Accountant - Accounts & Finance - Manufacturing\n5 - 6 yrs\nMumbai\nPosted 3 days ago\nAccounting\nFinance and Accounts\nCA\nFinancial Reporting\nFinancial Control",
+              "url": "https://www.iimjobs.com/j/chartered-accountant-accounts-and-finance-manufacturing-1740267?ref=sp&jobPos=14",
+              "status": "failed",
+              "updated_at": "2026-10-19T10:00:07.459427"
+            },
+            "https://www.iimjobs.com/j/assistant-director-business-finance-edtech-1740449?ref=sp&jobPos=15": {
+              "title": "Assistant Director - Business Finance - Edtech\n8 - 15 yrs\nNoida\n4.3\n9+ Reviews\nPosted 3 days ago\nFinancial Planning\nBusiness Finance\nFinancial Analysis\nFinancial Modeling",
+              "url": "https://www.iimjobs.com/j/assistant-director-business-finance-edtech-1740449?ref=sp&jobPos=15",
+              "status": "failed",
+              "updated_at": "2026-10-19T10:00:16.134052"
+            },
+            "https://www.iimjobs.com/j/plant-finance-head-manufacturing-1737404?ref=sp&jobPos=16": {
+              "title": "Plant Finance Head - Manufacturing\n10 - 15 yrs\nDelhi NCR\nPosted 2 weeks ago\nAccounting\nCosting\nBudgeting\nFinancial Reporting\nICWA\n+2",
+              "url": "https://www.iimjobs.com/j/plant-finance-head-manufacturing-1737404?ref=sp&jobPos=16",
+              "status": "failed",
+              "updated_at": "2026-10-19T10:00:24.046199"
+            },
+            "https://www.iimjobs.com/j/finance-manager-financial-reporting-bfsi-1735105?ref=sp&jobPos=17": {
+              "title": "Finance Manager - Financial Reporting - BFSI\n1 - 5 yrs\nMumbai\nPosted 3 weeks ago\nFinance and Accounts\nFinancial Reporting\nFinancial Control\nMIS\nBudgeting\n+2",
+              "url": "https://www.iimjobs.com/j/finance-manager-financial-reporting-bfsi-1735105?ref=sp&jobPos=17",
+              "status": "failed",
+              "updated_at": "2026-10-19T10:00:30.165868"
+            },
+            "https://www.iimjobs.com/j/valuations-analyst-real-estate-analytics-1735736?ref=sp&jobPos=18": {
+              "title": "Valuations Analyst - Real Estate Analytics\n1 - 5 yrs\nMumbai/Bangalore\n4.2\n40+ Reviews\nPosted 3 weeks ago\nData Analytics\nValuation\nPricing Strategy\nMarket Research\nAnalytics\n+1",
+              "url": "https://www.iimjobs.com/j/valuations-analyst-real-estate-analytics-1735736?ref=sp&jobPos=18",
+              "status": "failed",
+              "updated_at": "2026-10-19T10:00:37.770957"
+            },
+            "https://www.iimjobs.com/j/finance-controller-ca-1730760?ref=sp&jobPos=19": {
+              "title": "Finance Controller - CA\n6 - 8 yrs\nMumbai\n4.6\n36+ Reviews\nPosted 1 month ago\nFinancial Reporting\nFinancial Control\nBudgeting\nForecasting\nCA\n+2",
+              "url": "https://www.iimjobs.com/j/finance-controller-ca-1730760?ref=sp&jobPos=19",
+              "status": "failed",
+              "updated_at": "2026-10-19T10:00:44.137449"
+            },
+            "https://www.iimjobs.com/j/head-finance-controller-aviation-infrastructure-1737548?ref=sp&jobPos=20": {
+              "title": "Head - Finance Controller - Aviation Infrastructure\n15 - 20 yrs\nUP/Greater Noida\nPosted 2 weeks ago\nAccounting\nFinancial Control\nFinance Head\nCA\nFinance and Accounts\n+1",
+              "url": "https://www.iimjobs.com/j/head-finance-controller-aviation-infrastructure-1737548?ref=sp&jobPos=20",
+              "status": "failed",
+              "updated_at": "2026-10-19T10:00:50.214484"
+            },
+            "https://www.iimjobs.com/j/head-finance-and-accounts-corporate-bfsi-1739474?ref=sp&jobPos=21": {
+              "title": "Head - Finance & Accounts - Corporate - BFSI\n10 - 15 yrs\nKolkata\nPosted 6 days ago\nFinance and Accounts\nFinancial Reporting\nTaxation\nCA\nAccounting\n+2",
+              "url": "https://www.iimjobs.com/j/head-finance-and-accounts-corporate-bfsi-1739474?ref=sp&jobPos=21",
+              "status": "failed",
+              "updated_at": "2026-10-19T10:00:56.536350"
+            },
+            "https://www.iimjobs.com/j/commercial-finance-manager-ca-cfa-iim-fms-mdi-xlri-1740338?ref=sp&jobPos=22": {
+              "title": "Commercial Finance Manager - CA/CFA/IIM/FMS/MDI/XLRI\n8 - 10 yrs\nGurgaon/Gurugram\nPosted 3 days ago\nBusiness Finance\nBudgeting\nForecasting\nSales Planning\nCA\n+4",
+              "url": "https://www.iimjobs.com/j/commercial-finance-manager-ca-cfa-iim-fms-mdi-xlri-1740338?ref=sp&jobPos=22",
+              "status": "failed",
+              "updated_at": "2026-10-19T10:01:04.928331"
+            },
+            "https://www.iimjobs.com/j/financial-planning-and-analysis-analyst-1738888?ref=sp&jobPos=23": {
+              "title": "Financial Planning & Analysis Analyst\n2 - 5 yrs\nBangalore\nPosted 1 week ago\nFinancial Planning\nFinancial Analysis\nBudgeting\nForecasting\nFinancial Modeling\n+3",
+              "url": "https://www.iimjobs.com/j/financial-planning-and-analysis-analyst-1738888?ref=sp&jobPos=23",
+              "status": "submitted",
+              "updated_at": "2026-10-19T10:01:18.004166"
+            },
+            "https://www.iimjobs.com/j/head-finance-and-accounts-fmcg-1738420?ref=sp&jobPos=24": {
+              "title": "Head - Finance & Accounts - FMCG\n15 - 20 yrs\nChennai\n4.3\n14+ Reviews\nPosted 1 week ago\nChief Financial Officer\nFinance and Accounts\nFinancial Planning\nBudgeting\nAccounting\n+1",
+              "url": "https://www.iimjobs.com/j/head-finance-and-accounts-fmcg-1738420?ref=sp&jobPos=24",
+              "status": "failed",
+              "updated_at": "2026-10-19T10:01:24.258741"
+            },
+            "https://www.iimjobs.com/j/finance-controller-ca-1739500?ref=sp&jobPos=3": {
+              "title": "Finance Controller - CA\n2 - 5 yrs\nBangalore\n4.5\n18+ Reviews\nPosted 6 days ago\nAccounting\nFinancial Control\nCA\nRecord To Report\nBudgeting\n+2",
+              "url": "https://www.iimjobs.com/j/finance-controller-ca-1739500?ref=sp&jobPos=3",
+              "status": "failed",
+              "updated_at": "2026-10-19T15:31:57.778253"
+            },
+            "https://www.iimjobs.com/j/head-finance-1738544?ref=sp&jobPos=4": {
+              "title": "Head - Finance\n10 - 15 yrs\nMumbai\nPosted 1 week ago\nFinancial Planning\nFinancial Analysis\nFinancial Modeling\nBudgeting\nForecasting\n+6",
+              "url": "https://www.iimjobs.com/j/head-finance-1738544?ref=sp&jobPos=4",
+              "status": "failed",
+              "updated_at": "2026-10-19T15:32:02.429122"
+            },
+            "https://www.iimjobs.com/j/finance-controller-finance-and-accounting-manufacturing-ca-1740623?ref=sp&jobPos=2": {
+              "title": "Finance Controller - Finance & Accounting - Manufacturing - CA\n15 - 20 yrs\nMumbai\nPosted today\nFinance and Accounts\nFinancial Control\nCA\nAccounting\nFinancial Reporting\n+3",
+              "url": "https://www.iimjobs.com/j/finance-controller-finance-and-accounting-manufacturing-ca-1740623?ref=sp&jobPos=2",
+              "status": "submitted",
+              "updated_at": "2026-10-19T14:50:11.908126"
+            },
+            "https://www.iimjobs.com/j/finance-controller-ca-1739500?ref=sp&jobPos=4": {
+              "title": "Finance Controller - CA\n2 - 5 yrs\nBangalore\n4.5\n18+ Reviews\nPosted 6 days ago\nAccounting\nFinancial Control\nCA\nRecord To Report\nBudgeting\n+2",
+              "url": "https://www.iimjobs.com/j/finance-controller-ca-1739500?ref=sp&jobPos=4",
+              "status": "failed",
+              "updated_at": "2026-10-19T14:50:19.634038"
+            }
+          },
+          "daily_submissions": {
+            "2026-10-16": [
+              "https://www.iimjobs.com/j/morningstar-senior-analyst-rmbs-structured-finance-1718720?ref=sp_br&jobPos=2",
+              "https://www.iimjobs.com/j/credit-analyst-construction-finance-1725240?ref=sp&jobPos=3",
+              "https://www.iimjobs.com/j/actuarial-analyst-insurance-1737489?ref=sp&jobPos=11",
+              "https://www.iimjobs.com/j/assistant-finance-controller-plant-ca-icwa-1738515?ref=sp&jobPos=12",
+              "https://www.iimjobs.com/j/manager-tax-and-finance-family-office-1740067?ref=sp&jobPos=14"
+            ],
+            "2026-10-19": [
+              "https://www.iimjobs.com/j/finance-controller-head-ca-1738151?ref=sp&jobPos=16",
+              "https://www.iimjobs.com/j/financial-planning-and-analysis-analyst-1738888?ref=sp&jobPos=23",
+              "https://www.iimjobs.com/j/finance-controller-finance-and-accounting-manufacturing-ca-1740623?ref=sp&jobPos=2"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

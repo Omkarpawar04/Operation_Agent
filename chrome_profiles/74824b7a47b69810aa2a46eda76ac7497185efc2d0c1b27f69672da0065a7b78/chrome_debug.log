@@ -1,0 +1,5 @@
+[15160:12300:1016/162820.533:INFO:components\enterprise\browser\controller\chrome_browser_cloud_management_controller.cc:241] No machine level policy manager exists.
+[15160:12300:1016/162820.881:ERROR:chrome\browser\ui\webui\ntp\new_tab_ui.cc:54] Requested load of chrome://newtab/ for incorrect profile type.
+[7868:30824:1016/162820.925:WARNING:components\prefs\pref_notifier_impl.cc:26] Init observer found at shutdown.
+[7868:14176:1016/162820.938:WARNING:net\extras\sqlite\sqlite_persistent_store_backend_base.cc:182] Failed to post task from FlushAndNotifyInBackground@net\extras\sqlite\sqlite_persistent_store_backend_base.cc:232 to client_task_runner_.
+[7868:14176:1016/162820.938:WARNING:net\extras\sqlite\sqlite_persistent_store_backend_base.cc:182] Failed to post task from FlushAndNotifyInBackground@net\extras\sqlite\sqlite_persistent_store_backend_base.cc:232 to client_task_runner_.

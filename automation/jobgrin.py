@@ -1,11 +1,23 @@
-import json
-import re
+﻿import re
 import time
-from datetime import date, datetime
+import os
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
-from excel_users import get_user
+from excel_users import get_student_id, get_user
+from jobgrin_tracking import (
+    applications_today,
+    has_processed_job,
+    load_student_history,
+    save_student_history,
+    submission_confirmation_detected,
+)
+from jobgrin_run import JobGrinRunState, MAX_JOBS_PER_RUN
+from application_limits import (
+    DAILY_APPLICATION_LIMIT,
+    has_reached_daily_limit,
+)
 
 from selenium import webdriver
 from selenium.common.exceptions import (
@@ -40,10 +52,8 @@ DEBUG_DIR.mkdir(parents=True, exist_ok=True)
 # USER FROM EXCEL
 # ============================================================
 
-user = get_user(0)
-
-if not user:
-    raise RuntimeError("No user found in Excel.")
+user = get_user()
+STUDENT_ID = get_student_id(user)
 
 
 def get_user_value(key, default=""):
@@ -103,6 +113,12 @@ JOBGRIN_PASSWORD = str(
     get_user_value("jobgrin_password", "")
 ).strip()
 
+if not JOBGRIN_EMAIL:
+    raise ValueError(
+        "Each student row must have a JobGrin account email "
+        "to scope application history."
+    )
+
 
 # ============================================================
 # SEARCH SETTINGS
@@ -128,7 +144,7 @@ JOB_POSTED_FILTER = str(
 # AUTOMATION SETTINGS
 # ============================================================
 
-MAX_APPLICATIONS_PER_DAY = 10
+MAX_APPLICATIONS_PER_DAY = DAILY_APPLICATION_LIMIT
 
 MAX_EXPERIENCE_YEARS = 1
 
@@ -181,8 +197,9 @@ JOB_CARD_SELECTOR = (
 # STORAGE
 # ============================================================
 
+# Keep the unscoped legacy tracker untouched.
 APPLIED_FILE = (
-    DATA_DIR / "jobgrin_applied_jobs.json"
+    DATA_DIR / "jobgrin_student_applications.json"
 )
 
 
@@ -515,65 +532,20 @@ def posted_date_is_eligible(job):
 # ============================================================
 
 def load_processed_jobs():
-
-    if not APPLIED_FILE.exists():
-        return {}
-
-    try:
-        with open(
-            APPLIED_FILE,
-            "r",
-            encoding="utf-8"
-        ) as f:
-
-            data = json.load(f)
-
-        if isinstance(data, dict):
-            return data
-
-        return {}
-
-    except Exception as e:
-
-        print(
-            f"[WARNING] Could not read "
-            f"application file: {e}"
-        )
-
-        return {}
+    return load_student_history(
+        APPLIED_FILE,
+        STUDENT_ID,
+        JOBGRIN_EMAIL,
+    )
 
 
 def save_processed_jobs(data):
-
-    temp_file = (
-        APPLIED_FILE.with_suffix(".tmp")
+    save_student_history(
+        APPLIED_FILE,
+        STUDENT_ID,
+        JOBGRIN_EMAIL,
+        data,
     )
-
-    try:
-
-        with open(
-            temp_file,
-            "w",
-            encoding="utf-8"
-        ) as f:
-
-            json.dump(
-                data,
-                f,
-                indent=2,
-                ensure_ascii=False
-            )
-
-        temp_file.replace(
-            APPLIED_FILE
-        )
-
-    except Exception as e:
-
-        print(
-            f"[WARNING] Could not save "
-            f"application file: {e}"
-        )
 
 
 def job_key(job):
@@ -616,24 +588,7 @@ def is_already_processed(
     processed
 ):
     key = job_key(job)
-
-    value = processed.get(key)
-
-    if not isinstance(value, dict):
-        return False
-
-    status = normalize_upper(
-        value.get("status", "")
-    )
-
-    # IMPORTANT:
-    # Only APPLIED and EXTERNAL block future attempts.
-    #
-    # FAILED jobs can be retried.
-    return status in {
-        "APPLIED",
-        "EXTERNAL",
-    }
+    return has_processed_job(key, processed)
 
 
 def normalize_upper(value):
@@ -674,40 +629,6 @@ def record_job(
     save_processed_jobs(
         processed
     )
-
-
-def applications_today(
-    processed
-):
-
-    today = date.today().isoformat()
-
-    count = 0
-
-    for value in processed.values():
-
-        if not isinstance(value, dict):
-            continue
-
-        if (
-            normalize_upper(
-                value.get("status", "")
-            )
-            != "APPLIED"
-        ):
-            continue
-
-        timestamp = str(
-            value.get(
-                "timestamp",
-                ""
-            )
-        )
-
-        if timestamp.startswith(today):
-            count += 1
-
-    return count
 
 
 # ============================================================
@@ -767,6 +688,10 @@ def start_browser():
     options.add_argument(
         "--start-maximized"
     )
+
+    profile_dir = os.environ.get("JOB_AUTOMATION_PROFILE_DIR")
+    if profile_dir:
+        options.add_argument(f"--user-data-dir={profile_dir}")
 
     options.add_argument(
         "--disable-notifications"
@@ -1459,80 +1384,102 @@ def perform_search_with_input(
 # LOAD MORE
 # ============================================================
 
-def load_more_jobs(driver):
+def load_more_jobs(
+    driver,
+    run_state=None,
+    confirmed_applications_today=0,
+):
 
     banner(
         "LOADING MORE JOB RESULTS"
     )
 
-    previous_count = 0
+    previous_count = None
+    stagnant_scrolls = 0
+    stop_reason = ""
 
     for scroll_number in range(
         1,
         PAGE_SCROLL_LIMIT + 1
     ):
 
-        try:
-
-            cards = driver.find_elements(
-                By.CSS_SELECTOR,
-                JOB_CARD_SELECTOR
+        if run_state and run_state.stop_if_limited(
+            confirmed_applications_today
+        ):
+            stop_reason = run_state.termination_reason
+            print(
+                f"[SCROLL STOP] {stop_reason}; "
+                f"jobs_attempted={run_state.jobs_attempted}/"
+                f"{MAX_JOBS_PER_RUN}, "
+                f"confirmed_applications_today="
+                f"{confirmed_applications_today}/"
+                f"{MAX_APPLICATIONS_PER_DAY}"
             )
+            break
 
-            current_count = len(
-                cards
-            )
-
-        except Exception:
-
-            current_count = 0
+        cards = driver.find_elements(
+            By.CSS_SELECTOR,
+            JOB_CARD_SELECTOR
+        )
+        current_count = len(cards)
 
         print(
             f"Scroll {scroll_number}: "
             f"{current_count} cards"
         )
 
-        try:
+        if previous_count == current_count:
+            stagnant_scrolls += 1
+        else:
+            stagnant_scrolls = 0
 
-            driver.execute_script(
-                """
-                window.scrollTo({
-                    top: document.body.scrollHeight,
-                    behavior: 'smooth'
-                });
-                """
+        if stagnant_scrolls >= 2:
+            stop_reason = (
+                "job card count did not increase after "
+                "two consecutive scrolls"
             )
+            print(
+                f"[SCROLL STOP] {stop_reason}"
+            )
+            break
 
-        except Exception:
-            pass
+        driver.execute_script(
+            """
+            window.scrollTo({
+                top: document.body.scrollHeight,
+                behavior: 'smooth'
+            });
+            """
+        )
 
         time.sleep(1.5)
 
-        try:
+        new_cards = driver.find_elements(
+            By.CSS_SELECTOR,
+            JOB_CARD_SELECTOR
+        )
+        new_count = len(new_cards)
 
-            new_cards = driver.find_elements(
-                By.CSS_SELECTOR,
-                JOB_CARD_SELECTOR
-            )
-
-            new_count = len(
-                new_cards
-            )
-
-        except Exception:
-
-            new_count = current_count
-
+        if new_count > current_count:
+            stagnant_scrolls = 0
         previous_count = new_count
 
-    try:
+    else:
+        stop_reason = (
+            f"maximum page scroll limit reached "
+            f"({PAGE_SCROLL_LIMIT})"
+        )
+        print(f"[SCROLL STOP] {stop_reason}")
 
+    if not (
+        run_state
+        and run_state.stop_if_limited(
+            confirmed_applications_today
+        )
+    ):
         driver.execute_script(
             "window.scrollTo(0, 0);"
         )
-
-    except Exception:
-        pass
 
 
 # ============================================================
@@ -2084,6 +2031,19 @@ def extract_jobs(driver):
 # KEYWORD FILTER
 # ============================================================
 
+def log_job_skip(title, reason, current_application_count=None):
+    count = (
+        "unknown"
+        if current_application_count is None
+        else str(current_application_count)
+    )
+    print(
+        f"[SKIP] {title} | reason={reason} | "
+        f"confirmed applications today: "
+        f"{count}/{MAX_APPLICATIONS_PER_DAY}"
+    )
+
+
 def job_matches_keyword(job):
 
     keyword = normalize_lower(
@@ -2144,7 +2104,8 @@ def job_matches_keyword(job):
 
 
 def filter_jobs_by_keyword(
-    jobs
+    jobs,
+    current_application_count=None,
 ):
 
     banner(
@@ -2172,9 +2133,10 @@ def filter_jobs_by_keyword(
             matched.append(job)
 
         else:
-
-            print(
-                f"[SKIP]  {title}"
+            log_job_skip(
+                title,
+                "keyword mismatch",
+                current_application_count,
             )
 
     print()
@@ -2192,7 +2154,8 @@ def filter_jobs_by_keyword(
 # ============================================================
 
 def filter_jobs_by_experience(
-    jobs
+    jobs,
+    current_application_count=None,
 ):
 
     banner(
@@ -2236,10 +2199,11 @@ def filter_jobs_by_experience(
             eligible.append(job)
 
         else:
-
-            print(
-                f"[SKIP]  {title} | "
-                f"{experience}"
+            log_job_skip(
+                title,
+                f"experience {experience!r} exceeds "
+                f"{MAX_EXPERIENCE_YEARS} year(s)",
+                current_application_count,
             )
 
     print()
@@ -2257,7 +2221,8 @@ def filter_jobs_by_experience(
 # ============================================================
 
 def filter_jobs_by_location(
-    jobs
+    jobs,
+    current_application_count=None,
 ):
 
     banner(
@@ -2324,10 +2289,11 @@ def filter_jobs_by_location(
             result.append(job)
 
         else:
-
-            print(
-                f"[SKIP]  {title} | "
-                f"{location}"
+            log_job_skip(
+                title,
+                f"location {location!r} does not match "
+                f"{SEARCH_CITY!r}",
+                current_application_count,
             )
 
     print()
@@ -2345,7 +2311,8 @@ def filter_jobs_by_location(
 # ============================================================
 
 def filter_jobs_by_posted_date(
-    jobs
+    jobs,
+    current_application_count=None,
 ):
 
     if not JOB_POSTED_FILTER:
@@ -2382,10 +2349,11 @@ def filter_jobs_by_posted_date(
             result.append(job)
 
         else:
-
-            print(
-                f"[SKIP]  {title} | "
-                f"{posted}"
+            log_job_skip(
+                title,
+                f"posted date {posted!r} fails "
+                f"{JOB_POSTED_FILTER!r}",
+                current_application_count,
             )
 
     print()
@@ -2404,7 +2372,8 @@ def filter_jobs_by_posted_date(
 
 def remove_processed_jobs(
     jobs,
-    processed
+    processed,
+    current_application_count=None,
 ):
 
     banner(
@@ -2419,10 +2388,10 @@ def remove_processed_jobs(
             job,
             processed
         ):
-
-            print(
-                f"[SKIP] Already processed: "
-                f"{job.get('title', '')}"
+            log_job_skip(
+                job.get("title", "Unknown Job"),
+                "already applied or external application recorded",
+                current_application_count,
             )
 
         else:
@@ -3476,22 +3445,6 @@ def find_validation_errors(
 # SUCCESS DETECTION
 # ============================================================
 
-SUCCESS_PHRASES = [
-    "application submitted",
-    "application has been submitted",
-    "application was submitted",
-    "application sent successfully",
-    "application submitted successfully",
-    "successfully applied",
-    "successfully applied for",
-    "thank you for applying",
-    "thank you for your application",
-    "your application was received",
-    "application received successfully",
-    "application received",
-    "your application has been received",
-]
-
 ALREADY_APPLIED_PHRASES = [
     "already applied",
     "you have already applied",
@@ -3525,15 +3478,8 @@ def application_success_detected(
         driver
     )
 
-    for phrase in SUCCESS_PHRASES:
-
-        if phrase in body:
-            return True
-
-    for phrase in ALREADY_APPLIED_PHRASES:
-
-        if phrase in body:
-            return True
+    if submission_confirmation_detected(body):
+        return True
 
     try:
 
@@ -3558,8 +3504,6 @@ def application_success_detected(
             )
 
             if text in {
-                "applied",
-                "already applied",
                 "application submitted",
             }:
 
@@ -3930,7 +3874,9 @@ def apply_to_job(
     driver,
     job,
     main_handle,
-    search_url
+    search_url,
+    run_state,
+    confirmed_applications_today,
 ):
 
     title = job.get(
@@ -4101,7 +4047,7 @@ def apply_to_job(
                 )
 
                 return {
-                    "status": "APPLIED",
+                    "status": "ALREADY_APPLIED",
                     "reason": "ALREADY_APPLIED",
                 }
 
@@ -4124,9 +4070,19 @@ def apply_to_job(
                 driver
             ):
 
+                if not run_state.begin_attempt(
+                    job_key(job),
+                    confirmed_applications_today,
+                ):
+                    return {
+                        "status": "FAILED",
+                        "reason": "RUN_ATTEMPT_LIMIT",
+                    }
+
                 print(
-                    "[OK] Application UI "
-                    "already present."
+                    "[ATTEMPT] Application form detected; "
+                    f"jobs_attempted={run_state.jobs_attempted}/"
+                    f"{MAX_JOBS_PER_RUN}"
                 )
 
             else:
@@ -4150,6 +4106,21 @@ def apply_to_job(
             print(
                 "[APPLY BUTTON] "
                 f"{element_text(apply_button) or 'Apply'}"
+            )
+
+            if not run_state.begin_attempt(
+                job_key(job),
+                confirmed_applications_today,
+            ):
+                return {
+                    "status": "FAILED",
+                    "reason": "RUN_ATTEMPT_LIMIT",
+                }
+
+            print(
+                "[ATTEMPT] Starting application attempt; "
+                f"jobs_attempted={run_state.jobs_attempted}/"
+                f"{MAX_JOBS_PER_RUN}"
             )
 
             handles_before = set(
@@ -4351,6 +4322,16 @@ def apply_to_job(
             return {
                 "status": "APPLIED",
                 "reason": "APPLICATION_SUBMITTED",
+            }
+
+        if "no eligible resumes found" in page_body_text(driver):
+            print(
+                "[BLOCKED] JobGrin reports no eligible resumes for "
+                f"{title!r}; configured resume path is not usable."
+            )
+            return {
+                "status": "FAILED",
+                "reason": "NO_ELIGIBLE_RESUME",
             }
 
         return {
@@ -4695,8 +4676,8 @@ def go_to_next_page(driver):
                             text_value == "next"
                             or "next page" in text_value
                             or text_value == ">"
-                            or text_value == "›"
-                            or text_value == "→"
+                            or text_value == "â€º"
+                            or text_value == "â†’"
                         ):
                             candidates.append(element)
 
@@ -4961,7 +4942,7 @@ def go_to_next_page(driver):
             f"[ERROR] Pagination exception: {e}"
         )
 
-        return False
+        raise RuntimeError("JobGrin pagination failed.") from e
 
 
 # ============================================================
@@ -4973,17 +4954,31 @@ def process_current_page(
     processed,
     main_handle,
     current_application_count,
-    search_url
+    search_url,
+    run_state,
 ):
+
+    if run_state.stop_if_limited(current_application_count):
+        print(
+            f"[STOP] {run_state.termination_reason}; "
+            f"jobs_attempted={run_state.jobs_attempted}/"
+            f"{MAX_JOBS_PER_RUN}, "
+            f"confirmed_applications_today="
+            f"{current_application_count}/"
+            f"{MAX_APPLICATIONS_PER_DAY}"
+        )
+        return current_application_count
 
     jobs = extract_jobs(
         driver
     )
 
     if not jobs:
-
         print(
-            "[WARNING] No jobs found."
+            "[PAGE SKIP] No job cards found; "
+            f"confirmed applications today: "
+            f"{current_application_count}/"
+            f"{MAX_APPLICATIONS_PER_DAY}"
         )
 
         return current_application_count
@@ -4998,13 +4993,16 @@ def process_current_page(
     # ========================================================
 
     jobs = filter_jobs_by_keyword(
-        jobs
+        jobs,
+        current_application_count,
     )
 
     if not jobs:
-
         print(
-            "No jobs matched keyword."
+            "[PAGE SKIP] No jobs passed keyword eligibility; "
+            f"confirmed applications today: "
+            f"{current_application_count}/"
+            f"{MAX_APPLICATIONS_PER_DAY}"
         )
 
         return current_application_count
@@ -5014,13 +5012,16 @@ def process_current_page(
     # ========================================================
 
     jobs = filter_jobs_by_experience(
-        jobs
+        jobs,
+        current_application_count,
     )
 
     if not jobs:
-
         print(
-            "No jobs passed experience filter."
+            "[PAGE SKIP] No jobs passed experience eligibility; "
+            f"confirmed applications today: "
+            f"{current_application_count}/"
+            f"{MAX_APPLICATIONS_PER_DAY}"
         )
 
         return current_application_count
@@ -5030,13 +5031,16 @@ def process_current_page(
     # ========================================================
 
     jobs = filter_jobs_by_location(
-        jobs
+        jobs,
+        current_application_count,
     )
 
     if not jobs:
-
         print(
-            "No jobs passed location filter."
+            "[PAGE SKIP] No jobs passed location eligibility; "
+            f"confirmed applications today: "
+            f"{current_application_count}/"
+            f"{MAX_APPLICATIONS_PER_DAY}"
         )
 
         return current_application_count
@@ -5046,13 +5050,16 @@ def process_current_page(
     # ========================================================
 
     jobs = filter_jobs_by_posted_date(
-        jobs
+        jobs,
+        current_application_count,
     )
 
     if not jobs:
-
         print(
-            "No jobs passed posted-date filter."
+            "[PAGE SKIP] No jobs passed posted-date eligibility; "
+            f"confirmed applications today: "
+            f"{current_application_count}/"
+            f"{MAX_APPLICATIONS_PER_DAY}"
         )
 
         return current_application_count
@@ -5063,7 +5070,8 @@ def process_current_page(
 
     jobs = remove_processed_jobs(
         jobs,
-        processed
+        processed,
+        current_application_count,
     )
 
     print(
@@ -5072,6 +5080,12 @@ def process_current_page(
     )
 
     if not jobs:
+        print(
+            "[PAGE SKIP] No unprocessed jobs remain; "
+            f"confirmed applications today: "
+            f"{current_application_count}/"
+            f"{MAX_APPLICATIONS_PER_DAY}"
+        )
         return current_application_count
 
     banner(
@@ -5087,17 +5101,25 @@ def process_current_page(
         start=1
     ):
 
-        if (
-            current_application_count
-            >= MAX_APPLICATIONS_PER_DAY
-        ):
-
+        if run_state.stop_if_limited(current_application_count):
             print(
-                "\nDaily application "
-                "limit reached."
+                f"[STOP] {run_state.termination_reason}; "
+                f"jobs_attempted={run_state.jobs_attempted}/"
+                f"{MAX_JOBS_PER_RUN}, "
+                f"confirmed_applications_today="
+                f"{current_application_count}/"
+                f"{MAX_APPLICATIONS_PER_DAY}"
             )
-
             break
+
+        current_job_key = job_key(job)
+        if run_state.has_attempted(current_job_key):
+            log_job_skip(
+                job.get("title", "Unknown Job"),
+                "application attempt already started during this run",
+                current_application_count,
+            )
+            continue
 
         print()
         print(
@@ -5111,6 +5133,15 @@ def process_current_page(
         print(
             f"Title   : "
             f"{job.get('title', '')}"
+        )
+        print(
+            f"Confirmed applications today: "
+            f"{current_application_count}/"
+            f"{MAX_APPLICATIONS_PER_DAY}"
+        )
+        print(
+            f"Job attempts this run: "
+            f"{run_state.jobs_attempted}/{MAX_JOBS_PER_RUN}"
         )
 
         print(
@@ -5132,12 +5163,29 @@ def process_current_page(
             "#" * 70
         )
 
-        result = apply_to_job(
-            driver,
-            job,
-            main_handle,
-            search_url
-        )
+        try:
+            result = apply_to_job(
+                driver,
+                job,
+                main_handle,
+                search_url,
+                run_state,
+                current_application_count,
+            )
+        except Exception as error:
+            run_state.stop(
+                f"application attempt raised "
+                f"{type(error).__name__}"
+            )
+            print(
+                f"[STOP] {run_state.termination_reason}: {error}; "
+                f"jobs_attempted={run_state.jobs_attempted}/"
+                f"{MAX_JOBS_PER_RUN}, "
+                f"confirmed_applications_today="
+                f"{current_application_count}/"
+                f"{MAX_APPLICATIONS_PER_DAY}"
+            )
+            break
 
         status = result.get(
             "status",
@@ -5153,7 +5201,23 @@ def process_current_page(
         # SUCCESS
         # ====================================================
 
-        if status == "APPLIED":
+        if status == "ALREADY_APPLIED":
+
+            record_job(
+                processed,
+                job,
+                "ALREADY_APPLIED",
+                reason,
+            )
+            print(
+                f"[SKIP] {job.get('title', '')} | "
+                "reason=already applied on JobGrin; "
+                "daily confirmed count unchanged: "
+                f"{current_application_count}/"
+                f"{MAX_APPLICATIONS_PER_DAY}"
+            )
+
+        elif status == "APPLIED":
 
             current_application_count += 1
 
@@ -5214,18 +5278,61 @@ def process_current_page(
             # Otherwise the next run will skip them.
             #
             print(
-                f"[APPLICATION FAILED] "
+                "[APPLICATION FAILED] "
                 f"{job.get('title', '')}"
             )
 
             print(
-                f"Reason: {reason}"
+                f"Skip reason: {reason or 'application not confirmed'}"
+            )
+
+            print(
+                f"Confirmed applications today remain: "
+                f"{current_application_count}/"
+                f"{MAX_APPLICATIONS_PER_DAY}"
             )
 
             print(
                 "[RETRY] Failed job will "
                 "NOT be marked as applied."
             )
+
+            if reason == "NO_ELIGIBLE_RESUME":
+                run_state.stop(
+                    "No eligible JobGrin resume is available; "
+                    "configure an eligible resume on the account "
+                    "or provide a valid Excel resume path."
+                )
+                print(
+                    f"[STOP] {run_state.termination_reason}; "
+                    f"jobs_attempted={run_state.jobs_attempted}/"
+                    f"{MAX_JOBS_PER_RUN}, "
+                    f"confirmed_applications_today="
+                    f"{current_application_count}/"
+                    f"{MAX_APPLICATIONS_PER_DAY}"
+                )
+                break
+
+        print(
+            f"[RUN COUNTS] jobs_attempted="
+            f"{run_state.jobs_attempted}/{MAX_JOBS_PER_RUN}, "
+            f"confirmed_applications_today="
+            f"{current_application_count}/"
+            f"{MAX_APPLICATIONS_PER_DAY}"
+        )
+
+        if run_state.has_reached_limit():
+            run_state.stop(
+                f"per-run job attempt limit reached "
+                f"({run_state.jobs_attempted}/{MAX_JOBS_PER_RUN})"
+            )
+            print(
+                f"[STOP] {run_state.termination_reason}; "
+                f"confirmed_applications_today="
+                f"{current_application_count}/"
+                f"{MAX_APPLICATIONS_PER_DAY}"
+            )
+            break
 
         time.sleep(1.5)
 
@@ -5348,13 +5455,34 @@ def main():
             processed
         )
     )
+    run_state = JobGrinRunState()
 
     print(
-        f"Applications today: "
-        f"{daily_count}"
+        f"confirmed_applications_today="
+        f"{daily_count}/{MAX_APPLICATIONS_PER_DAY}"
+    )
+    print(
+        f"jobs_attempted={run_state.jobs_attempted}/"
+        f"{MAX_JOBS_PER_RUN}"
     )
 
+    if has_reached_daily_limit(daily_count):
+        run_state.stop(
+            "daily confirmed application limit already reached "
+            f"({daily_count}/{MAX_APPLICATIONS_PER_DAY})"
+        )
+        print(
+            f"\n[TERMINATION] {run_state.termination_reason}; "
+            "skipping browser startup and job search; "
+            f"jobs_attempted={run_state.jobs_attempted}/"
+            f"{MAX_JOBS_PER_RUN}, "
+            f"confirmed_applications_today="
+            f"{daily_count}/{MAX_APPLICATIONS_PER_DAY}"
+        )
+        return
+
     driver = None
+    termination_reason = ""
 
     try:
 
@@ -5363,6 +5491,13 @@ def main():
         # ====================================================
 
         driver = start_browser()
+        print(
+            "[STAGE] Chrome started; login begins next; "
+            f"jobs_attempted={run_state.jobs_attempted}/"
+            f"{MAX_JOBS_PER_RUN}, "
+            f"confirmed_applications_today="
+            f"{daily_count}/{MAX_APPLICATIONS_PER_DAY}"
+        )
 
         # ====================================================
         # LOGIN
@@ -5370,6 +5505,13 @@ def main():
 
         login_jobgrin(
             driver
+        )
+        print(
+            "[STAGE] Login completed; opening job search; "
+            f"jobs_attempted={run_state.jobs_attempted}/"
+            f"{MAX_JOBS_PER_RUN}, "
+            f"confirmed_applications_today="
+            f"{daily_count}/{MAX_APPLICATIONS_PER_DAY}"
         )
 
         # ====================================================
@@ -5386,6 +5528,13 @@ def main():
 
         search_url = search_jobs(
             driver
+        )
+        print(
+            "[STAGE] Search results loaded; "
+            f"jobs_attempted={run_state.jobs_attempted}/"
+            f"{MAX_JOBS_PER_RUN}, "
+            f"confirmed_applications_today="
+            f"{daily_count}/{MAX_APPLICATIONS_PER_DAY}"
         )
 
         # ====================================================
@@ -5406,9 +5555,9 @@ def main():
 
         while (
             page_number <= MAX_PAGES
+            and not run_state.has_reached_limit()
             and
-            daily_count
-            < MAX_APPLICATIONS_PER_DAY
+            not has_reached_daily_limit(daily_count)
         ):
 
             pages_checked += 1
@@ -5418,10 +5567,24 @@ def main():
                 f"{page_number}"
             )
 
+            if run_state.stop_if_limited(daily_count):
+                print(
+                    f"[TERMINATION] {run_state.termination_reason}; "
+                    f"jobs_attempted={run_state.jobs_attempted}/"
+                    f"{MAX_JOBS_PER_RUN}, "
+                    f"confirmed_applications_today="
+                    f"{daily_count}/{MAX_APPLICATIONS_PER_DAY}"
+                )
+                break
+
             # Load results.
             load_more_jobs(
-                driver
+                driver,
+                run_state,
+                daily_count,
             )
+            if run_state.termination_reason:
+                break
 
             # IMPORTANT:
             # If a previous job click restored the page,
@@ -5440,9 +5603,19 @@ def main():
 
                 time.sleep(2)
 
+                if run_state.stop_if_limited(daily_count):
+                    print(
+                        f"[TERMINATION] {run_state.termination_reason}; "
+                        "not scrolling search results."
+                    )
+                    break
                 load_more_jobs(
-                    driver
+                    driver,
+                    run_state,
+                    daily_count,
                 )
+                if run_state.termination_reason:
+                    break
 
             daily_count = (
                 process_current_page(
@@ -5450,23 +5623,25 @@ def main():
                     processed,
                     main_handle,
                     daily_count,
-                    search_url
+                    search_url,
+                    run_state,
                 )
             )
+
+            if run_state.termination_reason:
+                break
 
             # =================================================
             # DAILY LIMIT
             # =================================================
 
-            if (
-                daily_count
-                >= MAX_APPLICATIONS_PER_DAY
-            ):
-
-                print()
+            if has_reached_daily_limit(daily_count):
+                run_state.stop(
+                    "daily confirmed application limit reached "
+                    f"({daily_count}/{MAX_APPLICATIONS_PER_DAY})"
+                )
                 print(
-                    "Daily application "
-                    "limit reached."
+                    f"[TERMINATION] {run_state.termination_reason}"
                 )
 
                 break
@@ -5498,22 +5673,59 @@ def main():
 
                     time.sleep(2)
 
-            except Exception:
-                pass
+            except Exception as error:
+                run_state.stop(
+                    f"failed to restore JobGrin search page "
+                    f"({type(error).__name__})"
+                )
+                print(
+                    f"[TERMINATION] {run_state.termination_reason}: "
+                    f"{error}; jobs_attempted="
+                    f"{run_state.jobs_attempted}/"
+                    f"{MAX_JOBS_PER_RUN}, "
+                    f"confirmed_applications_today="
+                    f"{daily_count}/{MAX_APPLICATIONS_PER_DAY}"
+                )
+                break
+
+            if run_state.stop_if_limited(daily_count):
+                print(
+                    f"[TERMINATION] {run_state.termination_reason}; "
+                    "not opening another search page."
+                )
+                break
 
             if not go_to_next_page(
                 driver
             ):
-
-                print()
+                run_state.stop(
+                    "no more JobGrin search pages available"
+                )
                 print(
-                    "No more JobGrin "
-                    "pages available."
+                    f"[TERMINATION] {run_state.termination_reason}"
                 )
 
                 break
 
             page_number += 1
+
+        if not run_state.termination_reason:
+            if run_state.has_reached_limit():
+                run_state.stop(
+                    f"per-run job attempt limit reached "
+                    f"({run_state.jobs_attempted}/{MAX_JOBS_PER_RUN})"
+                )
+            elif has_reached_daily_limit(daily_count):
+                run_state.stop(
+                    "daily confirmed application limit reached "
+                    f"({daily_count}/{MAX_APPLICATIONS_PER_DAY})"
+                )
+            else:
+                run_state.stop(
+                    f"maximum search page limit reached ({MAX_PAGES})"
+                )
+
+        termination_reason = run_state.termination_reason
 
         # ====================================================
         # FINAL STATUS
@@ -5557,6 +5769,20 @@ def main():
         )
 
         print(
+            f"jobs_attempted={run_state.jobs_attempted}/"
+            f"{MAX_JOBS_PER_RUN}"
+        )
+
+        print(
+            f"confirmed_applications_today="
+            f"{daily_count}/{MAX_APPLICATIONS_PER_DAY}"
+        )
+
+        print(
+            f"Termination reason : {termination_reason}"
+        )
+
+        print(
             f"Applications sent  : "
             f"{daily_count}"
         )
@@ -5588,17 +5814,29 @@ def main():
         )
 
     except KeyboardInterrupt:
+        run_state.stop("interrupted by user")
 
         print()
 
         print(
-            "[STOPPED] Automation "
-            "stopped by user."
+            f"[STOPPED] {run_state.termination_reason}; "
+            f"jobs_attempted={run_state.jobs_attempted}/"
+            f"{MAX_JOBS_PER_RUN}, "
+            f"confirmed_applications_today="
+            f"{daily_count}/{MAX_APPLICATIONS_PER_DAY}"
         )
 
     except Exception as e:
+        run_state.stop(f"JobGrin stopped because of an error: {e}")
 
         print()
+        print(
+            f"[TERMINATION] {run_state.termination_reason}; "
+            f"jobs_attempted={run_state.jobs_attempted}/"
+            f"{MAX_JOBS_PER_RUN}, "
+            f"confirmed_applications_today="
+            f"{daily_count}/{MAX_APPLICATIONS_PER_DAY}"
+        )
 
         print(
             "=" * 70
@@ -5628,11 +5866,17 @@ def main():
             except Exception:
                 pass
 
+        if os.environ.get("JOB_AUTOMATION_STUDENT_ID"):
+            raise
+
     finally:
 
         if driver:
 
-            if KEEP_BROWSER_OPEN:
+            if (
+                KEEP_BROWSER_OPEN
+                and not os.environ.get("JOB_AUTOMATION_STUDENT_ID")
+            ):
 
                 print()
 
