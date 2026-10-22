@@ -1,0 +1,31 @@
+{
+  "job_id": "tech-demo-002",
+  "title": "Software Engineer",
+  "company": "Tech Innovators Inc.",
+  "description": "We are seeking a Software Engineer to design, build, and maintain cloud-based applications and APIs.",
+  "required_skills": [
+    "Python",
+    "SQL",
+    "REST APIs",
+    "Git",
+    "Problem Solving"
+  ],
+  "preferred_skills": [
+    "Docker",
+    "Kubernetes",
+    "AWS"
+  ],
+  "responsibilities": [
+    "Design and develop backend services.",
+    "Collaborate with frontend engineers.",
+    "Write automated unit and integration tests."
+  ],
+  "education": {
+    "minimum_degree": "Bachelor's degree",
+    "fields": [
+      "Computer Science",
+      "Software Engineering",
+      "Related field"
+    ]
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "job_id": "finance-demo-001",
+  "title": "Financial Analyst",
+  "company": "ABC Finance Ltd.",
+  "description": "We are looking for a Financial Analyst to support financial planning, reporting, forecasting, and business analysis activities.",
+  "required_skills": [
+    "Financial Analysis",
+    "Financial Modeling",
+    "Financial Reporting",
+    "Forecasting",
+    "Budgeting",
+    "Advanced Microsoft Excel",
+    "Power BI",
+    "SQL",
+    "Data Analysis",
+    "Variance Analysis",
+    "Accounting fundamentals"
+  ],
+  "preferred_skills": [
+    "Tableau",
+    "Python",
+    "Valuation",
+    "Cash Flow Analysis",
+    "Business Partnering"
+  ],
+  "responsibilities": [
+    "Prepare financial reports and management reports.",
+    "Analyze revenue, expenses, and financial performance.",
+    "Support budgeting and forecasting activities.",
+    "Perform variance analysis between actual and budgeted results.",
+    "Develop and maintain Excel-based financial models.",
+    "Analyze business data using SQL and other analytical tools.",
+    "Create dashboards and reports for management.",
+    "Assist with financial planning and business analysis."
+  ],
+  "education": {
+    "minimum_degree": "Bachelor's or Master's degree",
+    "fields": [
+      "Finance",
+      "Accounting",
+      "Business",
+      "Computer Science",
+      "Related field"
+    ]
+  },
+  "aliases": [
+    "demo-001"
+  ]
+}

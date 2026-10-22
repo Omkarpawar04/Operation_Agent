@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+output/
+.venv/
+venv/
+
+resume_optimizer/backend/uploads/*
+resume_optimizer/backend/outputs/*
+!resume_optimizer/backend/uploads/.gitkeep
+!resume_optimizer/backend/outputs/.gitkeep
