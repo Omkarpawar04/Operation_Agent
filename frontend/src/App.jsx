@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { LayoutDashboard, Users, Video, UserCheck, BookOpen, Briefcase, BarChart2, FileText, Building2, Search, Bell, Plus, CheckCircle2, Clock, ChevronRight, TrendingUp, Award, UploadCloud, FileDown, Sparkles, PlayCircle, CheckCircle, XCircle, HelpCircle, LogOut, SlidersHorizontal, MapPin, DollarSign, Calendar, Eye, EyeOff, Send, MessageSquare, AlertCircle, Pencil, Download, Check, X, Loader2, RefreshCw, Mail, Phone, Printer, ChevronDown, User, Settings, Lock, Repeat, ShieldAlert, HelpCircle as QnAIcon } from 'lucide-react';
-import OverviewPage from './components/OverviewPage.jsx';
+import React, { useEffect, useState } from 'react';
+import { Menu, LayoutDashboard, Users, Video, UserCheck, BookOpen, Briefcase, BarChart2, FileText, Building2, Search, Bell, Plus, CheckCircle2, Clock, ChevronRight, TrendingUp, Award, UploadCloud, FileDown, Sparkles, PlayCircle, CheckCircle, XCircle, HelpCircle, LogOut, SlidersHorizontal, MapPin, DollarSign, Calendar, Eye, EyeOff, Send, MessageSquare, AlertCircle, Pencil, Download, Check, X, Loader2, RefreshCw, Mail, Phone, Printer, ChevronDown, User, Settings, Lock, Repeat, ShieldAlert, HelpCircle as QnAIcon } from 'lucide-react';
 import StudentListPage from './components/StudentListPage.jsx';
 import Batches from './components/Batches.jsx';
 import LiveMocksPage from './components/LiveMocksPage.jsx';
@@ -11,19 +10,44 @@ import ProgressReportsPage from './components/ProgressReportsPage.jsx';
 import ResumeOptimizerPage from './components/ResumeOptimizerPage.jsx';
 import JobsCompanyDetailsSection from './components/JobsCompanyDetailsSection.jsx';
 import QNAGeneratorPage from './components/QnAGeneratorPage.jsx';
+import DrivesPage from './components/DrivesPage.jsx';
+import UsersPage from './components/UsersPage.jsx';
+import RoleDashboard from './components/RoleDashboard.jsx';
+import ChangePasswordModal from './components/ChangePasswordModal.jsx';
+import { Page, PageHeader, PrimaryButton } from './components/ui.jsx';
+import { api, API_BASE } from './api.js';
+
+const SESSION_KEY = 'finxl_token';
+const readToken = () => { try { return sessionStorage.getItem(SESSION_KEY) || ''; } catch { return ''; } };
+const saveToken = (t) => { try { t ? sessionStorage.setItem(SESSION_KEY, t) : sessionStorage.removeItem(SESSION_KEY); } catch { /* storage blocked: login lasts until the page is closed */ } };
+
+// Initials badge instead of a stock photo
+const Avatar = ({ name = '?', className = '' }) => (
+  <div className={`${className} bg-gradient-to-tr from-blue-600 to-indigo-500 text-white flex items-center justify-center font-bold text-[11px] shrink-0`} aria-hidden="true">
+    {name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('')}
+  </div>
+);
 
 export default function App() {
   // Navigation & Authentication States
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState('Admin'); // 'Admin' | 'Trainer' | 'Student'
+  const [userRole, setUserRole] = useState(''); // 'Admin' | 'Operations' | 'Placement' | 'Trainer' | 'Student'
+  const [currentUser, setCurrentUser] = useState({ id: '', name: '', email: '' });
+  const [authToken, setAuthToken] = useState('');
+  const [restoring, setRestoring] = useState(() => Boolean(readToken())); // true while a saved login is checked
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Overview');
-  const [selectedStudent, setSelectedStudent] = useState('Riya Joshi');
+  const [selectedStudentId, setSelectedStudentId] = useState(null); // the student opened from the Students list
+  const [openMyDetails, setOpenMyDetails] = useState(false); // a student asked to fill in their details from the dashboard
 
   // ---> ADD THIS ROLE PERMISSIONS MAP HERE <---
   const ROLE_PERMISSIONS = {
-    Operations: ['Overview', 'Student List', 'Batches', 'Student Profile','Live Mocks','Learning Modules', 'Progress Reports','Job Portal', 'Company', 'Resume Optimizer', 'QnA Generator'],
+    // Admin: everything, plus Master (logins and passwords). Operations runs the students and drives, without Master.
+    Admin: ['Overview', 'Master', 'Student List', 'Batches', 'Student Profile','Live Mocks','Learning Modules', 'Progress Reports','Job Portal', 'Company', 'Drives', 'Resume Optimizer', 'QnA Generator'],
+    Operations: ['Overview', 'Student List', 'Batches', 'Student Profile','Live Mocks','Learning Modules', 'Progress Reports','Job Portal', 'Company', 'Drives', 'Resume Optimizer', 'QnA Generator'],
     Trainer: ['Overview', 'Student List', 'Batches', 'Live Mocks', 'Student Profile', 'Learning Modules', 'Progress Reports'],
-    Placement: ['Overview', 'Student List', 'Job Portal', 'Company', 'Resume Optimizer'],
+    Placement: ['Overview', 'Student List', 'Student Profile', 'Job Portal', 'Company', 'Drives', 'Resume Optimizer'],
     Student: ['Overview', 'Live Mocks', 'Student Profile', 'Learning Modules', 'Job Portal', 'Progress Reports', 'Resume Optimizer', 'QnA Generator']
   };
 
@@ -31,8 +55,8 @@ export default function App() {
 
   // Login Form States
   const [showPassword, setShowPassword] = useState(false);
-  const [emailInput, setEmailInput] = useState('ops@finxl.com');
-  const [passwordInput, setPasswordInput] = useState('••••••••');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
   const [isLoadingLogin, setIsLoadingLogin] = useState(false);
 
   // Job Portal States
@@ -49,6 +73,44 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const signIn = (token, user) => {
+    saveToken(token);
+    setAuthToken(token);
+    setCurrentUser({ id: user.id, name: user.name, email: user.email });
+    setUserRole(user.role);
+    setActiveTab('Overview');
+    setIsAuthenticated(true);
+  };
+
+  const signOut = () => {
+    saveToken('');
+    setAuthToken('');
+    setIsAuthenticated(false);
+    setUserRole('');
+    setCurrentUser({ id: '', name: '', email: '' });
+    setShowProfileModal(false);
+    setShowChangePassword(false);
+    setMobileNavOpen(false);
+    setPasswordInput('');
+  };
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') setMobileNavOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // A refresh keeps the login for this browser tab: check the saved token with the server
+  useEffect(() => {
+    const saved = readToken();
+    if (!saved) return;
+    api('/me', { token: saved })
+      .then((d) => signIn(saved, d.user))
+      .catch(() => saveToken(''))
+      .finally(() => setRestoring(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Sample Notifications State
   const [notifications, setNotifications] = useState([
@@ -67,7 +129,7 @@ const handleLogin = async (e) => {
   setIsLoadingLogin(true);
 
   try {
-    const response = await fetch('http://localhost:5000/api/login', {
+    const response = await fetch(`${API_BASE}/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -81,10 +143,7 @@ const handleLogin = async (e) => {
     const data = await response.json();
 
     if (data.success) {
-      setIsAuthenticated(true);
-      setUserRole(data.user.role); // Sets role to 'Operations', 'Trainer', 'Placement', or 'Student'
-      setActiveTab('Overview');
-      console.log('Logged in as:', data.user.name, 'Role:', data.user.role);
+      signIn(data.token, data.user);
     } else {
       alert(data.message || 'Invalid email or password');
     }
@@ -95,6 +154,10 @@ const handleLogin = async (e) => {
     setIsLoadingLogin(false);
   }
 };
+
+  if (restoring) {
+    return <div className="min-h-screen bg-[#030712] flex items-center justify-center text-xs text-slate-400">Restoring your session…</div>;
+  }
 
   if (!isAuthenticated) {
     return (
@@ -189,7 +252,7 @@ const handleLogin = async (e) => {
                     onChange={(e) => setEmailInput(e.target.value)}
                     required
                     className="w-full bg-slate-950/90 border border-indigo-500/30 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 transition shadow-inner"
-                    placeholder="ops@finxl.com"
+                    placeholder="you@company.com"
                   />
                 </div>
               </div>
@@ -295,6 +358,7 @@ const handleLogin = async (e) => {
   // Navigation Items Sidebar
   const navigationItems = [
     { name: 'Overview', icon: LayoutDashboard },
+    { name: 'Master', icon: Settings },
     { name: 'Student List', icon: Users },
     { name: 'Batches', icon: Users },
     { name: 'Live Mocks', icon: Video },
@@ -305,12 +369,11 @@ const handleLogin = async (e) => {
     { name: 'Resume Optimizer', icon: Sparkles },
     { name: 'QnA Generator', icon: QnAIcon },
     { name: 'Company', icon: Building2 },
+    { name: 'Drives', icon: Briefcase },
   ];
 
-  return (
-    <div className="min-h-screen bg-slate-50/60 font-sans flex text-slate-800">
-      {/* Sidebar Component */}
-      <aside className="w-64 bg-white/80 backdrop-blur-xl border-r border-slate-200/80 flex flex-col justify-between hidden md:flex shrink-0 shadow-sm">
+  const sidebarBody = (
+    <>
         <div>
           {/* Logo Brand */}
           <div className="p-5 flex items-center space-x-3 border-b border-slate-200/80">
@@ -335,7 +398,7 @@ const handleLogin = async (e) => {
               return (
                 <button
                   key={item.name}
-                  onClick={() => setActiveTab(item.name)}
+                  onClick={() => { setActiveTab(item.name); setMobileNavOpen(false); }}
                   className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
                     isActive
                       ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 text-white font-bold shadow-md shadow-blue-500/20'
@@ -353,31 +416,50 @@ const handleLogin = async (e) => {
         {/* User Footer Profile */}
         <div className="p-4 border-t border-slate-200/80 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
-            <img
-              src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80"
-              alt="User"
-              className="w-8 h-8 rounded-full object-cover"
-            />
+            <Avatar name={currentUser.name} className="w-8 h-8 rounded-full" />
             <div className="text-left">
-              <p className="text-xs font-bold text-slate-800 leading-none">Admin User</p>
-              <span className="text-[10px] text-slate-400 font-medium">admin@finxl.com</span>
+              <p className="text-xs font-bold text-slate-800 leading-none">{currentUser.name}</p>
+              <span className="text-[10px] text-slate-400 font-medium">{userRole}</span>
             </div>
           </div>
           <button
-            onClick={() => setShowLogoutConfirm(true)}
+            onClick={() => { setMobileNavOpen(false); setShowLogoutConfirm(true); }}
             className="text-slate-400 hover:text-blue-600 transition p-1 cursor-pointer"
             title="Sign Out"
           >
             <LogOut className="w-4 h-4" />
           </button>
         </div>
+    </>
+  );
+
+  return (
+    <div className="h-dvh overflow-hidden bg-slate-50/60 font-sans flex text-slate-800">
+      {/* Sidebar Component */}
+      {/* Sidebar (tablet and desktop) */}
+      <aside className="w-64 bg-white/80 backdrop-blur-xl border-r border-slate-200/80 hidden lg:flex flex-col justify-between shrink-0 shadow-sm h-full overflow-y-auto">
+        {sidebarBody}
       </aside>
+
+      {/* Menu drawer (phone) */}
+      {mobileNavOpen && (
+        <div className="lg:hidden fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Menu">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setMobileNavOpen(false)} />
+          <aside className="absolute left-0 top-0 h-full w-72 max-w-[85vw] bg-white flex flex-col justify-between shadow-2xl overflow-y-auto">
+            {sidebarBody}
+          </aside>
+        </div>
+      )}
 
       {/* Main App Section */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {/* Top Navbar */}
-        <header className="sticky top-0 z-30 h-16 bg-white/70 backdrop-blur-md border-b border-slate-200/60 px-6 py-4 flex items-center justify-between shrink-0 shadow-sm">
-          <div className="relative w-full max-w-md">
+        <header className="relative z-30 h-16 bg-white/70 backdrop-blur-md border-b border-slate-200/60 px-3 sm:px-6 flex items-center justify-between gap-3 shrink-0 shadow-sm">
+          <button onClick={() => setMobileNavOpen(true)} aria-label="Open menu" className="lg:hidden p-2 -ml-1 rounded-xl text-slate-600 hover:bg-blue-50 transition shrink-0">
+            <Menu className="w-5 h-5" />
+          </button>
+          <span className="sm:hidden font-bold text-sm text-slate-900 truncate">Finxl Placement</span>
+          <div className="relative w-full max-w-md hidden sm:block">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -386,7 +468,7 @@ const handleLogin = async (e) => {
             />
           </div>
 
-          <div className="flex items-center space-x-4 relative">
+          <div className="flex items-center space-x-3 sm:space-x-4 relative ml-auto">
             <div className="relative">
               <button 
                 onClick={() => {
@@ -402,7 +484,7 @@ const handleLogin = async (e) => {
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 mt-3 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 z-50 space-y-3 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute right-0 mt-3 w-80 max-w-[calc(100vw-1.5rem)] bg-white border border-slate-200 rounded-2xl shadow-xl p-4 z-50 space-y-3 animate-in fade-in slide-in-from-top-2">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                     <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                       <Bell className="w-3.5 h-3.5 text-blue-600" /> Notifications
@@ -442,42 +524,22 @@ const handleLogin = async (e) => {
                 }}
                 className="flex items-center gap-2 focus:outline-none rounded-full ring-2 ring-transparent hover:ring-blue-500/30 transition cursor-pointer"
               >
-                <img
-                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80"
-                  alt="User Avatar"
-                  className="w-7 h-7 rounded-full object-cover shadow-sm"
-                />
+                <Avatar name={currentUser.name} className="w-7 h-7 rounded-full shadow-sm" />
               </button>
 
               {showProfileModal && (
-                <div className="absolute right-0 mt-3 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 z-50 space-y-3 animate-in fade-in slide-in-from-top-2 text-left">
+                <div className="absolute right-0 mt-3 w-72 max-w-[calc(100vw-1.5rem)] bg-white border border-slate-200 rounded-2xl shadow-xl p-4 z-50 space-y-3 animate-in fade-in slide-in-from-top-2 text-left">
                   <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-                    <img
-                      src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80"
-                      alt="User Avatar"
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
+                    <Avatar name={currentUser.name} className="w-10 h-10 rounded-full" />
                     <div>
-                      <h4 className="text-xs font-bold text-slate-900">Admin User</h4>
-                      <p className="text-[10px] text-slate-400">admin@finxl.com</p>
+                      <h4 className="text-xs font-bold text-slate-900">{currentUser.name}</h4>
+                      <p className="text-[10px] text-slate-400">{userRole} · {currentUser.email}</p>
                     </div>
                   </div>
 
                   <div className="space-y-1 text-xs font-medium text-slate-600">
-                    <button onClick={() => { alert("Opening Profile Settings..."); setShowProfileModal(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 transition">
-                      <User className="w-3.5 h-3.5 text-blue-600" /> Profile
-                    </button>
-                    <button onClick={() => { alert("Opening Edit Options..."); setShowProfileModal(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 transition">
-                      <Pencil className="w-3.5 h-3.5 text-slate-500" /> Edit Profile
-                    </button>
-                    <button onClick={() => { alert("Opening Password Change..."); setShowProfileModal(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 transition">
+                    <button onClick={() => { setShowChangePassword(true); setShowProfileModal(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 transition">
                       <Lock className="w-3.5 h-3.5 text-amber-500" /> Password Change
-                    </button>
-                    <button onClick={() => { alert("Opening Settings..."); setShowProfileModal(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 transition">
-                      <Settings className="w-3.5 h-3.5 text-indigo-500" /> Settings
-                    </button>
-                    <button onClick={() => { alert("Opening Switch Accounts..."); setShowProfileModal(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 transition">
-                      <Repeat className="w-3.5 h-3.5 text-emerald-600" /> Switch Accounts
                     </button>
                   </div>
 
@@ -500,25 +562,35 @@ const handleLogin = async (e) => {
         </header>
 
         {/* Dynamic Main Workspace Content */}
-        <main className="app-content flex-1 overflow-y-auto p-6 md:p-8">
+        <main className="app-content flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
         {/* If current activeTab is NOT allowed for user's role, fallback to Overview */}
         {!allowedModules.includes(activeTab) ? (
-        <OverviewPage setActiveTab={setActiveTab} />
+        <RoleDashboard token={authToken} user={currentUser} role={userRole} allowedTabs={allowedModules} setActiveTab={setActiveTab} onFillDetails={() => { setOpenMyDetails(true); setActiveTab('Student Profile'); }} onSessionExpired={signOut} />
         ) : (
         <>
-        {activeTab === 'Overview' && <OverviewPage setActiveTab={setActiveTab} />}
+        {activeTab === 'Overview' && <RoleDashboard token={authToken} user={currentUser} role={userRole} allowedTabs={allowedModules} setActiveTab={setActiveTab} onFillDetails={() => { setOpenMyDetails(true); setActiveTab('Student Profile'); }} onSessionExpired={signOut} />}
         {activeTab === 'Student List' && (
         <StudentListPage
-          setActiveTab={setActiveTab}
-          setSelectedStudent={setSelectedStudent}
+          token={authToken}
+          role={userRole}
+          openStudent={(id) => { setSelectedStudentId(id); setActiveTab('Student Profile'); }}
+          onSessionExpired={signOut}
         />
         )}
-        {activeTab === 'Batches' && <Batches />}
+        {activeTab === 'Batches' && <Batches token={authToken} role={userRole} openStudent={(id) => { setSelectedStudentId(id); setActiveTab('Student Profile'); }} onSessionExpired={signOut} />}
         {activeTab === 'Live Mocks' && <LiveMocksPage />}
         {activeTab === 'Student Profile' && (
-        <StudentProfilePage studentName={selectedStudent} />
+        userRole === 'Student' ? (
+          <StudentProfilePage token={authToken} role={userRole} studentId="me" openDetailsOnLoad={openMyDetails} onDetailsOpened={() => setOpenMyDetails(false)} onSessionExpired={signOut} />
+        ) : selectedStudentId ? (
+          <StudentProfilePage key={selectedStudentId} token={authToken} role={userRole} studentId={selectedStudentId} onBack={() => setActiveTab('Student List')} onSessionExpired={signOut} />
+        ) : (
+          <Page>
+            <PageHeader title="Student Profile" subtitle="Open a student from the list to see their full record." action={<PrimaryButton onClick={() => setActiveTab('Student List')}>Go to Students</PrimaryButton>} />
+          </Page>
+        )
         )}
-        {activeTab === 'Learning Modules' && <LearningModulesPage />}
+        {activeTab === 'Learning Modules' && <LearningModulesPage token={authToken} role={userRole} onSessionExpired={signOut} />}
         {activeTab === 'Job Portal' && (
         <JobPortalPage
           setSelectedJob={setSelectedJob}
@@ -528,11 +600,15 @@ const handleLogin = async (e) => {
         {activeTab === 'Progress Reports' && <ProgressReportsPage />}
         {activeTab === 'Resume Optimizer' && <ResumeOptimizerPage />}
         {activeTab === 'QnA Generator' && <QNAGeneratorPage />}
+        {activeTab === 'Drives' && <DrivesPage token={authToken} onSessionExpired={signOut} />}
+        {activeTab === 'Master' && <UsersPage token={authToken} currentUserId={currentUser.id} onSessionExpired={signOut} />}
         {activeTab === 'Company' && <JobsCompanyDetailsSection setActiveTab={setActiveTab} />}
       </>
         )}
         </main>
       </div>
+
+      {showChangePassword && <ChangePasswordModal token={authToken} onClose={() => setShowChangePassword(false)} onSessionExpired={signOut} />}
 
       {/* Double Verification Logout Modal */}
       {showLogoutConfirm && (
@@ -557,7 +633,7 @@ const handleLogin = async (e) => {
               <button
                 onClick={() => {
                   setShowLogoutConfirm(false);
-                  setIsAuthenticated(false);
+                  signOut();
                 }}
                 className="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-sm shadow-rose-600/20 cursor-pointer"
               >

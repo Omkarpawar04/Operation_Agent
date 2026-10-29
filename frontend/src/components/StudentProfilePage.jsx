@@ -1,580 +1,497 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  User, Mail, Phone, MapPin, GraduationCap, Briefcase,
-  CheckCircle2, PlayCircle, Clock, ChevronRight,
-  Video, Eye, Sparkles, TrendingUp, BarChart3, Download,
-  Calendar, Award, BookOpen, Edit, X, ExternalLink
+  ArrowLeft, Pencil, Loader2, Mail, Phone, MapPin, GraduationCap, Building2, Video, FileText, Award, X, Send,
+  AlertTriangle, CheckCircle2, Clock, BookOpen, Briefcase, Layers,
 } from 'lucide-react';
+import { api } from '../api.js';
+import { BarRow, Card, Empty, Initials, Kpi, KpiGrid, Page, Pill } from './ui.jsx';
+import { STAGES, STAGE_CHIP, STAGE_LABEL, fmtDate, fmtDateTime } from './studentMeta.js';
+import MyDetailsModal from './MyDetailsModal.jsx';
 
-export default function StudentProfilePage({ studentName }) {
-  // Navigation Tabs (Updated from 'Video Analytics' to 'Module Progress')
-  const [activeSubTab, setActiveSubTab] = useState('Overview');
-  
-  // Selected video for playing in modal
-  const [activeVideo, setActiveVideo] = useState(null);
+const KIND = { mock: 'Mock interview', doubt: 'Doubt clearing', final_mock: 'Final mock', ai_mock: 'AI mock' };
+const SESSION_CHIP = {
+  scheduled: 'bg-sky-50 text-sky-700 border-sky-100', done: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  missed: 'bg-rose-50 text-rose-700 border-rose-100', rescheduled: 'bg-amber-50 text-amber-700 border-amber-100', cancelled: 'bg-slate-50 text-slate-500 border-slate-200',
+};
+const DRIVE_CHIP = { ranked: 'bg-slate-50 text-slate-600 border-slate-200', pack_review: 'bg-indigo-50 text-indigo-700 border-indigo-100', mocking: 'bg-orange-50 text-orange-700 border-orange-100', report_ready: 'bg-sky-50 text-sky-700 border-sky-100', put_forward: 'bg-emerald-50 text-emerald-700 border-emerald-100' };
+const DRIVE_LABEL = { ranked: 'Ranked', pack_review: 'Pack in review', mocking: 'Mocks running', report_ready: 'Report ready', put_forward: 'Put forward' };
+const VERDICT = { job_ready: 'Job ready', one_more_mock: 'One more mock', not_ready: 'Not ready' };
+const field = 'w-full bg-slate-50/80 border border-slate-200/80 rounded-xl px-3 py-2 text-xs outline-none focus:border-blue-400';
 
-  // Module Progress Data
-  const moduleStats = {
-    totalVideos: 48,
-    completed: 32,
-    inProgress: 11,
-    notStarted: 5,
-    totalHoursWatched: '42.5 hrs',
-    completionRate: 67
-  };
+// One student's whole record. `studentId` is a student id, or "me" for a student looking at themselves.
+export default function StudentProfilePage({ token, role, studentId, onBack, openDetailsOnLoad, onDetailsOpened, onSessionExpired }) {
+  const [profile, setProfile] = useState(null);
+  const [error, setError] = useState('');
+  const [tab, setTab] = useState('overview');
+  const [editing, setEditing] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const expiredRef = useRef(onSessionExpired);
+  expiredRef.current = onSessionExpired;
+  const isOps = role === 'Operations' || role === 'Admin';
+  const isStudent = role === 'Student';
 
-  const moduleList = [
-    {
-      id: 1,
-      title: 'Financial Modeling & Valuation Fundamentals',
-      category: 'Finance',
-      duration: '45 mins',
-      status: 'Completed',
-      watchedPercent: 100,
-      thumbnail: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=300&auto=format&fit=crop&q=80',
-      embedUrl: 'https://www.youtube.com/embed/g6BtbIiJ_rc' // Financial Modeling Tutorial
-    },
-    {
-      id: 2,
-      title: 'Advanced Excel & Financial Statement Analysis',
-      category: 'Analytics',
-      duration: '60 mins',
-      status: 'Completed',
-      watchedPercent: 100,
-      thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=300&auto=format&fit=crop&q=80',
-      embedUrl: 'https://www.youtube.com/embed/Vl0H-qTclOg' // Excel Financial Analysis
-    },
-    {
-      id: 3,
-      title: 'Corporate Finance & Capital Structuring',
-      category: 'Finance',
-      duration: '50 mins',
-      status: 'In Progress',
-      watchedPercent: 65,
-      thumbnail: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=300&auto=format&fit=crop&q=80',
-      embedUrl: 'https://www.youtube.com/embed/3U8P14T453E' // Corporate Finance Basics
-    },
-    {
-      id: 4,
-      title: 'Behavioral & Situational Interview Preparation',
-      category: 'Soft Skills',
-      duration: '35 mins',
-      status: 'In Progress',
-      watchedPercent: 40,
-      thumbnail: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
-      embedUrl: 'https://www.youtube.com/embed/HG68Ymazo18' // Behavioral Interview Prep
-    },
-    {
-      id: 5,
-      title: 'DCF Model Building Step-by-Step Guide',
-      category: 'Finance',
-      duration: '75 mins',
-      status: 'Not Started',
-      watchedPercent: 0,
-      thumbnail: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=300&auto=format&fit=crop&q=80',
-      embedUrl: 'https://www.youtube.com/embed/0T1y38mZfC0' // DCF Modeling Tutorial
+  const call = useCallback((path, options = {}) => api(path, { token, onExpired: () => expiredRef.current?.(), ...options }), [token]);
+  const base = isStudent ? '/students/me' : `/students/${studentId}`;
+
+  const load = useCallback(async () => {
+    setProfile(null);
+    setError('');
+    try {
+      setProfile((await call(base)).profile);
+    } catch (e) {
+      setError(e.message);
     }
+  }, [call, base]);
+  useEffect(() => { load(); setTab('overview'); }, [load]);
+  // Re-read the record without blanking the page (used after something is logged, like viewing ID numbers)
+  const refresh = useCallback(async () => {
+    try { setProfile((await call(base)).profile); } catch { /* the page keeps what it has */ }
+  }, [call, base]);
+  // The dashboard's "Fill my details" button lands here and opens the form straight away
+  useEffect(() => {
+    if (openDetailsOnLoad && profile) { setDetailsOpen(true); onDetailsOpened?.(); }
+  }, [openDetailsOnLoad, profile, onDetailsOpened]);
+
+  const back = !isStudent && onBack && (
+    <button onClick={onBack} className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline"><ArrowLeft className="w-4 h-4" /> All students</button>
+  );
+  if (error) return <Page>{back}<p className="text-xs font-medium text-rose-600 bg-rose-50 border border-rose-100 rounded-2xl px-4 py-3">{error} <button onClick={load} className="underline font-bold ml-1">Try again</button></p></Page>;
+  if (!profile) return <Page>{back}<p className="text-xs text-slate-500 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading the student record…</p></Page>;
+
+  const p = profile;
+  const x = p.extra || {};
+  const done = p.sessions.filter((s) => s.status === 'done').length;
+  const tabs = [
+    ['overview', 'Overview'], ['mocks', `Mocks (${p.sessions.length})`], ['jobs', `Drives and jobs (${p.drives.length + p.placements.length})`],
+    ['activity', isOps ? `Notes and activity` : 'Activity'],
   ];
 
   return (
-    <div className="space-y-6 max-w-full mx-auto pb-10">
-      
-      {/* ================= TOP PROFILE BANNER ================= */}
-      <div className="bg-white border border-slate-200/80 p-4 sm:p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        
-        {/* Profile Info */}
-        <div className="flex items-center space-x-3 sm:space-x-4">
-          <div className="relative shrink-0">
-            <img
-              src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80"
-              alt={studentName || 'Riya Joshi'}
-              className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl object-cover ring-4 ring-blue-50 shadow-sm"
-            />
-            <span className="absolute -bottom-1 -right-1 bg-emerald-500 text-white w-5 h-5 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold" title="Eligible">
-              ✓
-            </span>
-          </div>
+    <Page>
+      {back}
 
-          <div className="space-y-1">
-            <div className="flex items-center flex-wrap gap-2">
-              <h1 className="text-lg sm:text-2xl font-bold text-slate-900">{studentName || 'Riya Joshi'}</h1>
-              <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
-                • Eligible for Placement
-              </span>
+      <section className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-start gap-4 md:gap-6">
+          <Initials name={p.name} className="w-16 h-16 text-lg" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight break-words">{p.name}</h1>
+              <Pill className={STAGE_CHIP[p.stage]}>{STAGE_LABEL[p.stage]}</Pill>
+              {!isStudent && <Pill className={p.completeness.percent >= 100 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}>Profile {p.completeness.percent}%</Pill>}
+              {!p.is_active && <Pill className="bg-slate-100 text-slate-500 border-slate-200">Login disabled</Pill>}
             </div>
             <p className="text-xs text-slate-500">
-              Student ID : <span className="font-semibold text-slate-800">D312</span> | Course :{' '}
-              <span className="font-semibold text-slate-800">Financial Analysis and Planning</span> | Batch :{' '}
-              <span className="font-semibold text-slate-800">D08</span>
+              <span className="font-mono font-semibold text-slate-700">{p.student_code}</span>
+              {p.batch && <> · {p.batch}</>}{p.course && <> · {p.course}</>}
             </p>
+            <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-slate-600">
+              <a href={`mailto:${p.email}`} className="flex items-center gap-1.5 hover:text-blue-600 min-w-0"><Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" /><span className="truncate">{p.email}</span></a>
+              {p.phone && <a href={`tel:${p.phone}`} className="flex items-center gap-1.5 hover:text-blue-600"><Phone className="w-3.5 h-3.5 text-slate-400" />{p.phone}</a>}
+              {p.city && <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" />{p.city}</span>}
+            </div>
           </div>
-        </div>
-
-        {/* Responsive Action Buttons */}
-        <div className="w-full sm:w-auto flex items-center justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-0 border-slate-100">
-          <button className="flex-1 sm:flex-none px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition flex items-center justify-center gap-1.5 active:scale-95">
-            <Download className="w-4 h-4 text-slate-600" />
-            <span>Export Profile</span>
-          </button>
-          
-          <button className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition shadow-sm flex items-center justify-center gap-1.5 active:scale-95">
-            <Edit className="w-3.5 h-3.5" />
-            <span>Manage</span>
-          </button>
-        </div>
-
-      </div>
-
-      {/* ================= SUB-NAVIGATION TABS ================= */}
-      <div className="border-b border-slate-200 flex space-x-6 text-xs font-bold text-slate-500 overflow-x-auto no-scrollbar">
-        {['Overview', 'Academic Skills', 'Resume', 'Mock History', 'Module Progress'].map((tab) => {
-          const isActive = activeSubTab === tab;
-          return (
-            <button
-              key={tab}
-              onClick={() => setActiveSubTab(tab)}
-              className={`pb-3 transition relative whitespace-nowrap flex items-center gap-1.5 ${
-                isActive ? 'text-blue-600 border-b-2 border-blue-600 font-bold' : 'hover:text-slate-800'
-              }`}
-            >
-              {tab === 'Module Progress' && <BookOpen className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />}
-              {tab}
-              {tab === 'Module Progress' && (
-                <span className="px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[9px] font-extrabold">
-                  Active
-                </span>
-              )}
+          {isOps && (
+            <button onClick={() => setEditing(true)} className="flex items-center justify-center gap-2 text-xs font-bold text-slate-700 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 rounded-xl px-4 py-2.5 transition shrink-0">
+              <Pencil className="w-3.5 h-3.5" /> Edit profile
             </button>
-          );
-        })}
+          )}
+          {isStudent && (
+            <button onClick={() => setDetailsOpen(true)} className="flex items-center justify-center gap-2 text-xs font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 hover:brightness-105 shadow-md shadow-blue-500/20 rounded-xl px-4 py-2.5 transition shrink-0">
+              <Pencil className="w-3.5 h-3.5" /> {p.completeness.percent < 100 ? 'Fill my details' : 'Update my details'}
+            </button>
+          )}
+        </div>
+      </section>
+
+      {isStudent && p.completeness.percent < 100 && (
+        <section className="bg-white p-5 sm:p-6 rounded-3xl border border-blue-100 shadow-sm space-y-3" aria-label="Complete your profile">
+          <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-bold text-slate-900">Your profile is {p.completeness.percent}% complete</h2><span className="text-xs font-bold text-blue-600 tabular-nums">{8 - p.completeness.missing.length} / 8</span></div>
+          <BarRow label="Completeness" value={p.completeness.percent} shown={`${p.completeness.percent}%`} pct={p.completeness.percent} tone={p.completeness.percent >= 50 ? 'blue' : 'amber'} />
+          <p className="text-xs text-slate-600">Companies are matched to you using your skills and the roles you want, so the more you fill in, the more drives you can be put forward for. Still to add:</p>
+          <div className="flex flex-wrap gap-1.5">{p.completeness.missing.map((m) => <Pill key={m.key} className="bg-amber-50 text-amber-700 border-amber-100">{m.label.replace(/ \(.*\)/, '')}</Pill>)}</div>
+        </section>
+      )}
+
+      {p.flags.length > 0 && (
+        <div className="bg-amber-50/70 border border-amber-100 rounded-2xl px-4 py-3 space-y-1.5" role="note" aria-label="Things to look at">
+          <p className="flex items-center gap-1.5 text-[11px] font-bold text-amber-800 uppercase tracking-wider"><AlertTriangle className="w-3.5 h-3.5" />Worth a look</p>
+          <ul className="text-xs text-amber-900 space-y-1 list-disc pl-5">{p.flags.map((f) => <li key={f}>{f}</li>)}</ul>
+        </div>
+      )}
+
+      <KpiGrid>
+        <Kpi label="Stage" value={STAGE_LABEL[p.stage]} icon={GraduationCap} tone="blue" />
+        <Kpi label="Level" value={`${p.level} / 5`} icon={Award} tone="violet" />
+        <Kpi label="Mocks done" value={done} icon={Video} tone="sky" hint={`${p.sessions.length} booked`} />
+        <Kpi label="Drives" value={p.drives.length} icon={Building2} tone="indigo" />
+        <Kpi label="Videos passed" value={p.learning.videos_passed} icon={BookOpen} tone="emerald" />
+        <Kpi label="Resumes" value={p.resumes.length} icon={FileText} tone="amber" />
+      </KpiGrid>
+
+      <div className="flex gap-1 overflow-x-auto border-b border-slate-200 -mx-1 px-1" role="tablist">
+        {tabs.map(([id, label]) => (
+          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
+            className={`px-4 py-2.5 text-xs font-bold whitespace-nowrap border-b-2 -mb-px transition ${tab === id ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>{label}</button>
+        ))}
       </div>
 
-      {/* ================= OVERVIEW TAB ================= */}
-      {activeSubTab === 'Overview' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Left Column (2 Grid Span) */}
-          <div className="md:col-span-2 space-y-5">
-            
-            {/* Personal & Contact */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                <User className="w-4 h-4 text-blue-600" /> Personal & Contact Details
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center space-x-3">
-                  <Mail className="w-4 h-4 text-slate-400 shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-slate-400 font-medium">Email Address</p>
-                    <p className="font-bold text-slate-800">riya.j@gmail.com</p>
-                  </div>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center space-x-3">
-                  <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-slate-400 font-medium">Phone Number</p>
-                    <p className="font-bold text-slate-800">+91 98230 11234</p>
-                  </div>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center space-x-3 sm:col-span-2">
-                  <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-slate-400 font-medium">Current Location</p>
-                    <p className="font-bold text-slate-800">Pune, Maharashtra, India</p>
-                  </div>
-                </div>
+      {tab === 'overview' && <Overview p={p} x={x} isOps={isOps} role={role} call={call} refresh={refresh} />}
+      {tab === 'mocks' && <Mocks p={p} />}
+      {tab === 'jobs' && <Jobs p={p} />}
+      {tab === 'activity' && <Activity p={p} isOps={isOps} call={call} studentId={p.id} onChange={setProfile} />}
+
+      {detailsOpen && <MyDetailsModal token={token} profile={p} onClose={() => setDetailsOpen(false)} onSaved={(np) => { setProfile(np); setDetailsOpen(false); }} onSessionExpired={() => expiredRef.current?.()} />}
+      {editing && <EditModal p={p} call={call} onClose={() => setEditing(false)} onSaved={(np) => { setProfile(np); setEditing(false); }} />}
+    </Page>
+  );
+}
+
+const Row = ({ label, children }) => (children ? (
+  <div className="flex items-start justify-between gap-4 py-2.5 text-xs border-b border-slate-100 last:border-0">
+    <dt className="text-slate-400 font-semibold shrink-0">{label}</dt><dd className="text-slate-800 font-medium text-right break-words min-w-0">{children}</dd>
+  </div>
+) : null);
+
+function Overview({ p, x, isOps, role, call, refresh }) {
+  const at = Math.max(0, STAGES.indexOf(p.stage));
+  const other = Object.entries(x.other || {});
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 items-start gap-5 sm:gap-6">
+      <Card title="About" icon={GraduationCap}>
+        <dl>
+          <Row label="College">{p.college}</Row>
+          <Row label="Degree">{p.degree}{x.postgraduation ? ` · ${x.postgraduation}` : ''}</Row>
+          <Row label="Experience">{x.experience_years !== undefined && x.experience_years !== null ? `${x.experience_years} year${x.experience_years === 1 ? '' : 's'}` : null}</Row>
+          <Row label="Target roles">{p.target_roles.join(', ')}</Row>
+          <Row label="Course mode">{x.course_mode}</Row>
+          <Row label="Experience note">{x.experience_note}</Row>
+          <Row label="State">{x.state}</Row>
+          <Row label="Gender">{x.gender}</Row>
+          <Row label="Admitted">{x.admission_date ? fmtDate(x.admission_date) : null}</Row>
+          <Row label="WhatsApp">{x.whatsapp}</Row>
+          <Row label="LinkedIn">{x.linkedin ? <a href={/^https?:/.test(x.linkedin) ? x.linkedin : `https://${x.linkedin}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{x.linkedin}</a> : null}</Row>
+          {isOps && <>
+            <Row label="Date of birth">{x.dob ? fmtDate(x.dob) : null}</Row>
+            <Row label="Address">{x.address}</Row>
+            <Row label="Parent / guardian">{[x.parent_name, x.parent_phone].filter(Boolean).join(' · ')}</Row>
+            <Row label="Counsellor">{x.counsellor}</Row>
+            <Row label="Referred by">{x.reference_of}</Row>
+            <Row label="Telegram">{x.telegram}</Row>
+            <Row label="Status in the old system">{x.source_status}</Row>
+            <DocumentsRow p={p} call={call} onViewed={refresh} />
+          </>}
+        </dl>
+        <div className="space-y-2 pt-1">
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Skills</p>
+          {(x.skills || []).length ? <div className="flex flex-wrap gap-1.5">{x.skills.map((s) => <Pill key={s} className="bg-blue-50 text-blue-700 border-blue-100">{s}</Pill>)}</div>
+            : <p className="text-xs text-slate-400">No skills added yet. Drive rankings use these, so add them{isOps ? ' with Edit profile' : ''}.</p>}
+        </div>
+        {isOps && other.length > 0 && (
+          <details className="pt-1"><summary className="text-xs font-bold text-blue-600 cursor-pointer">More columns from the Excel ({other.length})</summary>
+            <dl className="mt-2">{other.map(([k, v]) => <Row key={k} label={k}>{v}</Row>)}</dl></details>
+        )}
+      </Card>
+
+      <div className="space-y-5 sm:space-y-6 min-w-0">
+        {!['Student'].includes(role) && <TeamUpdates p={p} x={x} role={role} call={call} refresh={refresh} />}
+        <Card title="Journey" icon={Layers}>
+          <ol className="space-y-2">
+            {STAGES.map((s, i) => (
+              <li key={s} className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-xs font-semibold ${i < at ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : i === at ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+                {i < at ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <span className="w-4 h-4 rounded-full border-2 border-current shrink-0 opacity-60" />}{STAGE_LABEL[s]}
+                {i === at && <span className="ml-auto text-[10px] uppercase tracking-wider opacity-80">Now</span>}
+              </li>
+            ))}
+          </ol>
+        </Card>
+        <Card title="Learning progress" icon={BookOpen}>
+          <BarRow label="Videos passed" value={p.learning.videos_passed} pct={0} />
+          <p className="text-xs text-slate-500">Quiz attempts: <b className="text-slate-700">{p.learning.quiz_attempts}</b> · Speaking practice sessions: <b className="text-slate-700">{p.learning.comms_sessions}</b></p>
+          <p className="text-[11px] text-slate-400">Course videos and quizzes are not switched on yet. Progress will fill in here automatically.</p>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+const TEAM_SECTIONS = [
+  {
+    id: 'operations', title: 'Operations update', roles: ['Operations', 'Admin'],
+    fields: [
+      ['student_status', 'Student status', 'select', ['Active', 'Inactive', 'Left Between']],
+      ['attendance', 'Attendance', 'select', ['Good', 'Average', 'Bad']],
+      ['course_completion', 'Course completion', 'select', ['Less Than 25%', '25%', '50%', '75%', '100%']],
+      ['operations_remark', 'Remark for placement team', 'text'],
+      ['current_ctc', 'Current / previous CTC', 'text'], ['expected_ctc', 'Expected CTC', 'text'],
+      ['education_detail', 'Education details', 'text'], ['current_location', 'Current location', 'text'],
+      ['preferred_location', 'Preferred job location', 'text'],
+    ],
+  },
+  {
+    id: 'trainer', title: 'Trainer / Mock Team update', roles: ['Trainer', 'Admin'],
+    fields: [
+      ['mock_count', 'Mocks given', 'number'], ['mock_remark', 'Mock preparation remark', 'text'],
+      ['mock_final_status', 'Final readiness', 'select', ['Placement Ready', 'Partially Prepared', 'Not Ready for Placement']],
+      ['technical_feedback', 'Technical feedback', 'text'], ['mock_final_remark', 'Final communication remark', 'text'],
+    ],
+  },
+  {
+    id: 'placement', title: 'Placement update', roles: ['Placement', 'Admin'],
+    fields: [
+      ['opportunities_given', 'Opportunities given', 'number'], ['interview_feedback', 'Interview feedback', 'text'],
+      ['placement_status', 'Placement status', 'select', ['Placed', 'Not Placed', 'Not Eligible For Placement']],
+      ['placement_remark', 'Placement remark', 'text'],
+    ],
+  },
+  { id: 'admin', title: 'Management update', roles: ['Admin'], fields: [['management_remark', 'Management / Priyanka remark', 'text']] },
+];
+
+function TeamUpdates({ p, x, role, call, refresh }) {
+  const [editing, setEditing] = useState(null);
+  const [draft, setDraft] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const open = (section) => { setEditing(section.id); setDraft(Object.fromEntries(section.fields.map(([key]) => [key, x[key] ?? '']))); setError(''); };
+  const save = async () => {
+    setSaving(true); setError('');
+    try {
+      await call(`/students/${p.id}/team-update`, { method: 'PATCH', body: { updates: draft } });
+      setEditing(null); await refresh();
+    } catch (e) { setError(e.message); } finally { setSaving(false); }
+  };
+  return (
+    <div className="space-y-5 sm:space-y-6">
+      {TEAM_SECTIONS.map((section) => {
+        const canEdit = section.roles.includes(role);
+        const hasValue = section.fields.some(([key]) => x[key] !== undefined && x[key] !== '');
+        if (!canEdit && !hasValue) return null;
+        return (
+          <Card key={section.id} title={section.title} icon={FileText}>
+            {editing === section.id ? (
+              <div className="space-y-3">
+                {section.fields.map(([key, label, type, options]) => (
+                  <label key={key} className="block text-[11px] font-bold text-slate-500 uppercase space-y-1">
+                    {label}
+                    {type === 'select' ? <select className={field} value={draft[key] ?? ''} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}><option value="">Not set</option>{options.map((v) => <option key={v} value={v}>{v}</option>)}</select>
+                      : type === 'number' ? <input className={field} type="number" min="0" step="1" value={draft[key] ?? ''} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} />
+                        : <textarea className={`${field} min-h-20 resize-y normal-case font-medium text-slate-800`} value={draft[key] ?? ''} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} />}
+                  </label>
+                ))}
+                {error && <p className="text-xs text-rose-600">{error}</p>}
+                <div className="flex justify-end gap-2"><button onClick={() => setEditing(null)} className="px-3 py-2 text-xs font-bold text-slate-600">Cancel</button><button disabled={saving} onClick={save} className="px-3 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 disabled:opacity-60">{saving ? 'Saving…' : 'Save update'}</button></div>
               </div>
+            ) : (
+              <>
+                <dl>{section.fields.map(([key, label]) => <Row key={key} label={label}>{x[key]}</Row>)}</dl>
+                {canEdit && <button onClick={() => open(section)} className="mt-3 text-xs font-bold text-blue-600 hover:underline">Update {section.id === 'trainer' ? 'mock assessment' : section.title.toLowerCase()}</button>}
+              </>
+            )}
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+function DocumentsRow({ p, call, onViewed }) {
+  const [full, setFull] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  if (!p.documents || (!p.documents.aadhaar && !p.documents.pan)) return null;
+
+  const toggle = async () => {
+    if (full) return setFull(null);
+    setBusy(true);
+    setError('');
+    try {
+      setFull(await call(`/students/${p.id}/documents`));
+      onViewed?.(); // the view is now on the timeline
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const aadhaar = full?.aadhaar ? full.aadhaar.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3') : p.documents.aadhaar;
+  return (
+    <div className="py-2.5 text-xs border-b border-slate-100 space-y-1.5">
+      <div className="flex items-start justify-between gap-4">
+        <dt className="text-slate-400 font-semibold shrink-0">ID numbers</dt>
+        <dd className="text-right min-w-0 space-y-0.5">
+          {p.documents.aadhaar && <p className="font-mono font-semibold text-slate-800 break-all">Aadhaar {aadhaar}</p>}
+          {p.documents.pan && <p className="font-mono font-semibold text-slate-800 break-all">PAN {full?.pan || p.documents.pan}</p>}
+        </dd>
+      </div>
+      <div className="flex items-center justify-end gap-3">
+        {error && <span className="text-rose-600 font-medium">{error}</span>}
+        <button onClick={toggle} disabled={busy} className="text-blue-600 font-bold hover:underline disabled:opacity-50">{busy ? 'Loading…' : full ? 'Hide' : 'Show full numbers'}</button>
+      </div>
+      {!full && <p className="text-[11px] text-slate-400 text-right">Saved encrypted. Showing them is recorded on the timeline.</p>}
+    </div>
+  );
+}
+
+function Mocks({ p }) {
+  if (!p.sessions.length) return <Card><Empty>No mocks booked yet. They appear here once the placement team schedules them.</Empty></Card>;
+  return (
+    <Card title="Mocks and doubt sessions" icon={Video}>
+      <ul className="divide-y divide-slate-100">
+        {p.sessions.map((s) => (
+          <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-xs">
+            <div className="min-w-0"><p className="font-bold text-slate-900">{KIND[s.kind] || s.kind}{s.mock_number ? ` ${s.mock_number}` : ''}</p>
+              <p className="text-slate-400 flex items-center gap-1"><Clock className="w-3 h-3" />{fmtDateTime(s.starts_at)}{s.trainer ? ` · ${s.trainer}` : ''}</p></div>
+            <div className="flex items-center gap-2">
+              {s.score !== null && s.score !== undefined && <span className="font-black text-slate-800 tabular-nums">{Number(s.score).toFixed(1)}<span className="text-slate-400 font-medium"> / 10</span></span>}
+              <Pill className={SESSION_CHIP[s.status]}>{s.status}</Pill>
+              {s.meeting_url && s.status === 'scheduled' && <a href={s.meeting_url} target="_blank" rel="noreferrer" className="text-blue-600 font-bold hover:underline">Join</a>}
             </div>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
 
-            {/* Education & Experience */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-blue-600" /> Education & Experience
-              </h2>
-              <div className="space-y-2.5 text-xs">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-start space-x-3">
-                  <GraduationCap className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold text-slate-800">B.Com in Finance</p>
-                    <p className="text-slate-500">Savitribai Phule Pune University (2021 - 2024)</p>
-                  </div>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-start space-x-3">
-                  <Briefcase className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold text-slate-800">Finance Intern</p>
-                    <p className="text-slate-500">HDFC Bank (3 Months Internship)</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+function Jobs({ p }) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 items-start gap-5 sm:gap-6">
+      <Card title="Company drives" icon={Building2}>
+        {p.drives.length === 0 ? <Empty>Not part of any drive yet.</Empty> : (
+          <ul className="divide-y divide-slate-100">
+            {p.drives.map((d) => (
+              <li key={d.id} className="py-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between gap-3"><div className="min-w-0"><p className="font-bold text-slate-900 truncate">{d.company}</p><p className="text-slate-400 truncate">{d.role}</p></div>
+                  <Pill className={DRIVE_CHIP[d.status]}>{d.selected ? DRIVE_LABEL[d.status] || d.status : 'Not picked'}</Pill></div>
+                <BarRow label="Match" value={d.match_score ?? 0} pct={d.match_score ?? 0} />
+                {d.final_verdict && <p className="text-slate-600">Verdict: <b>{VERDICT[d.final_verdict]}</b></p>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+      <div className="space-y-5 sm:space-y-6 min-w-0">
+        <Card title="Offers" icon={Briefcase}>
+          {p.placements.length === 0 ? <Empty>No offers recorded yet.</Empty> : (
+            <ul className="divide-y divide-slate-100">{p.placements.map((o) => <li key={o.id} className="py-3 text-xs flex justify-between gap-3"><span><b className="text-slate-900">{o.company}</b><br /><span className="text-slate-400">{o.role}</span></span><span className="text-right text-slate-600">{o.ctc_lpa ? `${o.ctc_lpa} LPA` : ''}<br />{fmtDate(o.offer_date)}</span></li>)}</ul>
+          )}
+        </Card>
+        <Card title="Resumes" icon={FileText}>
+          {p.resumes.length === 0 ? <Empty>No resume versions saved yet.</Empty> : (
+            <ul className="divide-y divide-slate-100">{p.resumes.map((r) => <li key={r.id} className="py-3 text-xs flex justify-between gap-3"><span><b className="text-slate-900">{r.company ? `Tailored for ${r.company}` : 'Base resume'}</b><br /><span className="text-slate-400">Version {r.version} · {fmtDate(r.created_at)}</span></span>{r.ats_match_pct !== null && <span className="font-black text-slate-800">{r.ats_match_pct}% ATS</span>}</li>)}</ul>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
 
-            {/* Career Readiness */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-blue-600" /> Career Readiness Progress
-              </h2>
-              <div className="flex flex-col sm:flex-row items-center gap-6">
-                
-                {/* Donut Score */}
-                <div className="relative w-28 h-28 flex items-center justify-center shrink-0">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                    <path
-                      className="text-slate-100"
-                      strokeWidth="3.5"
-                      stroke="currentColor"
-                      fill="none"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                    <path
-                      className="text-emerald-500"
-                      strokeDasharray="78, 100"
-                      strokeWidth="3.5"
-                      strokeLinecap="round"
-                      stroke="currentColor"
-                      fill="none"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                  </svg>
-                  <div className="absolute text-center">
-                    <span className="text-xl font-bold text-slate-900">78%</span>
-                    <span className="block text-[8px] text-slate-400 font-bold uppercase">Ready</span>
-                  </div>
-                </div>
+function Activity({ p, isOps, call, studentId, onChange }) {
+  const [text, setText] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
-                {/* Progress Indicators */}
-                <div className="flex-1 w-full space-y-3">
-                  <div>
-                    <div className="flex justify-between text-xs font-semibold mb-1">
-                      <span className="text-slate-600">Resume</span>
-                      <span className="text-slate-800 font-bold">78%</span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-slate-700 rounded-full" style={{ width: '78%' }} />
-                    </div>
-                  </div>
+  const addNote = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      onChange((await call(`/students/${studentId}/notes`, { method: 'POST', body: { body: text } })).profile);
+      setText('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
-                  <div>
-                    <div className="flex justify-between text-xs font-semibold mb-1">
-                      <span className="text-slate-600">Skills</span>
-                      <span className="text-slate-800 font-bold">65%</span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-cyan-500 rounded-full" style={{ width: '65%' }} />
-                    </div>
-                  </div>
+  return (
+    <div className={`grid grid-cols-1 ${isOps ? 'lg:grid-cols-2' : ''} items-start gap-5 sm:gap-6`}>
+      {isOps && (
+        <Card title="Call notes" icon={Phone}>
+          <form onSubmit={addNote} className="space-y-2">
+            <textarea className={`${field} min-h-[88px] resize-y`} value={text} onChange={(e) => setText(e.target.value)} placeholder="What was discussed, what was agreed…" aria-label="New note" maxLength={4000} />
+            {error && <p className="text-xs text-rose-600 font-medium">{error}</p>}
+            <button disabled={saving || !text.trim()} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold px-4 py-2 rounded-xl transition">
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}Save note
+            </button>
+          </form>
+          {p.notes?.length === 0 ? <Empty>No notes yet.</Empty> : (
+            <ul className="space-y-3">{p.notes?.map((n) => <li key={n.id} className="bg-slate-50 border border-slate-100 rounded-2xl p-3 text-xs"><p className="text-slate-800 whitespace-pre-wrap break-words">{n.body}</p><p className="text-slate-400 mt-1.5">{n.author} · {fmtDateTime(n.created_at)}</p></li>)}</ul>
+          )}
+        </Card>
+      )}
+      <Card title="Timeline" icon={Clock}>
+        {p.activity.length === 0 ? <Empty>Nothing has happened on this record yet.</Empty> : (
+          <ol className="relative border-l border-slate-200 ml-2 space-y-4">
+            {p.activity.map((a) => (
+              <li key={a.id} className="pl-5 relative text-xs">
+                <span className="absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-blue-500 ring-4 ring-white" />
+                <p className="text-slate-800 font-medium">{a.summary}</p>
+                <p className="text-slate-400">{a.actor ? `${a.actor} · ` : ''}{fmtDateTime(a.at)}</p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </Card>
+    </div>
+  );
+}
 
-                  <div>
-                    <div className="flex justify-between text-xs font-semibold mb-1">
-                      <span className="text-slate-600">JD Match</span>
-                      <span className="text-slate-800 font-bold">95%</span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-purple-500 rounded-full" style={{ width: '95%' }} />
-                    </div>
-                  </div>
+// Defined at module level on purpose: a component created inside another one is rebuilt on every keystroke and drops focus
+const L = ({ label, children }) => <label className="text-[11px] font-bold text-slate-500 uppercase space-y-1 block min-w-0">{label}{children}</label>;
 
-                  <div>
-                    <div className="flex justify-between text-xs font-semibold mb-1">
-                      <span className="text-slate-600">Interview Preps</span>
-                      <span className="text-slate-800 font-bold">82%</span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: '82%' }} />
-                    </div>
-                  </div>
-                </div>
+function EditModal({ p, call, onClose, onSaved }) {
+  const [batches, setBatches] = useState([]);
+  const [form, setForm] = useState({
+    name: p.name, phone: p.phone || '', college: p.college || '', degree: p.degree || '', city: p.city || '',
+    target_roles: p.target_roles.join(', '), skills: (p.extra.skills || []).join(', '),
+    experience_years: p.extra.experience_years ?? '', batch_id: p.batch_id || '', stage: p.stage,
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => { call('/students/meta/batches').then((d) => setBatches(d.batches)).catch(() => {}); }, [call]);
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-              </div>
-            </div>
+  const submit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      onSaved((await call(`/students/${p.id}`, { method: 'PATCH', body: { ...form, batch_id: form.batch_id || undefined } })).profile);
+    } catch (err) {
+      setError(err.message);
+      setSaving(false);
+    }
+  };
 
-            {/* Next Mock Interview & Mentor Session */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Next Mock Interview</h2>
-              <div className="bg-slate-50 p-4 rounded-xl space-y-2 text-xs border border-slate-100">
-                <h3 className="font-bold text-slate-900">Financial Analyst - Technical Round</h3>
-                <p className="text-slate-500">📅 01-10-2026 | 🕒 2:00 PM | AI Interview | 12 Questions | ~20 mins</p>
-                <button className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition mt-2">
-                  Join Interview
-                </button>
-              </div>
-
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider pt-2">Upcoming Mentor Session</h2>
-              <div className="bg-slate-50 p-4 rounded-xl space-y-2 text-xs border border-slate-100">
-                <div className="flex items-center space-x-2">
-                  <img
-                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80"
-                    alt="Mentor"
-                    className="w-7 h-7 rounded-full object-cover"
-                  />
-                  <div>
-                    <h4 className="font-bold text-slate-900">Priya Sharma</h4>
-                    <p className="text-[10px] text-slate-400 font-medium">Senior Finance Trainer</p>
-                  </div>
-                </div>
-                <p className="text-slate-500">Topic: Resume & Interview Feedback | 📅 01-10-2026 | 🕒 2:00 PM</p>
-                <button className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition mt-2">
-                  Join Session
-                </button>
-              </div>
-            </div>
-
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4" role="dialog" aria-modal="true" aria-label="Edit profile">
+      <form onSubmit={submit} className="bg-white border border-slate-200 sm:rounded-3xl rounded-t-3xl shadow-2xl w-full max-w-2xl max-h-[94dvh] overflow-y-auto">
+        <div className="sticky top-0 bg-white/95 backdrop-blur flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100">
+          <h2 className="text-sm font-bold text-slate-900">Edit {p.name}</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-700"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-5 sm:p-6 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <L label="Full name"><input required className={field} value={form.name} onChange={set('name')} /></L>
+            <L label="Phone"><input className={field} value={form.phone} onChange={set('phone')} /></L>
+            <L label="College"><input className={field} value={form.college} onChange={set('college')} /></L>
+            <L label="Degree"><input className={field} value={form.degree} onChange={set('degree')} /></L>
+            <L label="City"><input className={field} value={form.city} onChange={set('city')} /></L>
+            <L label="Experience (years)"><input type="number" min="0" max="60" step="0.5" className={field} value={form.experience_years} onChange={set('experience_years')} /></L>
+            <L label="Batch"><select className={field} value={form.batch_id} onChange={set('batch_id')}><option value="">No batch</option>{batches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></L>
+            <L label="Stage"><select className={field} value={form.stage} onChange={set('stage')}>{STAGES.map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}</select></L>
           </div>
-
-          {/* Right Column Sidebar */}
-          <div className="space-y-5">
-            
-            {/* Skill Score */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-blue-600" /> Skill Score
-              </h2>
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                  <span className="text-slate-600 font-medium">Technical</span>
-                  <span className="font-bold text-slate-900">78%</span>
-                </div>
-                <div className="flex justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                  <span className="text-slate-600 font-medium">Communication</span>
-                  <span className="font-bold text-slate-900">65%</span>
-                </div>
-                <div className="flex justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                  <span className="text-slate-600 font-medium">Behavioral</span>
-                  <span className="font-bold text-slate-900">82%</span>
-                </div>
-              </div>
-            </div>
-
-            {/* AI Coach Insights */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
-              <h2 className="text-xs font-bold text-slate-800 flex items-center gap-2 uppercase tracking-wider">
-                <Sparkles className="w-4 h-4 text-blue-600" /> AI Coach Says
-              </h2>
-              <div className="space-y-2 text-xs font-semibold">
-                <p className="text-orange-600 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
-                  Improve: Financial Ratio Analysis
-                </p>
-                <p className="text-amber-600 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                  Practice: SQL Interview Questions
-                </p>
-                <p className="text-emerald-600 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  Strong: Excel & Communication
-                </p>
-              </div>
-            </div>
-
-            {/* Resume Preview */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
-                <span>Resume</span>
-                <span className="text-[9px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-bold border border-emerald-200">
-                  Verified
-                </span>
-              </h2>
-
-              <div className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-100 h-36 flex items-center justify-center">
-                <img
-                  src="https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400&auto=format&fit=crop&q=80"
-                  alt="Resume Preview"
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                />
-                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                  <button className="px-3 py-1.5 rounded-lg bg-white text-slate-900 text-xs font-bold shadow flex items-center gap-1">
-                    <Eye className="w-3.5 h-3.5" /> Full View
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <button className="py-2 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition border border-slate-200">
-                  View Old
-                </button>
-                <button className="py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-sm">
-                  View AI
-                </button>
-              </div>
-            </div>
-
+          <L label="Target roles (comma separated)"><input className={field} value={form.target_roles} onChange={set('target_roles')} placeholder="Financial Analyst, Equity Research" /></L>
+          <L label="Skills (comma separated)"><input className={field} value={form.skills} onChange={set('skills')} placeholder="Excel, Financial Modeling, Valuation" /></L>
+          <p className="text-[11px] text-slate-400">Skills and target roles decide how this student ranks in company drives.</p>
+          {error && <p className="text-xs font-medium text-rose-600">{error}</p>}
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Cancel</button>
+            <button disabled={saving} className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 transition">{saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}Save changes</button>
           </div>
         </div>
-      )}
-
-      {/* ================= MODULE PROGRESS TAB (RENAMED) ================= */}
-      {activeSubTab === 'Module Progress' && (
-        <div className="space-y-6">
-          
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                <PlayCircle className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Modules</p>
-                <h3 className="text-lg font-extrabold text-slate-900">{moduleStats.totalVideos} Videos</h3>
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Completed</p>
-                <h3 className="text-lg font-extrabold text-emerald-600">{moduleStats.completed} Modules ({moduleStats.completionRate}%)</h3>
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-                <Clock className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">In Progress</p>
-                <h3 className="text-lg font-extrabold text-amber-600">{moduleStats.inProgress} Modules</h3>
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-                <BookOpen className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Time Completed</p>
-                <h3 className="text-lg font-extrabold text-slate-900">{moduleStats.totalHoursWatched}</h3>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Module Videos List */}
-          <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200/80 space-y-5">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Course Modules & Embedded Video Lessons</h2>
-                <p className="text-xs text-slate-500">Click any video module below to open and play the content.</p>
-              </div>
-              <span className="text-xs font-bold px-3 py-1 bg-slate-100 text-slate-700 rounded-full border border-slate-200">
-                {moduleStats.notStarted} Modules Remaining
-              </span>
-            </div>
-
-            {/* Video Module List */}
-            <div className="space-y-3">
-              {moduleList.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => setActiveVideo(item)}
-                  className="group p-4 rounded-xl border border-slate-100 hover:border-blue-200 bg-slate-50/50 hover:bg-blue-50/30 transition cursor-pointer flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="relative w-28 h-16 rounded-lg overflow-hidden shrink-0 bg-slate-900 group-hover:shadow-md transition">
-                      <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover group-hover:opacity-80 transition" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <PlayCircle className="w-8 h-8 text-white drop-shadow-md group-hover:scale-110 transition duration-200" />
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                        {item.category}
-                      </span>
-                      <h3 className="text-xs md:text-sm font-bold text-slate-800 mt-1 group-hover:text-blue-600 transition">{item.title}</h3>
-                      <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5 font-medium">
-                        <Clock className="w-3 h-3" /> Duration: {item.duration}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="w-full md:w-60 space-y-1.5 shrink-0">
-                    <div className="flex justify-between items-center text-xs font-semibold">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        item.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
-                        item.status === 'In Progress' ? 'bg-amber-100 text-amber-700' :
-                        'bg-slate-200 text-slate-600'
-                      }`}>
-                        {item.status}
-                      </span>
-                      <span className="text-slate-700 font-bold text-[11px]">{item.watchedPercent}%</span>
-                    </div>
-
-                    <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          item.watchedPercent === 100 ? 'bg-emerald-500' :
-                          item.watchedPercent > 0 ? 'bg-amber-500' : 'bg-slate-300'
-                        }`}
-                        style={{ width: `${item.watchedPercent}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-          </div>
-
-        </div>
-      )}
-
-      {/* ================= EMBEDDED YOUTUBE VIDEO MODAL ================= */}
-      {activeVideo && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl space-y-0 relative border border-slate-200">
-            
-            {/* Modal Header */}
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
-              <div>
-                <span className="text-[10px] uppercase font-extrabold text-blue-400">{activeVideo.category}</span>
-                <h3 className="text-sm font-bold text-slate-100">{activeVideo.title}</h3>
-              </div>
-              <button
-                onClick={() => setActiveVideo(null)}
-                className="p-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* iFrame Video Embed */}
-            <div className="relative aspect-video w-full bg-black">
-              <iframe
-                src={`${activeVideo.embedUrl}?autoplay=1`}
-                title={activeVideo.title}
-                className="w-full h-full border-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
-              <span className="text-slate-500 font-medium">Duration: {activeVideo.duration}</span>
-              <button
-                onClick={() => setActiveVideo(null)}
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition"
-              >
-                Close Lesson
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* ================= OTHER SUB-TABS PLACEHOLDER ================= */}
-      {['Academic Skills', 'Resume', 'Mock History'].includes(activeSubTab) && (
-        <div className="bg-white rounded-2xl p-12 text-center border border-slate-200/80 space-y-3">
-          <Award className="w-10 h-10 text-blue-500 mx-auto" />
-          <h3 className="text-base font-bold text-slate-800">{activeSubTab} Details</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Content and analytics for {activeSubTab} will be displayed here.
-          </p>
-        </div>
-      )}
-
+      </form>
     </div>
   );
 }

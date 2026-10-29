@@ -46,7 +46,8 @@ const ROP_STYLES = `@import url('https://fonts.googleapis.com/css2?family=Inter:
 
 /* Stepper */
 .ro-page .workflow-stepper { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 12px 20px; margin-bottom: 24px; box-shadow: var(--shadow-subtle); }
-.ro-page .stepper-track { display: flex; align-items: center; justify-content: space-between; }
+.ro-page .stepper-track { display: flex; align-items: center; justify-content: space-between; overflow-x: auto; padding-bottom: 4px; }
+.ro-page .step-item { flex-shrink: 0; white-space: nowrap; }
 .ro-page .step-item { display: flex; align-items: center; gap: 8px; color: var(--text-subtle); font-size: 13px; font-weight: 500; cursor: default; transition: all 0.2s ease; }
 .ro-page .step-num { font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 6px; background: var(--bg-subtle); color: var(--text-subtle); border: 1px solid var(--border-light); }
 .ro-page .step-item.active { color: var(--accent-primary); font-weight: 600; }

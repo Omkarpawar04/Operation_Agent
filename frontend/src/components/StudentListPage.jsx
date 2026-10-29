@@ -1,195 +1,208 @@
-import React, { useState } from 'react';
-import { Plus, Search, ChevronRight, SlidersHorizontal, Users } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Users, Search, UploadCloud, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { api } from '../api.js';
+import { Card, Empty, Initials, Page, PageHeader, Pill, PrimaryButton } from './ui.jsx';
+import ImportStudentsModal from './ImportStudentsModal.jsx';
+import { STAGES, STAGE_CHIP, STAGE_LABEL, ago } from './studentMeta.js';
 
-// =---------------- STUDENT LIST PAGE ----------------=
-export default function StudentListPage({ setActiveTab, setSelectedStudent }) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [courseFilter, setCourseFilter] = useState('All');
-  const [eligibilityFilter, setEligibilityFilter] = useState('All');
+const PAGE_SIZE = 25;
+const select = 'bg-slate-50/80 border border-slate-200/80 rounded-xl px-3 py-2 text-xs outline-none focus:border-blue-400 min-w-0';
 
-  const students = [
-    { id: 'D321', name: 'Riya Joshi', course: 'DSA', batch: 'D-08', mocksAttended: '8', score: '81%', status: 'YES' },
-    { id: 'D322', name: 'Aarav Patel', course: 'Financial Modeling', batch: 'D-08', mocksAttended: '12', score: '88%', status: 'YES' },
-    { id: 'D323', name: 'Siddharth Rao', course: 'Corporate Finance', batch: 'D-07', mocksAttended: '5', score: '58%', status: 'NO' },
-    { id: 'D324', name: 'Neha Sharma', course: 'Equity Research', batch: 'D-08', mocksAttended: '10', score: '85%', status: 'YES' },
-    { id: 'D325', name: 'Karan Mehta', course: 'DSA', batch: 'D-06', mocksAttended: '7', score: '72%', status: 'YES' },
-  ];
+const percentTone = (p) => (p >= 100 ? 'from-emerald-500 to-teal-600' : p >= 50 ? 'from-blue-500 to-indigo-600' : 'from-amber-400 to-orange-500');
+function Percent({ value }) {
+  return (
+    <div className="flex items-center gap-2 min-w-0" title={`Profile ${value}% complete`}>
+      <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden shrink-0"><div className={`h-full bg-gradient-to-r ${percentTone(value)}`} style={{ width: `${value}%` }} /></div>
+      <span className="text-[11px] font-bold text-slate-600 tabular-nums">{value}%</span>
+    </div>
+  );
+}
 
-  // Filtering logic for the search and dropdowns
-  const filteredStudents = students.filter(st => {
-    const matchesSearch = st.name.toLowerCase().includes(searchQuery.toLowerCase()) || st.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCourse = courseFilter === 'All' || st.course === courseFilter;
-    const matchesEligibility = eligibilityFilter === 'All' || st.status === eligibilityFilter;
-    return matchesSearch && matchesCourse && matchesEligibility;
-  });
+function Flags({ s }) {
+  if (!s.never_logged_in && !s.inactive && !s.no_skills) return null;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {s.never_logged_in && <Pill className="bg-amber-50 text-amber-700 border-amber-100">Never logged in</Pill>}
+      {s.inactive && <Pill className="bg-rose-50 text-rose-700 border-rose-100">Inactive 7+ days</Pill>}
+      {s.no_skills && <Pill className="bg-slate-50 text-slate-500 border-slate-200">No skills</Pill>}
+    </div>
+  );
+}
+
+export default function StudentListPage({ token, role, openStudent, onSessionExpired }) {
+  const [data, setData] = useState(null);
+  const [batches, setBatches] = useState([]);
+  const [q, setQ] = useState('');
+  const [search, setSearch] = useState(''); // q after a short pause, so typing does not fire a request per key
+  const [batchId, setBatchId] = useState('');
+  const [stage, setStage] = useState('');
+  const [flag, setFlag] = useState('');
+  const [sort, setSort] = useState('name');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showImport, setShowImport] = useState(false);
+  const latest = useRef(0);
+  const expiredRef = useRef(onSessionExpired);
+  expiredRef.current = onSessionExpired;
+  const canImport = role === 'Operations' || role === 'Admin';
+
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(q); setPage(1); }, 300);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const load = useCallback(async () => {
+    const ticket = ++latest.current; // ignore answers that arrive after a newer request
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ page, page_size: PAGE_SIZE, sort });
+      if (search) params.set('q', search);
+      if (batchId) params.set('batch_id', batchId);
+      if (stage) params.set('stage', stage);
+      if (flag) params.set('flag', flag);
+      const d = await api(`/students?${params}`, { token, onExpired: () => expiredRef.current?.() });
+      if (ticket !== latest.current) return;
+      setData(d);
+      setError('');
+    } catch (e) {
+      if (ticket === latest.current) setError(e.message);
+    } finally {
+      if (ticket === latest.current) setLoading(false);
+    }
+  }, [token, page, sort, search, batchId, stage, flag]);
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    api('/students/meta/batches', { token }).then((d) => setBatches(d.batches)).catch(() => {});
+  }, [token]);
+
+  const students = data?.students || [];
+  const total = data?.total ?? 0;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const stageCounts = Object.fromEntries((data?.stage_counts || []).map((s) => [s.stage, s.total]));
+  const everyone = Object.values(stageCounts).reduce((a, b) => a + b, 0);
+  const filtering = Boolean(search || batchId || stage || flag);
+  const reset = (setter) => (e) => { setter(e.target.value); setPage(1); };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto animate-fadeIn pb-12">
-      
-      {/* Top Header Banner with Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-br from-white via-blue-50/70 to-sky-50/70 p-6 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-200/80 text-slate-900">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
-              <Users className="w-4 h-4" />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight">All Students Directory</h1>
-          </div>
-          <p className="text-xs text-slate-600 pl-10">Manage active student evaluations, placement mock scores, and criteria eligibility.</p>
+    <Page>
+      <PageHeader
+        icon={Users}
+        title="Students"
+        subtitle={data ? `${everyone} student${everyone === 1 ? '' : 's'} on the platform. Open any one to see their full record.` : 'Loading…'}
+        action={canImport && <PrimaryButton icon={UploadCloud} onClick={() => setShowImport(true)}>Import from Excel</PrimaryButton>}
+      />
+
+      {everyone > 0 && (
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by stage">
+          {[['', 'All', everyone], ...STAGES.map((s) => [s, STAGE_LABEL[s], stageCounts[s] || 0])].map(([value, label, count]) => (
+            <button key={value} onClick={() => { setStage(value); setPage(1); }} aria-pressed={stage === value}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${stage === value ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+              {label} <span className="opacity-60">{count}</span>
+            </button>
+          ))}
         </div>
-        
-        <button 
-          onClick={() => alert("Trigger Add Student Modal or Form")}
-          className="flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 hover:brightness-105 text-white text-xs font-bold px-5 py-3 rounded-xl transition-all shadow-md shadow-blue-500/20 active:scale-95 group"
-        >
-          <Plus className="w-4 h-4 transition-transform group-hover:rotate-90 duration-300" />
-          <span>Add New Student</span>
-        </button>
-      </div>
+      )}
 
-      {/* Filter Toolbar with Search & Dropdowns */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white/90 backdrop-blur-xl p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-        
-        {/* Search Input */}
-        <div className="relative flex-1 max-w-sm">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-          <input 
-            type="text"
-            placeholder="Search by student name or ID..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white border border-slate-200/80 rounded-xl pl-10 pr-4 py-2 text-xs font-medium text-slate-700 outline-none focus:border-blue-400 focus:bg-white transition-all shadow-inner"
-          />
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3 bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm">
+        <div className="relative flex-1 min-w-0">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, phone or student ID" aria-label="Search students"
+            className="w-full bg-slate-50/80 border border-slate-200/80 text-xs pl-9 pr-4 py-2 rounded-xl outline-none focus:border-blue-400" />
         </div>
-
-        {/* Dropdowns */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5 text-slate-400 text-xs font-semibold px-1">
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span>Filters:</span>
-          </div>
-
-          <select 
-            onChange={(e) => setCourseFilter(e.target.value.replace('Course: ', ''))}
-            className="bg-slate-50/80 hover:bg-blue-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs font-medium text-slate-700 outline-none transition cursor-pointer shadow-sm"
-          >
-            <option>Course: All</option>
-            <option>DSA</option>
-            <option>Financial Modeling</option>
-            <option>Corporate Finance</option>
-            <option>Equity Research</option>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 lg:flex lg:gap-3">
+          <select className={select} value={batchId} onChange={reset(setBatchId)} aria-label="Filter by batch">
+            <option value="">All batches</option>
+            {batches.map((b) => <option key={b.id} value={b.id}>{b.name} ({b.students})</option>)}
           </select>
-
-          <select 
-            className="bg-slate-50/80 hover:bg-blue-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs font-medium text-slate-700 outline-none transition cursor-pointer shadow-sm"
-          >
-            <option>Students: All</option>
+          <select className={select} value={flag} onChange={reset(setFlag)} aria-label="Filter by needs">
+            <option value="">Everyone</option>
+            <option value="never">Never logged in</option>
+            <option value="inactive">Inactive 7+ days</option>
+            <option value="no_skills">No skills added</option>
           </select>
-
-          <select 
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val.includes('YES')) setEligibilityFilter('YES');
-              else if (val.includes('NO')) setEligibilityFilter('NO');
-              else setEligibilityFilter('All');
-            }}
-            className="bg-slate-50/80 hover:bg-blue-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs font-medium text-slate-700 outline-none transition cursor-pointer shadow-sm"
-          >
-            <option>Eligibility: All</option>
-            <option>Eligible (YES)</option>
-            <option>Not Eligible (NO)</option>
+          <select className={select} value={sort} onChange={reset(setSort)} aria-label="Sort by">
+            <option value="name">Sort: Name</option>
+            <option value="newest">Sort: Newest first</option>
+            <option value="last_login">Sort: Last login</option>
+            <option value="code">Sort: Student ID</option>
           </select>
         </div>
       </div>
 
-      {/* Student Table Card */}
-      <div className="bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-2xl overflow-hidden shadow-xl shadow-slate-200/50">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/80 text-slate-400 text-[11px] font-bold border-b border-slate-100 tracking-wider uppercase">
-              <tr>
-                <th className="py-4 px-5">Student ID</th>
-                <th className="py-4 px-5">Student Name</th>
-                <th className="py-4 px-5">Course</th>
-                <th className="py-4 px-5">Batch</th>
-                <th className="py-4 px-5">Mocks Attended</th>
-                <th className="py-4 px-5">Avg Score</th>
-                <th className="py-4 px-5">Eligibility</th>
-                <th className="py-4 px-5 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {filteredStudents.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="py-12 text-center text-slate-400">
-                    No matching student records found.
-                  </td>
-                </tr>
-              ) : (
-                filteredStudents.map((st, i) => (
-                  <tr
-                    key={i}
-                    onClick={() => {
-                      setSelectedStudent(st.name);
-                      setActiveTab('Student Profile');
-                    }}
-                    className="hover:bg-blue-50/40 cursor-pointer transition-colors duration-200 group"
-                  >
-                    <td className="py-4 px-5 text-blue-600 font-mono font-bold">{st.id}</td>
-                    <td className="py-4 px-5 font-bold text-slate-900 group-hover:text-blue-700 transition-colors flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white text-xs font-bold shadow-md shadow-blue-500/20">
-                        {st.name.charAt(0)}
-                      </div>
-                      {st.name}
-                    </td>
-                    <td className="py-4 px-5">
-                      <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-blue-100">
-                        {st.course}
-                      </span>
-                    </td>
-                    <td className="py-4 px-5 font-semibold text-slate-600">{st.batch}</td>
-                    <td className="py-4 px-5 text-slate-600">{st.mocksAttended} Sessions</td>
-                    <td className="py-4 px-5 font-bold text-slate-900">
-                      <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">
-                        {st.score}
-                      </span>
-                    </td>
-                    <td className="py-4 px-5">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase ${
-                          st.status === 'YES'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-sm'
-                            : 'bg-orange-50 text-orange-700 border border-orange-200 shadow-sm'
-                        }`}
-                      >
-                        {st.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-5 text-right">
-                      <div className="w-8 h-8 rounded-xl bg-slate-100 group-hover:bg-blue-600 group-hover:text-white text-slate-500 inline-flex items-center justify-center transition-all ml-auto">
-                        <ChevronRight className="w-4 h-4" />
-                      </div>
-                    </td>
+      {error && <p className="text-xs font-medium text-rose-600 bg-rose-50 border border-rose-100 rounded-2xl px-4 py-3">{error} <button onClick={load} className="underline font-bold ml-1">Try again</button></p>}
+
+      {!data && loading ? (
+        <p className="text-xs text-slate-500 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Loading students…</p>
+      ) : students.length === 0 ? (
+        <Card>
+          <Empty>
+            {filtering ? 'No students match these filters.' : canImport ? 'No students yet. Import your first batch from an Excel file.' : 'No students yet.'}
+          </Empty>
+          {!filtering && canImport && <div className="flex justify-center pb-2"><PrimaryButton icon={UploadCloud} onClick={() => setShowImport(true)}>Import from Excel</PrimaryButton></div>}
+        </Card>
+      ) : (
+        <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+          {/* Phone, tablet, laptop: one card per student */}
+          <div className="xl:hidden grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+            {students.map((s) => (
+              <button key={s.id} onClick={() => openStudent(s.id)} className="text-left bg-white rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition p-4 sm:p-5 space-y-3 min-w-0">
+                <div className="flex items-start gap-3 min-w-0">
+                  <Initials name={s.name} className="w-10 h-10" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-sm text-slate-900 truncate">{s.name}</p>
+                    <p className="text-xs text-slate-400 truncate">{s.student_code} · {s.email}</p>
+                  </div>
+                  <Pill className={STAGE_CHIP[s.stage]}>{STAGE_LABEL[s.stage]}</Pill>
+                </div>
+                <dl className="grid grid-cols-3 gap-2 text-xs bg-slate-50 rounded-2xl p-3">
+                  <div className="min-w-0"><dt className="text-[10px] font-bold uppercase text-slate-400">Batch</dt><dd className="mt-0.5 text-slate-700 truncate">{s.batch || '—'}</dd></div>
+                  <div className="min-w-0"><dt className="text-[10px] font-bold uppercase text-slate-400">City</dt><dd className="mt-0.5 text-slate-700 truncate">{s.city || '—'}</dd></div>
+                  <div className="min-w-0"><dt className="text-[10px] font-bold uppercase text-slate-400">Last login</dt><dd className="mt-0.5 text-slate-700 truncate">{ago(s.last_login_at)}</dd></div>
+                </dl>
+                <div className="flex items-center justify-between gap-3 text-[11px] text-slate-500"><span>Profile</span><Percent value={s.profile_percent} /></div>
+                <Flags s={s} />
+              </button>
+            ))}
+          </div>
+
+          {/* Wide screens: a table */}
+          <div className="hidden xl:block bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50/80 text-slate-400 text-[11px] font-bold border-b border-slate-100 tracking-wider uppercase">
+                <tr><th className="px-5 py-3">ID</th><th className="px-5 py-3">Student</th><th className="px-5 py-3">Batch</th><th className="px-5 py-3">City</th><th className="px-5 py-3">Stage</th><th className="px-5 py-3">Last login</th><th className="px-5 py-3">Profile</th><th className="px-5 py-3">Needs</th><th /></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {students.map((s) => (
+                  <tr key={s.id} onClick={() => openStudent(s.id)} className="hover:bg-blue-50/40 cursor-pointer transition-colors">
+                    <td className="px-5 py-3.5 font-mono text-slate-500 whitespace-nowrap">{s.student_code}</td>
+                    <td className="px-5 py-3.5 max-w-[280px]"><div className="flex items-center gap-3 min-w-0"><Initials name={s.name} /><div className="min-w-0"><p className="font-semibold text-slate-800 truncate">{s.name}</p><p className="text-slate-400 truncate">{s.email}</p></div></div></td>
+                    <td className="px-5 py-3.5 text-slate-600">{s.batch || '—'}</td>
+                    <td className="px-5 py-3.5 text-slate-600">{s.city || '—'}</td>
+                    <td className="px-5 py-3.5"><Pill className={STAGE_CHIP[s.stage]}>{STAGE_LABEL[s.stage]}</Pill></td>
+                    <td className="px-5 py-3.5 text-slate-500 whitespace-nowrap">{ago(s.last_login_at)}</td>
+                    <td className="px-5 py-3.5"><Percent value={s.profile_percent} /></td>
+                    <td className="px-5 py-3.5"><Flags s={s} /></td>
+                    <td className="px-5 py-3.5 text-slate-300"><ChevronRight className="w-4 h-4" /></td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        {/* Table Footer Pagination */}
-        <div className="p-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span className="font-medium">Showing <strong className="text-slate-700">1-{filteredStudents.length}</strong> of total students</span>
-          <div className="flex items-center gap-2">
-            <button disabled className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-400 cursor-not-allowed">
-              Previous
-            </button>
-            <button className="px-4 py-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 hover:brightness-105 font-semibold rounded-lg transition text-white shadow-md shadow-blue-500/20">
-              Next
-            </button>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 text-xs text-slate-500">
+            <span>Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}</span>
+            <div className="flex items-center gap-2">
+              <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="flex items-center gap-1 px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold hover:bg-slate-50 disabled:opacity-40"><ChevronLeft className="w-3.5 h-3.5" />Previous</button>
+              <span className="font-semibold text-slate-700 tabular-nums">{page} / {pages}</span>
+              <button disabled={page >= pages} onClick={() => setPage(page + 1)} className="flex items-center gap-1 px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold hover:bg-slate-50 disabled:opacity-40">Next<ChevronRight className="w-3.5 h-3.5" /></button>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+
+      {showImport && <ImportStudentsModal token={token} onClose={() => setShowImport(false)} onImported={load} onSessionExpired={onSessionExpired} />}
+    </Page>
   );
 }

@@ -54,6 +54,16 @@ DEFAULT_AI_API_URL = (
 
 DEFAULT_AI_MODEL = "gemini-3.8-flash"
 
+# Fields the resume parser adds for its own use; restored after the AI call.
+_INTERNAL_RESUME_KEYS = (
+    "format_signals",
+    "legacy_skills",
+    "section_heading_labels",
+    "section_order",
+    "sections_detected",
+    "source_lines",
+)
+
 
 # ---------------------------------------------------------------------------
 # Public entry point
@@ -145,6 +155,14 @@ def optimize_resume(
     # ---------------------------------------------------------------
     # Validation
     # ---------------------------------------------------------------
+
+    # Parser bookkeeping (layout, headings, source lines) is not resume
+    # content. The model does not reliably return it, so restore it from the
+    # original before validating.
+    if isinstance(optimized, dict):
+        for key in _INTERNAL_RESUME_KEYS:
+            if key in source_resume and key not in optimized:
+                optimized[key] = deepcopy(source_resume[key])
 
     validated, validation_errors = _validate_gemini_result(
         original=source_resume,
