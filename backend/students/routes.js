@@ -395,14 +395,36 @@ router.post('/import', requireRole('operations'), asyncRoute(async (req, res) =>
   const existingEmails = new Set((await pool.query('SELECT lower(email::text) AS e FROM users WHERE lower(email::text) = ANY($1::text[])', [emails])).rows.map((r) => r.e));
   const existingCodes = new Set((await pool.query('SELECT lower(student_code) AS c FROM students WHERE lower(student_code) = ANY($1::text[])', [codes])).rows.map((r) => r.c));
   const existingPhones = new Set((await pool.query("SELECT regexp_replace(phone, '\\D', '', 'g') AS p FROM users WHERE regexp_replace(phone, '\\D', '', 'g') = ANY($1::text[])", [phones])).rows.map((r) => r.p));
-  const { valid, problems, warnings } = validateRows(chosen.rows, chosen.headers, mapping, { existingEmails, existingCodes, existingPhones, defaults });
+  const updateExisting = options.import_mode === 'update_existing';
+  const { valid, problems, warnings } = validateRows(chosen.rows, chosen.headers, mapping, { existingEmails, existingCodes, existingPhones, defaults, allowExisting: updateExisting });
+  const matchByRow = new Map();
+  if (updateExisting && valid.length) {
+    const { rows: existing } = await pool.query(
+      `SELECT s.id, s.user_id, lower(u.email::text) AS email, lower(s.student_code) AS code,
+              regexp_replace(coalesce(u.phone, ''), '\\D', '', 'g') AS phone
+       FROM students s JOIN users u ON u.id = s.user_id
+       WHERE lower(u.email::text) = ANY($1::text[]) OR lower(s.student_code) = ANY($2::text[])
+          OR regexp_replace(coalesce(u.phone, ''), '\\D', '', 'g') = ANY($3::text[])`, [emails, codes, phones]);
+    const byEmail = new Map(existing.map((r) => [r.email, r]));
+    const byCode = new Map(existing.filter((r) => r.code).map((r) => [r.code, r]));
+    const byPhone = new Map(existing.filter((r) => r.phone).map((r) => [r.phone, r]));
+    for (const entry of valid) {
+      const matches = [byEmail.get(entry.rec.email), entry.rec.student_code ? byCode.get(entry.rec.student_code.toLowerCase()) : null, entry.rec.phone ? byPhone.get(entry.rec.phone) : null].filter(Boolean);
+      const ids = [...new Set(matches.map((m) => m.id))];
+      if (ids.length > 1) problems.push({ row: entry.rowNumber, name: entry.rec.name, email: entry.rec.email, reason: 'Email, student ID or mobile match different students; not updated' });
+      else if (matches[0]) matchByRow.set(entry.rowNumber, matches[0]);
+    }
+  }
+  const processable = valid.filter((entry) => !problems.some((p) => p.row === entry.rowNumber));
+  const updateCount = [...matchByRow.keys()].filter((row) => processable.some((entry) => entry.rowNumber === row)).length;
+  const createCount = processable.length - updateCount;
 
   if (dry_run) {
     return res.json({
-      success: true, ...summary, ready: valid.length, skipped: problems.length, problems: problems.slice(0, 300), warnings: warnings.slice(0, 200), warning_count: warnings.length,
-      documents_will_be_stored: valid.filter((v) => v.rec.aadhaar || v.rec.pan).length, can_store_documents: canStoreViewable(),
-      sample: valid.slice(0, 5).map(({ rowNumber, rec }) => ({ row: rowNumber, name: rec.name, email: rec.email, phone: rec.phone, city: rec.city })),
-      batches_to_create: [...new Set(valid.map((v) => v.rec.batch).filter(Boolean))].slice(0, 10),
+      success: true, ...summary, ready: processable.length, creates: createCount, updates: updateCount, skipped: problems.length, problems: problems.slice(0, 300), warnings: warnings.slice(0, 200), warning_count: warnings.length,
+      documents_will_be_stored: processable.filter((v) => v.rec.aadhaar || v.rec.pan).length, can_store_documents: canStoreViewable(),
+      sample: processable.slice(0, 5).map(({ rowNumber, rec }) => ({ row: rowNumber, name: rec.name, email: rec.email, phone: rec.phone, city: rec.city })),
+      batches_to_create: [...new Set(processable.map((v) => v.rec.batch).filter(Boolean))].slice(0, 10),
     });
   }
 
@@ -410,14 +432,15 @@ router.post('/import', requireRole('operations'), asyncRoute(async (req, res) =>
   const mode = options.password_mode || 'none';
   if (mode === 'common' && String(options.common_password || '').length < MIN_PASSWORD) return bad(res, `The shared password must be at least ${MIN_PASSWORD} characters`);
   if (mode === 'column' && mapping.password === null) return bad(res, 'Pick the column that holds the passwords');
-  if (!valid.length) return bad(res, 'There are no valid rows to import');
+  if (!processable.length) return bad(res, 'There are no valid rows to import or update');
 
   // Hash passwords first, a few at a time, so the database transaction stays short
-  const secrets = new Array(valid.length).fill(null);
+  const secrets = new Array(processable.length).fill(null);
   let noPassword = 0;
   const wanted = (rec) => (mode === 'common' ? String(options.common_password) : mode === 'column' ? rec.password : '');
-  for (let i = 0; i < valid.length; i += 16) {
-    await Promise.all(valid.slice(i, i + 16).map(async ({ rec }, j) => {
+  for (let i = 0; i < processable.length; i += 16) {
+    await Promise.all(processable.slice(i, i + 16).map(async ({ rec, rowNumber }, j) => {
+      if (matchByRow.has(rowNumber)) return;
       const plain = wanted(rec);
       if (plain && plain.length >= MIN_PASSWORD) secrets[i + j] = [await hashPassword(plain), encryptPassword(plain)];
       else noPassword += 1;
@@ -441,13 +464,27 @@ router.post('/import', requireRole('operations'), asyncRoute(async (req, res) =>
 
     const imp = await client.query(
       'INSERT INTO student_imports (file_name, uploaded_by, rows_total, rows_imported, rows_skipped, problems) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
-      [summary.file_name, req.user.id, chosen.rows.length, valid.length, problems.length, JSON.stringify(problems.slice(0, 500))]);
+      [summary.file_name, req.user.id, chosen.rows.length, processable.length, problems.length, JSON.stringify(problems.slice(0, 500))]);
     const importId = imp.rows[0].id;
 
     const studentIds = [];
     let docsNotStored = 0;
-    for (let i = 0; i < valid.length; i += 1) {
-      const { rec } = valid[i];
+    let updated = 0;
+    for (let i = 0; i < processable.length; i += 1) {
+      const { rec, rowNumber } = processable[i];
+      const existingStudent = matchByRow.get(rowNumber);
+      if (existingStudent) {
+        const batch = rec.batch ? await batchId(rec.batch) : null;
+        const extra = { ...rec.extra, ...(rec.course ? { course: rec.course } : {}) };
+        await client.query('UPDATE users SET name = COALESCE($2, name), phone = COALESCE($3, phone) WHERE id = $1', [existingStudent.user_id, rec.name || null, rec.phone || null]);
+        await client.query(
+          `UPDATE students SET batch_id = COALESCE($2::uuid, batch_id), college = COALESCE($3, college), degree = COALESCE($4, degree), city = COALESCE($5, city),
+             target_roles = CASE WHEN cardinality($6::text[]) > 0 THEN $6::text[] ELSE target_roles END,
+             extra = COALESCE(extra, '{}'::jsonb) || $7::jsonb WHERE id = $1`,
+          [existingStudent.id, batch, rec.college, rec.degree, rec.city, rec.target_roles, JSON.stringify(extra)]);
+        studentIds.push(existingStudent.id); updated += 1;
+        continue;
+      }
       const [hash, enc] = secrets[i] || [null, null];
       const u = await client.query(
         "INSERT INTO users (name, email, phone, role, password_hash, password_enc) VALUES ($1,$2,$3,'student',$4,$5) RETURNING id",
@@ -467,7 +504,7 @@ router.post('/import', requireRole('operations'), asyncRoute(async (req, res) =>
       "INSERT INTO activity_log (student_id, actor_id, kind, summary) SELECT unnest($1::uuid[]), $2, 'imported', $3",
       [studentIds, req.user.id, `Imported from ${summary.file_name}`]);
     await client.query('COMMIT');
-    res.status(201).json({ success: true, imported: valid.length, skipped: problems.length, problems: problems.slice(0, 300), warnings: warnings.slice(0, 200), warning_count: warnings.length, documents_not_stored: docsNotStored, no_password: noPassword, import_id: importId });
+    res.status(201).json({ success: true, imported: processable.length - updated, updated, skipped: problems.length, problems: problems.slice(0, 300), warnings: warnings.slice(0, 200), warning_count: warnings.length, documents_not_stored: docsNotStored, no_password: noPassword, import_id: importId });
   } catch (err) {
     await client.query('ROLLBACK');
     if (err.code === '23505') return bad(res, 'Someone else created one of these students while you were importing. Run the preview again.', 409);

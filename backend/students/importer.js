@@ -201,7 +201,7 @@ export function toRecord(row, headers, mapping, defaults = {}) {
 }
 
 // Split rows into the ones we can create and the ones we must skip, with a plain-English reason for each skip
-export function validateRows(rows, headers, mapping, { existingEmails, existingCodes, existingPhones = new Set(), defaults }) {
+export function validateRows(rows, headers, mapping, { existingEmails, existingCodes, existingPhones = new Set(), defaults, allowExisting = false }) {
   const valid = [];
   const problems = [];
   const warnings = [];
@@ -218,16 +218,16 @@ export function validateRows(rows, headers, mapping, { existingEmails, existingC
     if (!rec.email) return skip('Email is missing');
     if (!EMAIL.test(rec.email)) return skip('Email is not valid');
     if (seenEmail.has(rec.email)) return skip(`Same email as row ${seenEmail.get(rec.email)} in this file`);
-    if (existingEmails.has(rec.email)) return skip('Already has a login');
+    if (!allowExisting && existingEmails.has(rec.email)) return skip('Already has a login');
     if (rec.phone) {
       if (seenPhone.has(rec.phone)) return skip(`Same mobile number as row ${seenPhone.get(rec.phone)} in this file`);
-      if (existingPhones.has(rec.phone)) return skip('Mobile number already belongs to another student');
+      if (!allowExisting && existingPhones.has(rec.phone)) return skip('Mobile number already belongs to another student');
       seenPhone.set(rec.phone, rowNumber);
     }
     if (rec.student_code) {
       const code = rec.student_code.toLowerCase();
       if (seenCode.has(code)) return skip(`Same student ID as row ${seenCode.get(code)} in this file`);
-      if (existingCodes.has(code)) return skip('Student ID already used by another student');
+      if (!allowExisting && existingCodes.has(code)) return skip('Student ID already used by another student');
       seenCode.set(code, rowNumber);
     }
     seenEmail.set(rec.email, rowNumber);

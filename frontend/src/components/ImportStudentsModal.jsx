@@ -23,6 +23,7 @@ export default function ImportStudentsModal({ token, onClose, onImported, onSess
   const [batchName, setBatchName] = useState('');
   const [courseName, setCourseName] = useState('');
   const [passwordMode, setPasswordMode] = useState('none'); // none | common | column
+  const [importMode, setImportMode] = useState('new_only'); // new_only | update_existing
   const [commonPassword, setCommonPassword] = useState('');
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -38,7 +39,7 @@ export default function ImportStudentsModal({ token, onClose, onImported, onSess
     api('/students/meta/batches', { token }).then((d) => setBatches(d.batches)).catch(() => {});
   }, [token]);
 
-  const options = () => ({ batch_name: batchName, course_name: courseName, password_mode: passwordMode, common_password: commonPassword });
+  const options = () => ({ batch_name: batchName, course_name: courseName, password_mode: passwordMode, common_password: commonPassword, import_mode: importMode });
 
   const runPreview = async (next = {}) => {
     const f = next.file || file;
@@ -164,8 +165,9 @@ export default function ImportStudentsModal({ token, onClose, onImported, onSess
               {preview.blocking ? (
                 <p className="text-xs font-medium text-amber-800 bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3">{preview.blocking}</p>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4"><p className="text-2xl font-black text-emerald-700 tabular-nums">{ready}</p><p className="text-xs font-semibold text-emerald-700">will be created</p></div>
+                <div className={`grid ${importMode === 'update_existing' ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4"><p className="text-2xl font-black text-emerald-700 tabular-nums">{importMode === 'update_existing' ? preview.creates : ready}</p><p className="text-xs font-semibold text-emerald-700">will be created</p></div>
+                  {importMode === 'update_existing' && <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4"><p className="text-2xl font-black text-blue-700 tabular-nums">{preview.updates || 0}</p><p className="text-xs font-semibold text-blue-700">will be updated</p></div>}
                   <div className={`${preview.skipped ? 'bg-amber-50 border-amber-100' : 'bg-slate-50 border-slate-200'} border rounded-2xl p-4`}><p className={`text-2xl font-black tabular-nums ${preview.skipped ? 'text-amber-700' : 'text-slate-500'}`}>{preview.skipped}</p><p className={`text-xs font-semibold ${preview.skipped ? 'text-amber-700' : 'text-slate-500'}`}>will be skipped</p></div>
                 </div>
               )}
@@ -181,6 +183,18 @@ export default function ImportStudentsModal({ token, onClose, onImported, onSess
 
               {!preview.blocking && (
                 <>
+                  <fieldset className="space-y-2">
+                    <legend className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">How should duplicates be handled?</legend>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {[
+                        ['new_only', 'Add new students only', 'Existing email, student ID or mobile matches are skipped.'],
+                        ['update_existing', 'Add new and update existing', 'Filled Excel cells update matching students; blank cells never erase data.'],
+                      ].map(([value, title, hint]) => <label key={value} className={`flex gap-3 border rounded-2xl px-4 py-3 cursor-pointer ${importMode === value ? 'border-blue-300 bg-blue-50/50' : 'border-slate-200'}`}>
+                        <input type="radio" name="import-mode" className="mt-0.5 accent-blue-600" checked={importMode === value} onChange={() => { setImportMode(value); runPreview({ options: { import_mode: value } }); }} />
+                        <span><span className="block text-xs font-bold text-slate-800">{title}</span><span className="block text-[11px] text-slate-500">{hint}</span></span>
+                      </label>)}
+                    </div>
+                  </fieldset>
                   <div className="space-y-3">
                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Batch and course (for rows that do not have their own)</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -258,7 +272,7 @@ export default function ImportStudentsModal({ token, onClose, onImported, onSess
               <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
                 <button onClick={() => { setStep('choose'); setPreview(null); setFile(null); setError(''); }} className="text-xs font-semibold text-slate-500 hover:text-slate-800" disabled={step === 'importing'}>Choose a different file</button>
                 <PrimaryButton onClick={doImport} disabled={busy || step === 'importing' || !ready || !!preview.blocking} icon={step === 'importing' ? Loader2 : CheckCircle2}>
-                  {step === 'importing' ? 'Importing… this can take a minute' : `Import ${ready} student${ready === 1 ? '' : 's'}`}
+                  {step === 'importing' ? 'Saving… this can take a minute' : importMode === 'update_existing' ? `Apply ${ready} change${ready === 1 ? '' : 's'}` : `Import ${ready} student${ready === 1 ? '' : 's'}`}
                 </PrimaryButton>
               </div>
             </>
@@ -268,7 +282,7 @@ export default function ImportStudentsModal({ token, onClose, onImported, onSess
             <>
               <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-4">
                 <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
-                <div><p className="text-sm font-bold text-emerald-800">{result.imported} student{result.imported === 1 ? '' : 's'} imported</p>
+                <div><p className="text-sm font-bold text-emerald-800">{result.imported} student{result.imported === 1 ? '' : 's'} imported{result.updated ? ` · ${result.updated} updated` : ''}</p>
                   <p className="text-xs text-emerald-700">{result.skipped ? `${result.skipped} skipped (see below). ` : ''}{result.no_password ? `${result.no_password} have no password yet; set them in Master.` : 'Passwords are set.'}{result.warning_count ? ` ${result.warning_count} ID value${result.warning_count === 1 ? ' was' : 's were'} left blank because they looked wrong.` : ''}{result.documents_not_stored ? ` ${result.documents_not_stored} ID number${result.documents_not_stored === 1 ? ' was' : 's were'} NOT saved: the encryption key is missing.` : ''}</p></div>
               </div>
               {result.problems?.length > 0 && (
