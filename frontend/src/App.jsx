@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import AiChatAssistant from './components/AiChatAssistant.jsx';
 import { Menu, LayoutDashboard, Users, Video, UserCheck, BookOpen, Briefcase, BarChart2, FileText, Building2, Search, Bell, Plus, CheckCircle2, Clock, ChevronRight, TrendingUp, Award, UploadCloud, FileDown, Sparkles, PlayCircle, CheckCircle, XCircle, HelpCircle, LogOut, SlidersHorizontal, MapPin, DollarSign, Calendar, Eye, EyeOff, Send, MessageSquare, AlertCircle, Pencil, Download, Check, X, Loader2, RefreshCw, Mail, Phone, Printer, ChevronDown, User, Settings, Lock, Repeat, ShieldAlert, HelpCircle as QnAIcon } from 'lucide-react';
 import StudentListPage from './components/StudentListPage.jsx';
 import Batches from './components/Batches.jsx';
@@ -18,12 +19,29 @@ import { Page, PageHeader, PrimaryButton } from './components/ui.jsx';
 import { api, API_BASE } from './api.js';
 
 const SESSION_KEY = 'finxl_token';
-const readToken = () => { try { return sessionStorage.getItem(SESSION_KEY) || ''; } catch { return ''; } };
-const saveToken = (t) => { try { t ? sessionStorage.setItem(SESSION_KEY, t) : sessionStorage.removeItem(SESSION_KEY); } catch { /* storage blocked: login lasts until the page is closed */ } };
+
+const readToken = () => {
+  try {
+    return sessionStorage.getItem(SESSION_KEY) || '';
+  } catch {
+    return '';
+  }
+};
+
+const saveToken = (t) => {
+  try {
+    t ? sessionStorage.setItem(SESSION_KEY, t) : sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* storage blocked: login lasts until the page is closed */
+  }
+};
 
 // Initials badge instead of a stock photo
 const Avatar = ({ name = '?', className = '' }) => (
-  <div className={`${className} bg-gradient-to-tr from-blue-600 to-indigo-500 text-white flex items-center justify-center font-bold text-[11px] shrink-0`} aria-hidden="true">
+  <div
+    className={`${className} bg-gradient-to-tr from-blue-600 to-indigo-500 text-white flex items-center justify-center font-bold text-[11px] shrink-0`}
+    aria-hidden="true"
+  >
     {name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('')}
   </div>
 );
@@ -31,24 +49,43 @@ const Avatar = ({ name = '?', className = '' }) => (
 export default function App() {
   // Navigation & Authentication States
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState(''); // 'Admin' | 'Operations' | 'Placement' | 'Trainer' | 'Student'
+  const [userRole, setUserRole] = useState('');
   const [currentUser, setCurrentUser] = useState({ id: '', name: '', email: '' });
   const [authToken, setAuthToken] = useState('');
-  const [restoring, setRestoring] = useState(() => Boolean(readToken())); // true while a saved login is checked
+  const [restoring, setRestoring] = useState(() => Boolean(readToken()));
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Overview');
-  const [selectedStudentId, setSelectedStudentId] = useState(null); // the student opened from the Students list
-  const [openMyDetails, setOpenMyDetails] = useState(false); // a student asked to fill in their details from the dashboard
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
+  const [openMyDetails, setOpenMyDetails] = useState(false);
 
-  // ---> ADD THIS ROLE PERMISSIONS MAP HERE <---
+  // Controls automatic opening of the first Live Mock session
+  const [openLiveMockOnNavigate, setOpenLiveMockOnNavigate] = useState(false);
+
+  // Role Permissions
   const ROLE_PERMISSIONS = {
-    // Admin: everything, plus Master (logins and passwords). Operations runs the students and drives, without Master.
-    Admin: ['Overview', 'Master', 'Student List', 'Batches', 'Student Profile','Live Mocks','Learning Modules', 'Progress Reports','Job Portal', 'Company', 'Drives', 'Resume Optimizer', 'QnA Generator'],
-    Operations: ['Overview', 'Student List', 'Batches', 'Student Profile','Live Mocks','Learning Modules', 'Progress Reports','Job Portal', 'Company', 'Drives', 'Resume Optimizer', 'QnA Generator'],
-    Trainer: ['Overview', 'Student List', 'Batches', 'Live Mocks', 'Student Profile', 'Learning Modules', 'Progress Reports'],
-    Placement: ['Overview', 'Student List', 'Student Profile', 'Job Portal', 'Company', 'Drives', 'Resume Optimizer'],
-    Student: ['Overview', 'Live Mocks', 'Student Profile', 'Learning Modules', 'Job Portal', 'Progress Reports', 'Resume Optimizer', 'QnA Generator']
+    Admin: [
+      'Overview', 'Master', 'Student List', 'Batches', 'Student Profile',
+      'Live Mocks', 'Learning Modules', 'Progress Reports', 'Job Portal',
+      'Company', 'Drives', 'Resume Optimizer', 'QnA Generator'
+    ],
+    Operations: [
+      'Overview', 'Student List', 'Batches', 'Student Profile',
+      'Live Mocks', 'Learning Modules', 'Progress Reports', 'Job Portal',
+      'Company', 'Drives', 'Resume Optimizer', 'QnA Generator'
+    ],
+    Trainer: [
+      'Overview', 'Student List', 'Batches', 'Live Mocks',
+      'Student Profile', 'Learning Modules', 'Progress Reports'
+    ],
+    Placement: [
+      'Overview', 'Student List', 'Student Profile', 'Job Portal',
+      'Company', 'Drives', 'Resume Optimizer'
+    ],
+    Student: [
+      'Overview', 'Live Mocks', 'Student Profile', 'Learning Modules',
+      'Job Portal', 'Progress Reports', 'Resume Optimizer', 'QnA Generator'
+    ]
   };
 
   const allowedModules = ROLE_PERMISSIONS[userRole] || [];
@@ -93,85 +130,113 @@ export default function App() {
     setShowChangePassword(false);
     setMobileNavOpen(false);
     setPasswordInput('');
+    setOpenLiveMockOnNavigate(false);
   };
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') setMobileNavOpen(false); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setMobileNavOpen(false);
+    };
+
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // A refresh keeps the login for this browser tab: check the saved token with the server
+  // A refresh keeps the login for this browser tab:
+  // check the saved token with the server
   useEffect(() => {
     const saved = readToken();
     if (!saved) return;
+
     api('/me', { token: saved })
       .then((d) => signIn(saved, d.user))
       .catch(() => saveToken(''))
       .finally(() => setRestoring(false));
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sample Notifications State
   const [notifications, setNotifications] = useState([
-    { id: 1, title: "Interview Scheduled", desc: "Barclays scheduled your interview for tomorrow at 2:00 PM.", time: "10m ago", unread: true },
-    { id: 2, title: "AI Auto-Apply Success", desc: "Successfully applied to Deloitte India for Financial Analyst.", time: "1h ago", unread: true },
-    { id: 3, title: "Profile Match Updated", desc: "Your resume match score increased to 95% for top tech roles.", time: "1d ago", unread: false }
+    {
+      id: 1,
+      title: 'Interview Scheduled',
+      desc: 'Barclays scheduled your interview for tomorrow at 2:00 PM.',
+      time: '10m ago',
+      unread: true
+    },
+    {
+      id: 2,
+      title: 'AI Auto-Apply Success',
+      desc: 'Successfully applied to Deloitte India for Financial Analyst.',
+      time: '1h ago',
+      unread: true
+    },
+    {
+      id: 3,
+      title: 'Profile Match Updated',
+      desc: 'Your resume match score increased to 95% for top tech roles.',
+      time: '1d ago',
+      unread: false
+    }
   ]);
 
   const markAllNotificationsRead = () => {
     setNotifications(notifications.map(n => ({ ...n, unread: false })));
   };
 
-  // Handle Login Flow with smooth loading state
-const handleLogin = async (e) => {
-  if (e && e.preventDefault) e.preventDefault();
-  setIsLoadingLogin(true);
+  // Handle Login Flow
+  const handleLogin = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setIsLoadingLogin(true);
 
-  try {
-    const response = await fetch(`${API_BASE}/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ 
-        email: emailInput, 
-        password: passwordInput 
-      }),
-    });
+    try {
+      const response = await fetch(`${API_BASE}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: emailInput,
+          password: passwordInput
+        }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (data.success) {
-      signIn(data.token, data.user);
-    } else {
-      alert(data.message || 'Invalid email or password');
+      if (data.success) {
+        signIn(data.token, data.user);
+      } else {
+        alert(data.message || 'Invalid email or password');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('Failed to connect to the backend server.');
+    } finally {
+      setIsLoadingLogin(false);
     }
-  } catch (error) {
-    console.error('Login error:', error);
-    alert('Failed to connect to the backend server.');
-  } finally {
-    setIsLoadingLogin(false);
-  }
-};
+  };
 
   if (restoring) {
-    return <div className="min-h-screen bg-[#030712] flex items-center justify-center text-xs text-slate-400">Restoring your session…</div>;
+    return (
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center text-xs text-slate-400">
+        Restoring your session…
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex flex-col lg:flex-row bg-[#030712] font-sans text-white relative overflow-hidden selection:bg-cyan-500 selection:text-white">
-        
+
         {/* Dynamic Glowing Aurora Background Orbs */}
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/30 rounded-full blur-[140px] pointer-events-none animate-pulse" style={{ animationDuration: '6s' }} />
         <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-600/30 rounded-full blur-[140px] pointer-events-none animate-pulse" style={{ animationDuration: '4s' }} />
         <div className="absolute top-[30%] left-[40%] w-[400px] h-[400px] bg-purple-600/20 rounded-full blur-[160px] pointer-events-none animate-pulse" style={{ animationDuration: '8s' }} />
 
-        {/* Left Immersive Animated Hero Section */}
+        {/* Left Hero Section */}
         <div className="w-full lg:w-1/2 bg-gradient-to-br from-indigo-950/40 via-slate-950/60 to-blue-950/50 backdrop-blur-3xl p-8 lg:p-16 flex flex-col justify-between min-h-[450px] lg:min-h-screen border-b lg:border-b-0 lg:border-r border-indigo-500/20 relative z-10">
-          
-          {/* Brand Header */}
+
           <div className="flex items-center space-x-3.5">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 text-white flex items-center justify-center font-extrabold text-2xl shadow-lg shadow-cyan-500/30 ring-2 ring-cyan-400/30 animate-bounce" style={{ animationDuration: '4s' }}>
               F
@@ -182,10 +247,7 @@ const handleLogin = async (e) => {
             </div>
           </div>
 
-          {/* Center Hero Content with Live Floating Cards */}
           <div className="my-auto max-w-lg py-12 space-y-8">
-            
-            {/* Glowing Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-semibold backdrop-blur-md shadow-lg shadow-cyan-500/10">
               <Sparkles className="w-4 h-4 text-cyan-400 animate-spin" style={{ animationDuration: '5s' }} />
               <span>AI-Powered Automated Placement Engine</span>
@@ -194,12 +256,11 @@ const handleLogin = async (e) => {
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1]">
               Get every student <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-300 animate-pulse">Job ready</span> automatically.
             </h1>
-            
+
             <p className="text-slate-300 text-sm sm:text-base font-normal leading-relaxed">
               Transform JD to resume instantly, conduct AI mock interviews, and streamline mentor scheduling — all in one unified autonomous ecosystem.
             </p>
 
-            {/* Floating Live Stats Card with Glow */}
             <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-900/40 via-indigo-900/40 to-purple-900/40 border border-indigo-500/30 backdrop-blur-xl shadow-xl flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
@@ -215,21 +276,18 @@ const handleLogin = async (e) => {
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"></span>
               </span>
             </div>
-
           </div>
 
-          {/* Footer Copyright */}
           <div className="text-xs text-slate-400 flex items-center justify-between border-t border-indigo-500/20 pt-4 font-medium">
             <span>© 2026 Finxl Placement Platform. All rights reserved.</span>
             <span className="text-cyan-400 font-bold">Secure AI Node v3.2</span>
           </div>
         </div>
 
-        {/* Right Authentication Form with High-Gloss Glassmorphism Card */}
+        {/* Right Authentication Form */}
         <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative z-10">
           <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-2xl border border-indigo-500/30 rounded-3xl p-8 sm:p-10 shadow-2xl shadow-indigo-950/80 space-y-6 relative overflow-hidden">
-            
-            {/* Subtle Top Inner Glow Line */}
+
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
 
             <div className="space-y-1.5">
@@ -264,7 +322,7 @@ const handleLogin = async (e) => {
                 <div className="relative">
                   <Lock className="w-4 h-4 text-cyan-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
-                    type={showPassword ? "text" : "password"}
+                    type={showPassword ? 'text' : 'password'}
                     value={passwordInput}
                     onChange={(e) => setPasswordInput(e.target.value)}
                     required
@@ -286,7 +344,7 @@ const handleLogin = async (e) => {
                   <input type="checkbox" className="rounded bg-slate-950 border-indigo-500 text-cyan-500 focus:ring-cyan-400/30" />
                   <span className="group-hover:text-cyan-300 transition font-medium">Remember me</span>
                 </label>
-                <a href="#forgot" onClick={(e) => { e.preventDefault(); alert("Password reset link sent to registered email."); }} className="text-cyan-400 hover:text-cyan-300 transition font-semibold">
+                <a href="#forgot" onClick={(e) => { e.preventDefault(); alert('Password reset link sent to registered email.'); }} className="text-cyan-400 hover:text-cyan-300 transition font-semibold">
                   Forgot Password?
                 </a>
               </div>
@@ -309,7 +367,7 @@ const handleLogin = async (e) => {
                 )}
               </button>
             </form>
-            
+
             <div className="relative my-4 flex items-center justify-center">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-indigo-500/30" />
@@ -330,22 +388,10 @@ const handleLogin = async (e) => {
               className="w-full bg-white hover:bg-slate-100 text-slate-800 font-bold py-3.5 rounded-xl text-xs flex items-center justify-center space-x-2.5 transition shadow-md cursor-pointer"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                />
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
               </svg>
               <span>Continue with Google Account</span>
             </button>
@@ -374,31 +420,35 @@ const handleLogin = async (e) => {
 
   const sidebarBody = (
     <>
-        <div>
-          {/* Logo Brand */}
-          <div className="p-5 flex items-center space-x-3 border-b border-slate-200/80">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-500/20">
-              F
-            </div>
-            <div>
-              <h1 className="font-bold text-xs text-slate-900 leading-tight">
-                Finxl Placement
-              </h1>
-              <span className="text-[10px] text-slate-400 block font-medium">Platform</span>
-            </div>
+      <div>
+        {/* Logo Brand */}
+        <div className="p-5 flex items-center space-x-3 border-b border-slate-200/80">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-500/20">
+            F
           </div>
+          <div>
+            <h1 className="font-bold text-xs text-slate-900 leading-tight">
+              Finxl Placement
+            </h1>
+            <span className="text-[10px] text-slate-400 block font-medium">Platform</span>
+          </div>
+        </div>
 
-          {/* Navigation Links */}
-          <nav className="p-3 space-y-1">
-            {navigationItems
+        {/* Navigation Links */}
+        <nav className="p-3 space-y-1">
+          {navigationItems
             .filter(item => allowedModules.includes(item.name))
             .map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.name;
+
               return (
                 <button
                   key={item.name}
-                  onClick={() => { setActiveTab(item.name); setMobileNavOpen(false); }}
+                  onClick={() => {
+                    setActiveTab(item.name);
+                    setMobileNavOpen(false);
+                  }}
                   className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
                     isActive
                       ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 text-white font-bold shadow-md shadow-blue-500/20'
@@ -410,33 +460,37 @@ const handleLogin = async (e) => {
                 </button>
               );
             })}
-          </nav>
+        </nav>
+      </div>
+
+      {/* User Footer Profile */}
+      <div className="p-4 border-t border-slate-200/80 flex items-center justify-between">
+        <div className="flex items-center space-x-2.5">
+          <Avatar name={currentUser.name} className="w-8 h-8 rounded-full" />
+          <div className="text-left">
+            <p className="text-xs font-bold text-slate-800 leading-none">{currentUser.name}</p>
+            <span className="text-[10px] text-slate-400 font-medium">{userRole}</span>
+          </div>
         </div>
 
-        {/* User Footer Profile */}
-        <div className="p-4 border-t border-slate-200/80 flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <Avatar name={currentUser.name} className="w-8 h-8 rounded-full" />
-            <div className="text-left">
-              <p className="text-xs font-bold text-slate-800 leading-none">{currentUser.name}</p>
-              <span className="text-[10px] text-slate-400 font-medium">{userRole}</span>
-            </div>
-          </div>
-          <button
-            onClick={() => { setMobileNavOpen(false); setShowLogoutConfirm(true); }}
-            className="text-slate-400 hover:text-blue-600 transition p-1 cursor-pointer"
-            title="Sign Out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            setMobileNavOpen(false);
+            setShowLogoutConfirm(true);
+          }}
+          className="text-slate-400 hover:text-blue-600 transition p-1 cursor-pointer"
+          title="Sign Out"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
+      </div>
     </>
   );
 
   return (
-    <div className="h-dvh overflow-hidden bg-slate-50/60 font-sans flex text-slate-800">
+    <div className="h-dvh overflow-hidden bg-slate-50/60 font-sans flex text-slate-800 relative">
+
       {/* Sidebar Component */}
-      {/* Sidebar (tablet and desktop) */}
       <aside className="w-64 bg-white/80 backdrop-blur-xl border-r border-slate-200/80 hidden lg:flex flex-col justify-between shrink-0 shadow-sm h-full overflow-y-auto">
         {sidebarBody}
       </aside>
@@ -453,12 +507,19 @@ const handleLogin = async (e) => {
 
       {/* Main App Section */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+
         {/* Top Navbar */}
         <header className="relative z-30 h-16 bg-white/70 backdrop-blur-md border-b border-slate-200/60 px-3 sm:px-6 flex items-center justify-between gap-3 shrink-0 shadow-sm">
-          <button onClick={() => setMobileNavOpen(true)} aria-label="Open menu" className="lg:hidden p-2 -ml-1 rounded-xl text-slate-600 hover:bg-blue-50 transition shrink-0">
+          <button
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="Open menu"
+            className="lg:hidden p-2 -ml-1 rounded-xl text-slate-600 hover:bg-blue-50 transition shrink-0"
+          >
             <Menu className="w-5 h-5" />
           </button>
+
           <span className="sm:hidden font-bold text-sm text-slate-900 truncate">Finxl Placement</span>
+
           <div className="relative w-full max-w-md hidden sm:block">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -470,7 +531,7 @@ const handleLogin = async (e) => {
 
           <div className="flex items-center space-x-3 sm:space-x-4 relative ml-auto">
             <div className="relative">
-              <button 
+              <button
                 onClick={() => {
                   setShowNotifications(!showNotifications);
                   setShowProfileModal(false);
@@ -489,8 +550,8 @@ const handleLogin = async (e) => {
                     <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                       <Bell className="w-3.5 h-3.5 text-blue-600" /> Notifications
                     </h3>
-                    <button 
-                      onClick={markAllNotificationsRead} 
+                    <button
+                      onClick={markAllNotificationsRead}
                       className="text-[10px] text-blue-600 font-semibold hover:underline"
                     >
                       Mark all read
@@ -499,8 +560,8 @@ const handleLogin = async (e) => {
 
                   <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                     {notifications.map((notif) => (
-                      <div 
-                        key={notif.id} 
+                      <div
+                        key={notif.id}
                         className={`p-2.5 rounded-xl border transition text-left ${notif.unread ? 'bg-blue-50/50 border-blue-100' : 'bg-slate-50 border-slate-100'}`}
                       >
                         <div className="flex items-center justify-between">
@@ -517,7 +578,7 @@ const handleLogin = async (e) => {
 
             {/* User Profile Avatar Dropdown */}
             <div className="relative pl-2 border-l border-slate-200/80">
-              <button 
+              <button
                 onClick={() => {
                   setShowProfileModal(!showProfileModal);
                   setShowNotifications(false);
@@ -538,13 +599,19 @@ const handleLogin = async (e) => {
                   </div>
 
                   <div className="space-y-1 text-xs font-medium text-slate-600">
-                    <button onClick={() => { setShowChangePassword(true); setShowProfileModal(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 transition">
+                    <button
+                      onClick={() => {
+                        setShowChangePassword(true);
+                        setShowProfileModal(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 transition"
+                    >
                       <Lock className="w-3.5 h-3.5 text-amber-500" /> Password Change
                     </button>
                   </div>
 
                   <div className="pt-2 border-t border-slate-100">
-                    <button 
+                    <button
                       onClick={() => {
                         setShowProfileModal(false);
                         setShowLogoutConfirm(true);
@@ -557,76 +624,153 @@ const handleLogin = async (e) => {
                 </div>
               )}
             </div>
-
           </div>
         </header>
 
         {/* Dynamic Main Workspace Content */}
         <main className="app-content flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        {/* If current activeTab is NOT allowed for user's role, fallback to Overview */}
-        {!allowedModules.includes(activeTab) ? (
-        <RoleDashboard token={authToken} user={currentUser} role={userRole} allowedTabs={allowedModules} setActiveTab={setActiveTab} onFillDetails={() => { setOpenMyDetails(true); setActiveTab('Student Profile'); }} onSessionExpired={signOut} />
-        ) : (
-        <>
-        {activeTab === 'Overview' && <RoleDashboard token={authToken} user={currentUser} role={userRole} allowedTabs={allowedModules} setActiveTab={setActiveTab} onFillDetails={() => { setOpenMyDetails(true); setActiveTab('Student Profile'); }} onSessionExpired={signOut} />}
-        {activeTab === 'Student List' && (
-        <StudentListPage
-          token={authToken}
-          role={userRole}
-          openStudent={(id) => { setSelectedStudentId(id); setActiveTab('Student Profile'); }}
-          onSessionExpired={signOut}
-        />
-        )}
-        {activeTab === 'Batches' && <Batches token={authToken} role={userRole} openStudent={(id) => { setSelectedStudentId(id); setActiveTab('Student Profile'); }} onSessionExpired={signOut} />}
-        {activeTab === 'Live Mocks' && <LiveMocksPage />}
-        {activeTab === 'Student Profile' && (
-        userRole === 'Student' ? (
-          <StudentProfilePage token={authToken} role={userRole} studentId="me" openDetailsOnLoad={openMyDetails} onDetailsOpened={() => setOpenMyDetails(false)} onSessionExpired={signOut} />
-        ) : selectedStudentId ? (
-          <StudentProfilePage key={selectedStudentId} token={authToken} role={userRole} studentId={selectedStudentId} onBack={() => setActiveTab('Student List')} onSessionExpired={signOut} />
-        ) : (
-          <Page>
-            <PageHeader title="Student Profile" subtitle="Open a student from the list to see their full record." action={<PrimaryButton onClick={() => setActiveTab('Student List')}>Go to Students</PrimaryButton>} />
-          </Page>
-        )
-        )}
-        {activeTab === 'Learning Modules' && <LearningModulesPage token={authToken} role={userRole} onSessionExpired={signOut} />}
-        {activeTab === 'Job Portal' && (
-        <JobPortalPage
-          setSelectedJob={setSelectedJob}
-          selectedJob={selectedJob}
-        />
-        )}
-        {activeTab === 'Progress Reports' && <ProgressReportsPage />}
-        {activeTab === 'Resume Optimizer' && <ResumeOptimizerPage />}
-        {activeTab === 'QnA Generator' && <QNAGeneratorPage />}
-        {activeTab === 'Drives' && <DrivesPage token={authToken} onSessionExpired={signOut} />}
-        {activeTab === 'Master' && <UsersPage token={authToken} currentUserId={currentUser.id} onSessionExpired={signOut} />}
-        {activeTab === 'Company' && <JobsCompanyDetailsSection setActiveTab={setActiveTab} />}
-      </>
-        )}
+
+          {!allowedModules.includes(activeTab) ? (
+            <RoleDashboard
+              token={authToken}
+              user={currentUser}
+              role={userRole}
+              allowedTabs={allowedModules}
+              setActiveTab={setActiveTab}
+              onFillDetails={() => {
+                setOpenMyDetails(true);
+                setActiveTab('Student Profile');
+              }}
+              onSessionExpired={signOut}
+            />
+          ) : (
+            <>
+              {activeTab === 'Overview' && (
+                <RoleDashboard
+                  token={authToken}
+                  user={currentUser}
+                  role={userRole}
+                  allowedTabs={allowedModules}
+                  setActiveTab={setActiveTab}
+                  onFillDetails={() => {
+                    setOpenMyDetails(true);
+                    setActiveTab('Student Profile');
+                  }}
+                  onSessionExpired={signOut}
+                />
+              )}
+
+              {activeTab === 'Student List' && (
+                <StudentListPage
+                  token={authToken}
+                  role={userRole}
+                  openStudent={(id) => {
+                    setSelectedStudentId(id);
+                    setActiveTab('Student Profile');
+                  }}
+                  onSessionExpired={signOut}
+                />
+              )}
+
+              {activeTab === 'Batches' && (
+                <Batches
+                  token={authToken}
+                  role={userRole}
+                  openStudent={(id) => {
+                    setSelectedStudentId(id);
+                    setActiveTab('Student Profile');
+                  }}
+                  onSessionExpired={signOut}
+                />
+              )}
+
+              {/* Live Mocks with automatic first-session opening */}
+              {activeTab === 'Live Mocks' && (
+                <LiveMocksPage
+                  autoOpenFirstSession={openLiveMockOnNavigate}
+                  onAutoOpenHandled={() => setOpenLiveMockOnNavigate(false)}
+                />
+              )}
+
+              {activeTab === 'Student Profile' && (
+                userRole === 'Student' ? (
+                  <StudentProfilePage
+                    token={authToken}
+                    role={userRole}
+                    studentId="me"
+                    openDetailsOnLoad={openMyDetails}
+                    onDetailsOpened={() => setOpenMyDetails(false)}
+                    onSessionExpired={signOut}
+                  />
+                ) : selectedStudentId ? (
+                  <StudentProfilePage
+                    key={selectedStudentId}
+                    token={authToken}
+                    role={userRole}
+                    studentId={selectedStudentId}
+                    onSessionExpired={signOut}
+                  />
+                ) : (
+                  <div className="p-6 text-center text-slate-500">
+                    Please select a student from the Student List first.
+                  </div>
+                )
+              )}
+
+              {activeTab === 'Learning Modules' && (
+                <LearningModulesPage token={authToken} role={userRole} />
+              )}
+
+              {activeTab === 'Job Portal' && (
+                <JobPortalPage token={authToken} role={userRole} />
+              )}
+
+              {activeTab === 'Progress Reports' && (
+                <ProgressReportsPage token={authToken} role={userRole} />
+              )}
+
+              {activeTab === 'Resume Optimizer' && (
+                <ResumeOptimizerPage token={authToken} role={userRole} />
+              )}
+
+              {activeTab === 'QnA Generator' && (
+                <QNAGeneratorPage token={authToken} role={userRole} />
+              )}
+
+              {activeTab === 'Company' && (
+                <JobsCompanyDetailsSection token={authToken} role={userRole} />
+              )}
+
+              {activeTab === 'Drives' && (
+                <DrivesPage token={authToken} role={userRole} />
+              )}
+
+              {activeTab === 'Master' && (
+                <UsersPage token={authToken} role={userRole} />
+              )}
+            </>
+          )}
         </main>
       </div>
 
-      {showChangePassword && <ChangePasswordModal token={authToken} onClose={() => setShowChangePassword(false)} onSessionExpired={signOut} />}
+      {/* Global 3D Animated Chat Assistant Widget */}
+      <AiChatAssistant />
 
-      {/* Double Verification Logout Modal */}
+      {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-6 max-w-sm w-full space-y-4 text-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 text-center space-y-4">
             <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
               <ShieldAlert className="w-6 h-6" />
             </div>
-            <div className="space-y-1">
-              <h3 className="text-sm font-bold text-slate-900">Are you sure?</h3>
-              <p className="text-xs text-slate-500">
-                You will be signed out of your Finxl Placement account and redirected to the login screen.
-              </p>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Sign Out Confirmation</h3>
+              <p className="text-xs text-slate-500 mt-1">Are you sure you want to end your secure session?</p>
             </div>
-            <div className="flex gap-2.5 pt-2">
+            <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-xl transition cursor-pointer"
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-xl transition"
               >
                 Cancel
               </button>
@@ -635,13 +779,21 @@ const handleLogin = async (e) => {
                   setShowLogoutConfirm(false);
                   signOut();
                 }}
-                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-sm shadow-rose-600/20 cursor-pointer"
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-md shadow-rose-600/20"
               >
-                Yes, Logout
+                Sign Out
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Password Change Modal */}
+      {showChangePassword && (
+        <ChangePasswordModal
+          token={authToken}
+          onClose={() => setShowChangePassword(false)}
+        />
       )}
     </div>
   );
