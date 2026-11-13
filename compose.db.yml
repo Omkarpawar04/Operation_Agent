@@ -1,0 +1,25 @@
+name: finxl-ai-interviewer-test-db
+
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_TEST_DB:-finxl_test}
+      POSTGRES_USER: ${POSTGRES_TEST_USER:-finxl_test}
+      POSTGRES_PASSWORD: ${POSTGRES_TEST_PASSWORD:-finxl_test_local_only}
+    ports:
+      - "${POSTGRES_TEST_PORT:-55432}:5432"
+    volumes:
+      - finxl_test_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  finxl_test_pgdata:
