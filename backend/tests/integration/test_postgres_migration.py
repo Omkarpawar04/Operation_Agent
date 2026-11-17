@@ -25,6 +25,10 @@ def test_empty_schema_migrates_to_latest_revision(
                 column["name"]
                 for column in inspect(connection).get_columns("questions", schema=schema_name)
             }
+            answer_columns = {
+                column["name"]
+                for column in inspect(connection).get_columns("answers", schema=schema_name)
+            }
             bank_primary_key = inspect(connection).get_pk_constraint(
                 "assessment_question_bank", schema=schema_name
             )["constrained_columns"]
@@ -68,8 +72,9 @@ def test_empty_schema_migrates_to_latest_revision(
             "assessment_question_bank",
         }
         assert expected <= tables
-        assert revision == "0008_content_pack_metadata"
+        assert revision == "0009_answer_skips"
         assert "provenance_json" in question_columns
+        assert "is_skipped" in answer_columns
         assert bank_primary_key == ["question_id", "content_version"]
         assert {"stage_ids_json", "content_metadata_json"} <= competency_columns
         assert "content_metadata_json" in rubric_columns

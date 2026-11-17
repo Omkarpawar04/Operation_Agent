@@ -1,6 +1,7 @@
 import {
   AbandonPayload,
   AnswerResponse,
+  SkipQuestionSubmission,
   AnswerSubmission,
   AssessmentResult,
   InterviewSession,
@@ -195,6 +196,13 @@ export class InterviewApiClient {
 
   async submitAnswer(sessionId: string, payload: AnswerSubmission): Promise<AnswerResponse> {
     return this._request<AnswerResponse>(`/interviews/${sessionId}/answers`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async skipQuestion(sessionId: string, payload: SkipQuestionSubmission): Promise<AnswerResponse> {
+    return this._request<AnswerResponse>(`/interviews/${sessionId}/skip`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });

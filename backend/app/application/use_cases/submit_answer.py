@@ -1,7 +1,8 @@
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from decimal import Decimal
+from uuid import UUID
 
 from app.application.orchestrator.engines import (
     AnswerAnalyzer,
@@ -10,7 +11,12 @@ from app.application.orchestrator.engines import (
     InvalidProviderOutput,
     QuestionGenerationEngine,
 )
-from app.application.workflow import evaluate, prompt_for_question, rubric_for, rubric_prompt
+from app.application.workflow import (
+    prompt_for_question,
+    repeated_question,
+    rubric_for,
+    rubric_prompt,
+)
 from app.core.config import Settings
 from app.core.errors import ProviderOutputRejected, ProviderUnavailable
 from app.domain.assessments.content import (
@@ -19,13 +25,17 @@ from app.domain.assessments.content import (
     QuestionProvenance,
     RubricDefinition,
 )
-from app.domain.assessments.models import EvaluationEvidence, Rubric
+from app.domain.assessments.models import (
+    EvaluationEvidence,
+    calculate_correctness_result,
+)
 from app.domain.interviews.decision import (
     AnalysisRecommendation,
     DecisionLimits,
     InterviewAction,
     decide,
 )
+from app.domain.interviews.models import InterviewStage
 from app.ports.answer_workflow import (
     AnswerCommand,
     AnswerCompletion,
@@ -253,6 +263,19 @@ class SubmitAnswer:
                 type(self._provider).__name__,
             )
             analysis, evidence = AnswerAnalyzer().analyze(self._provider, prompt, rubric)
+            root_question_id = reservation.root_question_id or (
+                reservation.active_question.parent_question_id
+                or reservation.active_question.id
+            )
+            rubric_weights = {dimension.key: dimension.weight for dimension in rubric.dimensions}
+            evidence = tuple(
+                replace(
+                    item,
+                    root_question_id=root_question_id,
+                    dimension_weight=rubric_weights[item.dimension_key],
+                )
+                for item in evidence
+            )
             action = decide(
                 reservation.session,
                 DecisionLimits(
@@ -266,6 +289,72 @@ class SubmitAnswer:
                     answer_needs_clarification=analysis.needs_clarification,
                 ),
             )
+            if (production or development_bank) and active_provenance is not None:
+                parent_id = (
+                    active_provenance.parent_question_id
+                    or active_provenance.bank_question_id
+                )
+                if action in {InterviewAction.FOLLOW_UP, InterviewAction.CLARIFICATION}:
+                    category = (
+                        QuestionCategory.CLARIFICATION
+                        if action is InterviewAction.CLARIFICATION
+                        else QuestionCategory.FOLLOW_UP
+                    )
+                    candidates = self._bank_candidates(
+                        stage,
+                        category,
+                        active_provenance.competency_id,
+                        parent_id,
+                        production,
+                    )
+                    candidates = tuple(
+                        item
+                        for item in candidates
+                        if not repeated_question(
+                            item.text,
+                            reservation.previous_questions
+                            + ((reservation.original_question_text or ""),),
+                        )
+                    )
+                    if not candidates and category is QuestionCategory.CLARIFICATION:
+                        candidates = self._bank_candidates(
+                            stage,
+                            QuestionCategory.FOLLOW_UP,
+                            active_provenance.competency_id,
+                            parent_id,
+                            production,
+                        )
+                        candidates = tuple(
+                            item
+                            for item in candidates
+                            if not repeated_question(
+                                item.text,
+                                reservation.previous_questions
+                                + ((reservation.original_question_text or ""),),
+                            )
+                        )
+                        if candidates:
+                            action = InterviewAction.FOLLOW_UP
+                    if not candidates:
+                        action = (
+                            InterviewAction.NEXT_QUESTION
+                            if reservation.session.base_question_count
+                            < self._settings.max_base_questions
+                            else InterviewAction.COMPLETE
+                        )
+                if action is InterviewAction.NEXT_QUESTION:
+                    bases = self._bank_candidates(
+                        stage,
+                        QuestionCategory.BASE,
+                        active_provenance.competency_id,
+                        None,
+                        production,
+                    )
+                    if not any(
+                        not repeated_question(item.text, reservation.previous_questions)
+                        for item in bases
+                    ):
+                        action = InterviewAction.COMPLETE
             next_question_text: str | None = None
             next_question_provenance: QuestionProvenance | None = None
             if action in {InterviewAction.FOLLOW_UP, InterviewAction.CLARIFICATION}:
@@ -274,6 +363,8 @@ class SubmitAnswer:
                     if action is InterviewAction.CLARIFICATION
                     else analysis.follow_up
                 )
+                if suggestion is None:
+                    suggestion = analysis.clarification
                 if suggestion is None:
                     raise ProviderOutputRejected("Analysis provider returned unsuitable output")
                 history = reservation.previous_questions
@@ -293,12 +384,17 @@ class SubmitAnswer:
                         allowed = tuple(
                             item
                             for item in approved_followups
-                            if not any(
+                            if item.parent_question_id
+                            == (
+                                active_provenance.parent_question_id
+                                or active_provenance.bank_question_id
+                            )
+                            and not any(
                                 item.text.strip().casefold() == old.strip().casefold()
                                 for old in history
                             )
                         )
-                        candidates = tuple(
+                        candidate_payloads = tuple(
                             {
                                 "question_id": item.question_id,
                                 "text": item.text,
@@ -325,7 +421,7 @@ class SubmitAnswer:
                                     ),
                                     "applicable_rubric": rubric_metadata,
                                     "prompt_schema_version": "approved_follow_up_selection.v1",
-                                    "approved_candidates": list(candidates),
+                                    "approved_candidates": list(candidate_payloads),
                                     "evidence_gap": suggestion,
                                 },
                             ),
@@ -493,10 +589,12 @@ class SubmitAnswer:
 
             result = None
             if action is InterviewAction.COMPLETE:
-                aggregate = self._aggregate_evidence(
-                    rubric, reservation.previous_evidence + evidence
+                question_evidence = self._question_evidence(
+                    reservation.previous_evidence + evidence
                 )
-                result = evaluate(reservation.attempt_id, rubric, aggregate)
+                result = calculate_correctness_result(
+                    reservation.attempt_id, rubric, question_evidence
+                )
             logger.info(
                 "interview_provider_completed session_id=%s question_id=%s "
                 "processing_version=%s provider=%s",
@@ -636,33 +734,48 @@ class SubmitAnswer:
             else ()
         )
 
+    def _bank_candidates(
+        self,
+        stage: InterviewStage,
+        category: QuestionCategory,
+        competency_id: str | None,
+        parent_question_id: str | None,
+        production: bool,
+    ) -> tuple[QuestionBankEntry, ...]:
+        if self._assessment_content is None or competency_id is None:
+            return ()
+        if production:
+            candidates = self._assessment_content.approved_questions(
+                stage, category, competency_id
+            )
+        else:
+            candidates = self._assessment_content.development_questions(
+                stage,
+                category,
+                allow_draft=self._settings.dev_assessment_allow_draft,
+                competency_id=competency_id,
+                parent_question_id=(
+                    parent_question_id
+                    if category is not QuestionCategory.BASE
+                    else None
+                ),
+            )
+        if category is QuestionCategory.BASE:
+            return tuple(item for item in candidates if item.parent_question_id is None)
+        return tuple(
+            item for item in candidates if item.parent_question_id == parent_question_id
+        )
+
     @staticmethod
-    def _aggregate_evidence(
-        rubric: Rubric, evidence: tuple[EvaluationEvidence, ...]
-    ) -> tuple[EvaluationEvidence, ...]:
-        aggregated: list[EvaluationEvidence] = []
-        for dimension in rubric.dimensions:
-            findings = [item for item in evidence if item.dimension_key == dimension.key]
-            scores = [item.score for item in findings if item.score is not None]
-            score = sum(scores, Decimal("0")) / len(scores) if scores else Decimal("0")
-            confidence = (
-                sum((item.confidence for item in findings), Decimal("0")) / len(findings)
-                if findings
-                else Decimal("0")
-            )
-            aggregated.append(
-                EvaluationEvidence(
-                    dimension_key=dimension.key,
-                    supporting_evidence=tuple(
-                        text for finding in findings for text in finding.supporting_evidence
-                    ),
-                    missing_evidence=tuple(
-                        text for finding in findings for text in finding.missing_evidence
-                    ),
-                    insufficient_evidence=False,
-                    confidence=confidence,
-                    score=score,
-                    explanation=" ".join(item.explanation for item in findings)[:500],
-                )
-            )
-        return tuple(aggregated)
+    def _question_evidence(
+        evidence: tuple[EvaluationEvidence, ...],
+    ) -> tuple[tuple[UUID, tuple[EvaluationEvidence, ...]], ...]:
+        grouped: dict[UUID, list[EvaluationEvidence]] = {}
+        for item in evidence:
+            if item.root_question_id is None:
+                raise ValueError("Assessment evidence is missing its parent main question")
+            grouped.setdefault(item.root_question_id, []).append(item)
+        return tuple(
+            (question_id, tuple(grouped[question_id]))
+            for question_id in sorted(grouped, key=str)
+        )

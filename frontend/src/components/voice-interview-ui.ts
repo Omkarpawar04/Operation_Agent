@@ -145,6 +145,9 @@ export class VoiceInterviewUI {
           <div style="font-size: 1.15rem; line-height: 1.5; color: #1e293b; font-weight: 500; margin-bottom: 8px;">
             ${contaminatedQuestion ? 'This question is unavailable. Please start a fresh interview.' : this._escapeHtml(displayQuestion)}
           </div>
+          <button type="button" id="finxl-btn-skip-question" class="btn-secondary" ${isSubmitting || contaminatedQuestion ? 'disabled' : ''} style="padding: 7px 12px; font-size: 0.85rem;">
+            ${isSubmitting && snapshot.state === 'skipping' ? 'Skipping...' : activeQuestion.kind === 'follow_up' || activeQuestion.kind === 'clarification' ? 'Skip Follow-up' : 'Skip Question'}
+          </button>
           ${
             isSpeaking
               ? '<div class="finxl-speaking-indicator" style="color: #2563eb; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px;"><span>Speaking question...</span></div>'
@@ -165,7 +168,9 @@ export class VoiceInterviewUI {
     let statusColor = '#334155';
 
     if (isSubmitting) {
-      statusText = 'Evaluating answer with FINXL analysis engine...';
+      statusText = snapshot.state === 'skipping'
+        ? 'Skipping question...'
+        : 'Evaluating answer with FINXL analysis engine...';
       statusBg = '#fef3c7';
       statusColor = '#92400e';
     } else if (isListening) {
@@ -327,6 +332,13 @@ export class VoiceInterviewUI {
     if (btnSubmit) {
       btnSubmit.addEventListener('click', () => {
         this._lifecycle.submitAnswer();
+      });
+    }
+
+    const btnSkip = this._container.querySelector<HTMLButtonElement>('#finxl-btn-skip-question');
+    if (btnSkip) {
+      btnSkip.addEventListener('click', () => {
+        this._lifecycle.skipQuestion();
       });
     }
 

@@ -276,6 +276,7 @@ class AnswerRow(Base):
     question_id: Mapped[UUID] = mapped_column(ForeignKey("questions.id"), index=True)
     idempotency_key: Mapped[str] = mapped_column(String(120))
     transcript: Mapped[str] = mapped_column(Text)
+    is_skipped: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
 
 

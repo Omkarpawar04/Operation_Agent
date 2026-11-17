@@ -25,6 +25,12 @@ class AnswerRequest(BaseModel):
         return value
 
 
+class SkipQuestionRequest(BaseModel):
+    question_id: UUID
+    expected_version: int = Field(ge=0)
+    idempotency_key: str = Field(min_length=8, max_length=120)
+
+
 class AbandonRequest(BaseModel):
     expected_version: int = Field(ge=0)
 

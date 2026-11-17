@@ -10,6 +10,7 @@ from app.api.dependencies import (
     get_assessment_reader,
     get_interview_reader,
     get_question_reader,
+    get_skip_question,
     get_start_interview,
     get_submit_answer,
 )
@@ -20,6 +21,7 @@ from app.application.use_cases.queries import (
     GetAssessment,
     GetInterview,
 )
+from app.application.use_cases.skip_question import SkipQuestion
 from app.application.use_cases.start_interview import StartInterview
 from app.application.use_cases.submit_answer import SubmitAnswer
 from app.ports.answer_workflow import AnswerCommand
@@ -30,6 +32,7 @@ from app.schemas.interviews import (
     AbandonRequest,
     AnswerRequest,
     InterviewResponse,
+    SkipQuestionRequest,
     StartInterviewRequest,
 )
 
@@ -142,6 +145,37 @@ def submit_answer(
             expected_version=body.expected_version,
             idempotency_key=body.idempotency_key,
             text=body.text,
+        )
+    )
+    response: dict[str, object] = {
+        "state": result.state,
+        "version": result.version,
+        "question": result.question_text,
+    }
+    if result.action is not None:
+        response["action"] = result.action.value
+    return response
+
+
+@router.post(
+    "/interviews/{session_id}/skip",
+    dependencies=[Depends(enforce_rate_limit("answer-submit"))],
+)
+def skip_question(
+    session_id: UUID,
+    body: SkipQuestionRequest,
+    principal: Principal = Depends(current_principal),
+    use_case: SkipQuestion = Depends(get_skip_question),
+) -> dict[str, object]:
+    result = use_case.execute(
+        AnswerCommand(
+            session_id=session_id,
+            student_id=principal.user_id,
+            question_id=body.question_id,
+            expected_version=body.expected_version,
+            idempotency_key=body.idempotency_key,
+            text="",
+            is_skip=True,
         )
     )
     response: dict[str, object] = {

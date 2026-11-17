@@ -50,6 +50,8 @@ class EvaluationEvidence:
     relevance: int | None = None
     correctness: int | None = None
     completeness: int | None = None
+    root_question_id: UUID | None = None
+    dimension_weight: Decimal | None = None
 
     def __post_init__(self) -> None:
         if not Decimal("0") <= self.confidence <= Decimal("1"):
@@ -67,6 +69,10 @@ class EvaluationEvidence:
             raise ValueError("Evidence ratings must be in [0,4]")
         if len(self.explanation) > 500:
             raise ValueError("Evidence explanation is too long")
+        if self.dimension_weight is not None and not (
+            Decimal("0") <= self.dimension_weight <= Decimal("1")
+        ):
+            raise ValueError("Evidence dimension weight must be in [0,1]")
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,4 +103,51 @@ def calculate_result(
         score += dimension.weight * dimension_score
     return AssessmentResult(
         attempt_id, rubric.version, score, score >= rubric.passing_threshold, evidence
+    )
+
+
+def calculate_correctness_result(
+    attempt_id: UUID,
+    rubric: Rubric,
+    question_evidence: tuple[tuple[UUID, tuple[EvaluationEvidence, ...]], ...],
+) -> AssessmentResult:
+    """Score one correctness result per main question; follow-ups share its denominator slot."""
+    if not question_evidence or len({question_id for question_id, _ in question_evidence}) != len(
+        question_evidence
+    ):
+        raise ValueError("Every main question must be represented exactly once")
+    weighted_points = Decimal("0")
+    denominator = Decimal(len(question_evidence) * 4)
+    evidence: list[EvaluationEvidence] = [
+        item for _, findings in question_evidence for item in findings
+    ]
+    for _question_id, findings in question_evidence:
+        if not findings:
+            raise ValueError("Main question has no correctness evidence")
+        by_key: dict[str, list[EvaluationEvidence]] = {}
+        for finding in findings:
+            if finding.correctness is None:
+                raise ValueError("Rubric evaluation omitted correctness rating")
+            by_key.setdefault(finding.dimension_key, []).append(finding)
+        question_points = Decimal("0")
+        used_weights = Decimal("0")
+        for _dimension_key, items in by_key.items():
+            dimension_weight = items[0].dimension_weight
+            if dimension_weight is None or any(
+                item.dimension_weight != dimension_weight for item in items
+            ):
+                raise ValueError("Correctness evidence is missing its rubric dimension weight")
+            rating = sum(item.correctness or 0 for item in items) / Decimal(len(items))
+            question_points += dimension_weight * rating
+            used_weights += dimension_weight
+        if used_weights != Decimal("1"):
+            raise ValueError("Question rubric weights must sum to one")
+        weighted_points += question_points
+    score = weighted_points * Decimal("100") / denominator
+    return AssessmentResult(
+        attempt_id,
+        rubric.version,
+        score,
+        score >= rubric.passing_threshold,
+        tuple(evidence),
     )

@@ -39,7 +39,7 @@ class SessionManager:
             if revision_id is None:
                 raise Conflict("Approved course content is not configured")
             if (
-                command.expected_content_revision_id is not None
+                command.expected_content_revision_id is not     None
                 and revision_id != command.expected_content_revision_id
             ):
                 raise Conflict("Approved course content changed; retry with the latest revision")
@@ -60,7 +60,7 @@ class SessionManager:
         ):
             raise StageLocked("This interview stage is locked")
         return revision_id
-
+    
     def start(self, command: StartSessionCommand) -> SessionRecord:
         existing = self.find_existing(command)
         if existing is not None:

@@ -147,7 +147,7 @@ def postgres_engine(postgres_url: URL):
     _upgrade_database(postgres_url)
     with engine.connect() as connection:
         revision = connection.scalar(text("SELECT version_num FROM public.alembic_version"))
-    if revision != "0008_content_pack_metadata":
+    if revision != "0009_answer_skips":
         engine.dispose()
         pytest.fail("finxl_test is not at the expected latest Alembic revision")
     _check_database(postgres_url)

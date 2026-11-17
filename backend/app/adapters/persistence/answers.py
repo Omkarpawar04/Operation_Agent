@@ -1,7 +1,7 @@
 import logging
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -13,6 +13,7 @@ from app.db.models import (
     AnswerRow,
     AssessmentAttemptRow,
     AssessmentResultRow,
+    AssessmentRubricRow,
     CourseContentRevisionRow,
     EvaluationRow,
     InterviewSessionRow,
@@ -66,7 +67,11 @@ class SqlAlchemyAnswerWorkflowAdapter(AnswerWorkflowPort):
             )
         )
         if duplicate is not None:
-            if duplicate.question_id != command.question_id or duplicate.transcript != command.text:
+            if (
+                duplicate.question_id != command.question_id
+                or duplicate.transcript != command.text
+                or duplicate.is_skipped != command.is_skip
+            ):
                 raise Conflict("Idempotency key reused with a different answer")
             active = (
                 self._session.get(QuestionRow, row.active_question_id)
@@ -129,7 +134,7 @@ class SqlAlchemyAnswerWorkflowAdapter(AnswerWorkflowPort):
         prior_answers = tuple(
             self._session.scalars(
                 select(AnswerRow.transcript)
-                .where(AnswerRow.session_id == row.id)
+                .where(AnswerRow.session_id == row.id, AnswerRow.is_skipped.is_(False))
                 .order_by(AnswerRow.created_at.desc())
                 .limit(8)
             ).all()
@@ -210,6 +215,7 @@ class SqlAlchemyAnswerWorkflowAdapter(AnswerWorkflowPort):
             follow_up_index=follow_up_index,
             original_question_text=root_question.text,
             previous_follow_up_questions=previous_followups,
+            root_question_id=root_question.id,
         )
 
     def release(self, reservation: AnswerReservation) -> None:
@@ -326,24 +332,27 @@ class SqlAlchemyAnswerWorkflowAdapter(AnswerWorkflowPort):
         ):
             raise Conflict("Interview transition requires a generated question")
 
-        answer = Answer(
+        answer_id = uuid4()
+        if not command.is_skip:
+            Answer(
+                session_id=row.id,
+                question_id=command.question_id,
+                text=command.text,
+                idempotency_key=command.idempotency_key,
+            )
+        answer_row = AnswerRow(
+            id=answer_id,
             session_id=row.id,
             question_id=command.question_id,
-            text=command.text,
+            transcript=command.text,
             idempotency_key=command.idempotency_key,
-        )
-        answer_row = AnswerRow(
-            id=answer.id,
-            session_id=answer.session_id,
-            question_id=answer.question_id,
-            transcript=answer.text,
-            idempotency_key=answer.idempotency_key,
+            is_skipped=command.is_skip,
         )
         self._session.add(answer_row)
         self._session.flush()
         self._session.add(
             EvaluationRow(
-                answer_id=answer.id,
+                answer_id=answer_id,
                 rubric_version=rubric_version,
                 evidence_json=[self._evidence_record(item) for item in evidence],
             )
@@ -454,19 +463,24 @@ class SqlAlchemyAnswerWorkflowAdapter(AnswerWorkflowPort):
         )
 
     def _previous_evidence(self, session_id: UUID) -> tuple[EvaluationEvidence, ...]:
-        records = (
-            self._session.execute(
-                select(EvaluationRow.evidence_json)
-                .join(AnswerRow, AnswerRow.id == EvaluationRow.answer_id)
-                .where(AnswerRow.session_id == session_id)
-            )
-            .scalars()
-            .all()
-        )
+        records = self._session.execute(
+            select(EvaluationRow.evidence_json, EvaluationRow.rubric_version, QuestionRow)
+            .join(AnswerRow, AnswerRow.id == EvaluationRow.answer_id)
+            .join(QuestionRow, QuestionRow.id == AnswerRow.question_id)
+            .where(AnswerRow.session_id == session_id)
+        ).all()
         evidence: list[EvaluationEvidence] = []
-        for record in records:
+        for record, rubric_version, question in records:
             if not isinstance(record, list):
                 raise ValueError("Stored evaluation evidence is malformed")
+            root = self._question_root(question)
+            rubric_row = self._session.get(AssessmentRubricRow, rubric_version)
+            dimensions = rubric_row.dimensions_json if rubric_row else []
+            weights = {
+                str(item.get("key")): Decimal(str(item.get("weight")))
+                for item in dimensions
+                if isinstance(item, dict) and item.get("key") is not None
+            }
             for item in record:
                 if not isinstance(item, dict):
                     raise ValueError("Stored evaluation evidence is malformed")
@@ -487,9 +501,32 @@ class SqlAlchemyAnswerWorkflowAdapter(AnswerWorkflowPort):
                         relevance=self._rating(item.get("relevance")),
                         correctness=self._rating(item.get("correctness")),
                         completeness=self._rating(item.get("completeness")),
+                        root_question_id=(
+                            UUID(str(item["root_question_id"]))
+                            if item.get("root_question_id")
+                            else root.id
+                        ),
+                        dimension_weight=(
+                            Decimal(str(item["dimension_weight"]))
+                            if item.get("dimension_weight") is not None
+                            else (
+                                weights[str(item["dimension"])]
+                                if str(item["dimension"]) in weights
+                                else Decimal("1") if len(record) == 1 else None
+                            )
+                        ),
                     )
                 )
         return tuple(evidence)
+
+    def _question_root(self, question: QuestionRow) -> QuestionRow:
+        root = question
+        while root.parent_question_id is not None:
+            parent = self._session.get(QuestionRow, root.parent_question_id)
+            if parent is None:
+                raise ValueError("Question history is incomplete")
+            root = parent
+        return root
 
     @staticmethod
     def _rating(value: object) -> int | None:
@@ -530,4 +567,8 @@ class SqlAlchemyAnswerWorkflowAdapter(AnswerWorkflowPort):
             "relevance": item.relevance,
             "correctness": item.correctness,
             "completeness": item.completeness,
+            "root_question_id": str(item.root_question_id) if item.root_question_id else None,
+            "dimension_weight": (
+                str(item.dimension_weight) if item.dimension_weight is not None else None
+            ),
         }

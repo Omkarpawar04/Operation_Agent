@@ -33,6 +33,9 @@ describe('VoiceInterviewLifecycle Integration', () => {
         question: 'What specific metrics did you monitor?',
         action: 'follow_up',
       }),
+      skipQuestion: vi.fn().mockResolvedValue({
+        state: 'awaiting_answer', version: 2, question: 'Next question', action: 'next_question',
+      }),
       getAssessment: vi.fn().mockResolvedValue({
         attempt_id: 'att-123',
         score: 78.5,
@@ -214,6 +217,25 @@ describe('VoiceInterviewLifecycle Integration', () => {
     expect(retrySubmission.question_id).toBe(originalSubmission.question_id);
     expect(retrySubmission.text).toBe(originalSubmission.text);
     expect(retrySubmission.expected_version).toBe(3);
+  });
+
+  it('skips the active main question and displays the next persisted question', async () => {
+    await lifecycle.initialize('session-001');
+    (mockApiClient.getActiveQuestion as any).mockResolvedValueOnce({
+      id: 'q-base-2', text: 'Next persisted main question?', kind: 'base', sequence: 2, version: 2,
+    });
+    await lifecycle.skipQuestion();
+
+    const snapshot = lifecycle.getSnapshot();
+    expect(mockApiClient.skipQuestion).toHaveBeenCalledWith('session-001', {
+      question_id: 'q-base-1',
+      expected_version: 1,
+      idempotency_key: expect.stringMatching(/^voice-skip-/),
+    });
+    expect(snapshot.activeQuestion?.id).toBe('q-base-2');
+    expect(snapshot.currentVersion).toBe(2);
+    expect(snapshot.state).toBe('question_ready');
+    expect(mockSpeechInput.stop).toHaveBeenCalled();
   });
 
   it('rejects voice submission when speech recognition is unsupported', async () => {

@@ -284,7 +284,6 @@ def validate_content(content: dict[str, Any]) -> list[str]:
         ):
             errors.append(f"question {qid} requires key concepts expected")
         check_refs(question_item, f"question {qid}")
-
     followup_texts: set[str] = set()
     for followup in rows["follow_up_candidates"]:
         fid = followup.get("follow_up_id")

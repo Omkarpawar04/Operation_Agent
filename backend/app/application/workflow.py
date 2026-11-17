@@ -14,7 +14,7 @@ from app.ports.llm import AnswerAnalysis, InterviewPrompt
 def is_development_placeholder_question(text: str) -> bool:
     lowered = text.casefold()
     return any(
-        marker in lowered
+        marker in lowered   
         for marker in (
             "synthetic development question",
             "synthetic-development-fixture",

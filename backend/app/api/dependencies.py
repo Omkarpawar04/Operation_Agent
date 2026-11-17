@@ -26,6 +26,7 @@ from app.application.use_cases.queries import (
     GetProgression,
 )
 from app.application.use_cases.readiness import CheckReadiness
+from app.application.use_cases.skip_question import SkipQuestion
 from app.application.use_cases.start_interview import StartInterview
 from app.application.use_cases.submit_answer import SubmitAnswer
 from app.application.use_cases.transcripts import DeleteStudentTranscripts
@@ -179,6 +180,15 @@ def get_submit_answer(
     assessment_content: AssessmentContentPort = Depends(get_assessment_content),
 ) -> SubmitAnswer:
     return SubmitAnswer(persistence, provider, settings, assessment_content)
+
+
+def get_skip_question(
+    persistence: AnswerWorkflowPort = Depends(get_answer_workflow),
+    provider: LLMProvider = Depends(get_llm_provider),
+    settings: Settings = Depends(get_settings),
+    assessment_content: AssessmentContentPort = Depends(get_assessment_content),
+) -> SkipQuestion:
+    return SkipQuestion(persistence, provider, settings, assessment_content)
 
 
 def get_readiness(request: Request) -> CheckReadiness:

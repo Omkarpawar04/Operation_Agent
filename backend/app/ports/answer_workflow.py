@@ -17,6 +17,7 @@ class AnswerCommand:
     expected_version: int
     idempotency_key: str
     text: str
+    is_skip: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +35,7 @@ class AnswerReservation:
     follow_up_index: int
     original_question_text: str | None = None
     previous_follow_up_questions: tuple[str, ...] = ()
+    root_question_id: UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)

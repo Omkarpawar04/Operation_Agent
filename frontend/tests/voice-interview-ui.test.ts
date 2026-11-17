@@ -25,6 +25,7 @@ describe('VoiceInterviewUI Component', () => {
       speakCurrentQuestion: vi.fn(),
       stopSpeaking: vi.fn(),
       submitAnswer: vi.fn(),
+      skipQuestion: vi.fn(),
       retry: vi.fn(),
     };
 
@@ -63,6 +64,22 @@ describe('VoiceInterviewUI Component', () => {
     expect(container.textContent?.match(/Behavioral Interview 1/g)).toHaveLength(1);
     expect(container.querySelector('.finxl-question-card strong')?.textContent?.trim()).toBe('Question 1');
     expect(container.querySelector('#finxl-btn-start-mic')).not.toBeNull();
+  });
+
+  it('shows the skip action and labels a follow-up skip distinctly', () => {
+    subscriberCallback?.({
+      sessionId: 'sess-1', stage: 'soft_1', state: 'follow_up_received',
+      activeQuestion: { id: 'q-followup', text: 'What evidence supports that?', kind: 'follow_up', sequence: 2, version: 3 },
+      currentVersion: 3, interimTranscript: '', finalTranscript: '', isSpeechInputSupported: true,
+      isSpeechOutputSupported: true, isListening: false, isSpeaking: false, isSubmitting: false,
+      lastError: null, assessmentResult: null, isFollowUp: true,
+    });
+
+    const skipButton = container.querySelector<HTMLButtonElement>('#finxl-btn-skip-question');
+    expect(skipButton?.textContent).toContain('Skip Follow-up');
+    expect(skipButton?.disabled).toBe(false);
+    skipButton?.click();
+    expect(mockLifecycle.skipQuestion).toHaveBeenCalledTimes(1);
   });
 
   it('decodes encoded text, renders clean metadata, and keeps the submit label readable', () => {

@@ -6,6 +6,7 @@ import {
   AnswerSubmission,
   InterviewStage,
   Question,
+  SkipQuestionSubmission,
   VoiceInterviewState,
 } from '../types/interview';
 import { SpeechInput, SpeechInputError, SpeechOutput } from '../types/speech';
@@ -64,6 +65,7 @@ export class VoiceInterviewLifecycle {
   private _isDisposed = false;
   private _spokenQuestionIds: Set<string> = new Set();
   private _pendingSubmission: AnswerSubmission | null = null;
+  private _pendingSkip: SkipQuestionSubmission | null = null;
 
   constructor(config: VoiceInterviewConfig) {
     this._apiClient = config.apiClient;
@@ -356,6 +358,7 @@ export class VoiceInterviewLifecycle {
       this._pendingSubmission.question_id !== activeQuestion.id ||
       this._pendingSubmission.text !== trimmed
     ) {
+      this._pendingSkip = null;
       this._pendingSubmission = {
         question_id: activeQuestion.id,
         expected_version: currentVersion,
@@ -419,6 +422,82 @@ export class VoiceInterviewLifecycle {
     }
   }
 
+  async skipQuestion(): Promise<void> {
+    if (this._isDisposed) return;
+    const { sessionId, activeQuestion, currentVersion } = this._snapshot;
+    if (!sessionId || !activeQuestion) {
+      this._updateSnapshot({
+        lastError: {
+          message: 'No active question found to skip.',
+          code: 'invalid_state',
+          isRetryable: false,
+        },
+      });
+      return;
+    }
+    this._pendingSubmission = null;
+    if (this._pendingSkip?.question_id !== activeQuestion.id) {
+      this._pendingSkip = {
+        question_id: activeQuestion.id,
+        expected_version: currentVersion,
+        idempotency_key: `voice-skip-${this._generateId()}`,
+      };
+    }
+    await this._sendPendingSkip();
+  }
+
+  private async _sendPendingSkip(): Promise<void> {
+    const { sessionId } = this._snapshot;
+    const pending = this._pendingSkip;
+    if (!sessionId || !pending) return;
+    this._speechInput.stop();
+    this._speechInput.cancel();
+    this._speechOutput.stop();
+    this._updateSnapshot({
+      isSubmitting: true,
+      isListening: false,
+      isSpeaking: false,
+      playbackBlocked: false,
+      state: 'skipping',
+      lastError: null,
+      interimTranscript: '',
+    });
+    try {
+      const response = await this._apiClient.skipQuestion(sessionId, pending);
+      if (this._isDisposed) return;
+      this._updateSnapshot({ currentVersion: response.version, isSubmitting: false });
+      if (response.action === 'complete' || response.state === 'completed') {
+        const assessment = await this._apiClient.getAssessment(sessionId);
+        this._pendingSkip = null;
+        this._updateSnapshot({
+          state: 'completed',
+          assessmentResult: assessment,
+          finalTranscript: '',
+          interimTranscript: '',
+        });
+        return;
+      }
+      const nextQuestion = await this._apiClient.getActiveQuestion(sessionId);
+      this._pendingSkip = null;
+      this._updateSnapshot({
+        activeQuestion: nextQuestion,
+        currentVersion: response.version ?? nextQuestion.version,
+        isFollowUp: nextQuestion.kind === 'follow_up',
+        state: nextQuestion.kind === 'follow_up' ? 'follow_up_received' : 'question_ready',
+        finalTranscript: '',
+        interimTranscript: '',
+      });
+      if (this._autoSpeak && this._speechOutput.isSupported() && nextQuestion.text) {
+        this._spokenQuestionIds.add(nextQuestion.id);
+        await this.speakCurrentQuestion();
+      }
+    } catch (err) {
+      if (this._isDisposed) return;
+      this._updateSnapshot({ isSubmitting: false });
+      this._handleError(err, 'Failed to skip question. Please retry.');
+    }
+  }
+
   /**
    * Safely retries the last failed action without duplicating submissions.
    */
@@ -432,7 +511,20 @@ export class VoiceInterviewLifecycle {
 
     this._updateSnapshot({ lastError: null });
 
-    if (state === 'error' && finalTranscript) {
+    if (state === 'error' && this._pendingSkip && sessionId) {
+      try {
+        const session = await this._apiClient.getInterview(sessionId);
+        if (session.state !== 'completed' && session.state !== 'abandoned') {
+          await this._apiClient.getActiveQuestion(sessionId);
+          this._pendingSkip = { ...this._pendingSkip, expected_version: session.version };
+          this._updateSnapshot({ currentVersion: session.version });
+        }
+      } catch (err) {
+        this._handleError(err, 'Could not refresh the interview before retrying.');
+        return;
+      }
+      await this._sendPendingSkip();
+    } else if (state === 'error' && finalTranscript) {
       // A failed reservation is released at a newer monotonic version. Refresh
       // before retrying, while keeping the original idempotency key and answer.
       if (sessionId && this._pendingSubmission) {

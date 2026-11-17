@@ -54,6 +54,12 @@ export interface AnswerSubmission {
   text: string;
 }
 
+export interface SkipQuestionSubmission {
+  question_id: string;
+  expected_version: number;
+  idempotency_key: string;
+}
+
 export type AnswerAction = 'follow_up' | 'clarification' | 'next_question' | 'complete';
 
 export interface AnswerResponse {
@@ -105,6 +111,7 @@ export type VoiceInterviewState =
   | 'listening'
   | 'recognizing'
   | 'submitting'
+  | 'skipping'
   | 'follow_up_received'
   | 'completed'
   | 'error'
