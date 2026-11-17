@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const qna = env.QNA_SERVICE_URL || 'http://127.0.0.1:5000'
   const resume = env.RESUME_SERVICE_URL || 'http://127.0.0.1:8000'
+  const chatbot = env.CHATBOT_SERVICE_URL || 'http://127.0.0.1:5001'
 
   return {
     plugins: [tailwindcss()],
@@ -14,6 +15,8 @@ export default defineConfig(({ mode }) => {
         '/generate': qna,
         '/download': qna,
         '/api': resume,
+        '/chat': chatbot,
+        '/health': chatbot,
       },
     },
   }

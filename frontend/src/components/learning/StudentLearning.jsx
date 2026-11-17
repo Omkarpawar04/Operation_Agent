@@ -40,7 +40,7 @@ function Cover({ title, className = 'h-44', children }) {
   );
 }
 
-export default function StudentLearning({ token, onSessionExpired }) {
+export default function StudentLearning({ token, onSessionExpired, onAssessmentStateChange }) {
   const call = useCall(token, onSessionExpired);
   const [state, setState] = useState(null);
   const [openId, setOpenId] = useState(null);
@@ -51,7 +51,7 @@ export default function StudentLearning({ token, onSessionExpired }) {
   }, [call]);
   useEffect(() => { load(); }, [load]);
 
-  if (openId) return <CourseView id={openId} call={call} onBack={() => { setOpenId(null); load(); }} />;
+  if (openId) return <CourseView id={openId} call={call} onAssessmentStateChange={onAssessmentStateChange} onBack={() => { setOpenId(null); load(); }} />;
 
   const courses = state?.courses || [];
   const totalVideos = courses.reduce((a, c) => a + c.videos, 0);
@@ -116,7 +116,7 @@ export default function StudentLearning({ token, onSessionExpired }) {
   );
 }
 
-function CourseView({ id, call, onBack }) {
+function CourseView({ id, call, onBack, onAssessmentStateChange }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [activeId, setActiveId] = useState(null);
@@ -257,7 +257,7 @@ function CourseView({ id, call, onBack }) {
               )}
 
               {active && info && (
-                <QuizPanel key={active.id} call={call} videoId={active.id} info={info} live={live} onPassed={async () => { setLive((l) => ({ ...l, passed: true })); await load(); }} />
+                <QuizPanel key={active.id} call={call} videoId={active.id} info={info} live={live} onAssessmentStateChange={onAssessmentStateChange} onPassed={async () => { setLive((l) => ({ ...l, passed: true })); await load(); }} />
               )}
 
               {active && (
@@ -339,13 +339,19 @@ function CourseView({ id, call, onBack }) {
 }
 
 // The quiz under the player: closed until enough is watched, then multiple choice. The answers appear only after passing.
-function QuizPanel({ call, videoId, info, live, onPassed }) {
+function QuizPanel({ call, videoId, info, live, onPassed, onAssessmentStateChange }) {
   const [quiz, setQuiz] = useState(null);
   const [answers, setAnswers] = useState([]);
   const [result, setResult] = useState(null);
   const [retake, setRetake] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const quizIsActive = Boolean(live.unlocked && info.questions && !result && (retake || !quiz?.passed));
+    onAssessmentStateChange?.('lessonQuiz', quizIsActive);
+    return () => onAssessmentStateChange?.('lessonQuiz', false);
+  }, [live.unlocked, info.questions, quiz?.passed, result, retake, onAssessmentStateChange]);
 
   useEffect(() => {
     if (!live.unlocked || !info.questions) return undefined;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import AiChatAssistant from './components/AiChatAssistant.jsx';
 import { Menu, LayoutDashboard, Users, Video, UserCheck, BookOpen, Briefcase, BarChart2, FileText, Building2, Search, Bell, Plus, CheckCircle2, Clock, ChevronRight, TrendingUp, Award, UploadCloud, FileDown, Sparkles, PlayCircle, CheckCircle, XCircle, HelpCircle, LogOut, SlidersHorizontal, MapPin, DollarSign, Calendar, Eye, EyeOff, Send, MessageSquare, AlertCircle, Pencil, Download, Check, X, Loader2, RefreshCw, Mail, Phone, Printer, ChevronDown, User, Settings, Lock, Repeat, ShieldAlert, HelpCircle as QnAIcon } from 'lucide-react';
 import StudentListPage from './components/StudentListPage.jsx';
@@ -61,6 +61,15 @@ export default function App() {
 
   // Controls automatic opening of the first Live Mock session
   const [openLiveMockOnNavigate, setOpenLiveMockOnNavigate] = useState(false);
+  const [activeAssessmentSources, setActiveAssessmentSources] = useState({});
+  const setAssessmentActivity = useCallback((source, active) => {
+    setActiveAssessmentSources((current) => {
+      const nextValue = Boolean(active);
+      if (current[source] === nextValue) return current;
+      return { ...current, [source]: nextValue };
+    });
+  }, []);
+  const assessmentActive = Object.values(activeAssessmentSources).some(Boolean);
 
   // Role Permissions
   const ROLE_PERMISSIONS = {
@@ -689,6 +698,7 @@ export default function App() {
                 <LiveMocksPage
                   autoOpenFirstSession={openLiveMockOnNavigate}
                   onAutoOpenHandled={() => setOpenLiveMockOnNavigate(false)}
+                  onAssessmentStateChange={setAssessmentActivity}
                 />
               )}
 
@@ -718,7 +728,7 @@ export default function App() {
               )}
 
               {activeTab === 'Learning Modules' && (
-                <LearningModulesPage token={authToken} role={userRole} />
+                <LearningModulesPage token={authToken} role={userRole} onSessionExpired={signOut} onAssessmentStateChange={setAssessmentActivity} />
               )}
 
               {activeTab === 'Job Portal' && (
@@ -754,7 +764,7 @@ export default function App() {
       </div>
 
       {/* Global 3D Animated Chat Assistant Widget */}
-      <AiChatAssistant />
+      <AiChatAssistant assessmentActive={assessmentActive} user={{ ...currentUser, role: userRole }} />
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (

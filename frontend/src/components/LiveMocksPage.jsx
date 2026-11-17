@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Video, Sparkles, Clock, ShieldCheck, Cpu, Mic, Volume2, ArrowRight } from 'lucide-react';
 import AiVoiceInterviewModal from './AiVoiceInterviewModal.jsx';
 
-export default function LiveMocksPage() {
+export default function LiveMocksPage({ onAssessmentStateChange }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const candidateName = "Piyanshi Vegad"; // Or active student profile name
+
+  useEffect(() => {
+    onAssessmentStateChange?.('mockInterview', isModalOpen);
+    return () => onAssessmentStateChange?.('mockInterview', false);
+  }, [isModalOpen, onAssessmentStateChange]);
 
   return (
     <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-8">
