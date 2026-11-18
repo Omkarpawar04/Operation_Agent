@@ -25,3 +25,9 @@ storage/
 # IDE
 .vscode/
 .idea/
+
+# Virtual environments
+venv/
+.venv/
+venv-kokoro/
+
