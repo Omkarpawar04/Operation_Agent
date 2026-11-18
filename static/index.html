@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#10131c">
+    <title>InterviewAI - Voice Interview</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="app-shell">
+    <header class="topbar">
+        <a class="brand" href="/"><span class="brand-icon">IA</span><span>Interview<span class="brand-accent">AI</span></span></a>
+        <div class="connection-status"><span class="status-dot" id="connectionDot"></span><span id="connectionStatus">Disconnected</span></div>
+    </header>
+    <main class="main-content">
+        <section id="setupScreen" class="setup-screen">
+            <div class="hero"><span class="eyebrow">VOICE-FIRST MOCK INTERVIEW</span><h1>Practice smarter.<br><span>Interview confidently.</span></h1><p>Have a hands-free interview. Speak naturally and hear each response from your AI interviewer.</p></div>
+            <div class="setup-card">
+                <h2>Prepare your interview</h2>
+                <p class="muted">Share your background and the job you are targeting.</p>
+                <form id="interviewForm">
+                    <label for="candidateName">Your name</label>
+                    <input id="candidateName" type="text" placeholder="Enter your name" maxlength="200">
+                    <label for="resumeFile">Resume (TXT, PDF, DOCX) or paste text</label>
+                    <input id="resumeFile" type="file" accept=".txt,.pdf,.docx">
+                    <textarea id="resumeText" rows="6" placeholder="Paste your resume text here..."></textarea>
+                    <label for="jobFile">Job description (TXT, PDF, DOCX) or paste text</label>
+                    <input id="jobFile" type="file" accept=".txt,.pdf,.docx">
+                    <textarea id="jobDescription" rows="6" placeholder="Paste the job description here..."></textarea>
+                    <button type="submit" id="startButton" class="primary-button" disabled>Start voice interview</button>
+                </form>
+                <p id="setupError" class="error-message" role="alert"></p>
+                <p id="voiceRequirements" class="voice-requirements" role="status"></p>
+                <section class="history-panel"><h2>Interview history</h2><div id="historyList" class="muted">Loading history...</div></section>
+            </div>
+        </section>
+
+        <section id="interviewScreen" class="interview-screen hidden">
+            <div class="interview-heading"><div><span class="eyebrow">LIVE VOICE SESSION</span><h1>Your interview room</h1></div><button id="endButton" class="end-button">End interview</button></div>
+            <div class="voice-room">
+                <div class="card-heading"><div><h2>Interview in progress</h2><p class="muted">Your answer is captured by microphone</p></div><span id="interviewStatus" class="status-label">Connecting</span></div>
+                <div class="interview-metrics"><span id="questionProgress">Question 0 of 0</span><span id="elapsedTime">00:00 elapsed</span></div>
+                <div class="progress-track"><div id="progressBar"></div></div>
+                <div id="voiceVisualizer" class="voice-visualizer voice-orb" aria-hidden="true"><div class="avatar-glow"></div><span class="orb-mic">MIC</span></div>
+                <p id="voiceStatus" class="voice-status" aria-live="polite">Preparing your voice session...</p>
+                <div id="conversation" class="captions" aria-live="polite" aria-label="Read-only interview captions"></div>
+                <div class="action-controls"><button type="button" id="repeatButton" disabled>Repeat question</button></div>
+            </div>
+            <p class="voice-note">The microphone listens during your turn and pauses while the interviewer speaks. Captions are read-only.</p>
+        </section>
+
+        <section id="completionScreen" class="completion-screen hidden">
+            <div class="completion-icon">OK</div><span class="eyebrow">SESSION FINISHED</span><h1>Interview completed.</h1>
+            <p class="muted">Your interview and evaluation are saved.</p>
+            <div id="evaluationReport" class="evaluation-report"></div><p id="evaluationError" class="error-message"></p>
+            <button id="newInterviewButton" class="primary-button">Start another interview</button>
+        </section>
+    </main>
+    <footer><span>InterviewAI</span><span>Voice-first interview practice</span></footer>
+</div>
+<script src="/static/app.js" defer></script>
+</body>
+</html>

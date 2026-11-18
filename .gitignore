@@ -1,0 +1,27 @@
+# /venv-kokoro/
+# /tests/output/kokoro_live.wav
+# .env
+# .env.example
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.coverage
+.pytest_cache/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Audio and generated files
+audio/
+storage/
+*.wav
+*.mp3
+
+# IDE
+.vscode/
+.idea/

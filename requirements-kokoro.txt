@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# Published Kokoro 0.9.4 supports Python 3.10 through 3.12.
+kokoro==0.9.4
