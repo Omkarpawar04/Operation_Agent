@@ -90,6 +90,23 @@ def test_preserve_partial_frame(processor):
     assert processor.get_frame_buffer_size() == 0
 
 
+def test_utterance_snapshot_is_a_copy_of_active_audio():
+    processor = WebSocketAudioProcessor(
+        sample_rate=16000,
+        frame_duration_ms=20,
+        silence_duration_ms=40,
+    )
+    processor.vad.vad = FakeVAD([True, True, True])
+    frames = [bytes([value]) * 640 for value in (1, 2, 3)]
+
+    processor.process_audio(b"".join(frames[:2]))
+    snapshot = processor.get_utterance_snapshot()
+    processor.process_audio(frames[2])
+
+    assert snapshot == frames[0] + frames[1]
+    assert processor.get_utterance_snapshot() == snapshot + frames[2]
+
+
 def test_reject_invalid_pcm(processor):
     with pytest.raises(WebSocketAudioError):
         processor.process_audio(bytes(101))

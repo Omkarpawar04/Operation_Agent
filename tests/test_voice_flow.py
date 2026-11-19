@@ -113,6 +113,8 @@ class FakeAudioProcessor:
 
         self.sample_rate = 16000
         self.result = None
+        self.is_speaking = False
+        self.utterance_snapshot = b""
 
         FakeAudioProcessor.instances.append(self)
 
@@ -128,8 +130,13 @@ class FakeAudioProcessor:
 
         return self.result
 
+    def get_utterance_snapshot(self):
+        return bytes(self.utterance_snapshot)
+
     def reset(self):
         self.result = None
+        self.is_speaking = False
+        self.utterance_snapshot = b""
 
 
 # --------------------------------------------------
@@ -140,9 +147,10 @@ class FakeFallbackVoicePipeline:
 
     instances = []
 
-    def __init__(self, interviewer=None):
+    def __init__(self, interviewer=None, tts_voice="af_heart"):
 
         self.interviewer = interviewer
+        self.tts_voice = tts_voice
         self.transcribed_audio = []
         self.spoken_texts = []
 
@@ -167,6 +175,9 @@ class FakeFallbackVoicePipeline:
         assert sample_rate == 16000
 
         self.transcribed_audio.append(audio)
+
+        if audio.startswith(b"live-window"):
+            return "I have experience working"
 
         transcript = self.transcripts.get(audio)
 
@@ -247,10 +258,16 @@ def voice_environment(tmp_path, monkeypatch):
 # HELPER: START INTERVIEW
 # --------------------------------------------------
 
-def start_test_interview(websocket):
+def start_test_interview(websocket, voice_id=None):
 
-    websocket.send_json({
+    websocket.send_json({"event": "recording_consent", "accepted": True})
+    assert websocket.receive_json()["event"] == "recording_consent_status"
+    websocket.send_json({"event": "recording_status", "active": True})
+    assert websocket.receive_json()["event"] == "recording_status"
+
+    message = {
         "event": "start_interview",
+        "recording_consent": True,
         "candidate_name": "Test Candidate",
         "resume_text": (
             "Python developer with SQL experience."
@@ -258,7 +275,10 @@ def start_test_interview(websocket):
         "job_description": (
             "We are looking for a junior Python developer."
         ),
-    })
+    }
+    if voice_id is not None:
+        message["voice_id"] = voice_id
+    websocket.send_json(message)
 
     planning_event = websocket.receive_json()
     started_event = websocket.receive_json()
@@ -267,6 +287,20 @@ def start_test_interview(websocket):
     assert started_event["event"] == "interview_started"
 
     return started_event
+
+
+def test_selected_voice_is_saved_and_bound_to_session_pipeline(voice_environment):
+    client, test_database = voice_environment
+
+    with client.websocket_connect("/ws/interview") as websocket:
+        assert websocket.receive_json()["event"] == "connection_ready"
+        started = start_test_interview(websocket, voice_id="bm_george")
+        assert started["tts_voice"] == "bm_george"
+        session = asyncio.run(test_database.get_session(started["session_id"]))
+        assert session["tts_voice"] == "bm_george"
+
+        enable_audio(websocket)
+        assert FakeFallbackVoicePipeline.instances[-1].tts_voice == "bm_george"
 
 
 # --------------------------------------------------
@@ -432,6 +466,59 @@ def test_complete_voice_interview_turn(voice_environment):
         assert turns[2]["content"] == (
             "I have experience working with Python."
         )
+
+
+def test_live_transcription_does_not_replace_final_answer(voice_environment):
+    client, test_database = voice_environment
+
+    with client.websocket_connect("/ws/interview") as websocket:
+        websocket.receive_json()
+        started = start_test_interview(websocket)
+        enable_audio(websocket)
+
+        processor = FakeAudioProcessor.instances[-1]
+        processor.is_speaking = True
+        processor.utterance_snapshot = b"live-window" + bytes(96000 - len(b"live-window"))
+        processor.result = SimpleNamespace(
+            speech_started=True,
+            speech_ended=False,
+            completed_utterances=[],
+            audio_duration_ms=3000,
+        )
+        websocket.send_bytes(bytes(640))
+        assert websocket.receive_json()["event"] == "speech_started"
+
+        processor.utterance_snapshot += bytes(32000)
+        processor.result = SimpleNamespace(
+            speech_started=False,
+            speech_ended=False,
+            completed_utterances=[],
+            audio_duration_ms=4000,
+        )
+        websocket.send_bytes(bytes(640))
+        live_event = websocket.receive_json()
+        assert live_event["event"] == "live_transcription"
+        assert live_event["text"] == "I have experience working"
+        assert live_event["sequence"] == 1
+
+        processor.is_speaking = False
+        processor.result = SimpleNamespace(
+            speech_started=False,
+            speech_ended=True,
+            completed_utterances=[b"utterance-1"],
+            audio_duration_ms=5000,
+        )
+        websocket.send_bytes(bytes(640))
+        assert websocket.receive_json()["event"] == "speech_ended"
+        receive_voice_turn(
+            websocket,
+            "I have experience working with Python.",
+        )
+
+        pipeline = FakeFallbackVoicePipeline.instances[-1]
+        assert pipeline.transcribed_audio[-1] == b"utterance-1"
+        turns = asyncio.run(test_database.get_turns(started["session_id"]))
+        assert turns[2]["content"] == "I have experience working with Python."
 
 
 def test_start_automatically_speaks_greeting_and_first_question(voice_environment):

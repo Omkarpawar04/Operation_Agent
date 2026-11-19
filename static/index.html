@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#10131c">
+    <meta name="theme-color" content="#F8FAFC">
     <title>InterviewAI - Voice Interview</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css?v=20261118-light-theme">
 </head>
 <body>
 <div class="app-shell">
@@ -28,6 +28,12 @@
                     <label for="jobFile">Job description (TXT, PDF, DOCX) or paste text</label>
                     <input id="jobFile" type="file" accept=".txt,.pdf,.docx">
                     <textarea id="jobDescription" rows="6" placeholder="Paste the job description here..."></textarea>
+                    <label for="ttsVoice">Interviewer voice</label>
+                    <div class="voice-picker">
+                        <select id="ttsVoice" aria-describedby="ttsVoiceDetails"></select>
+                        <button type="button" id="previewVoice" disabled>Preview</button>
+                    </div>
+                    <p id="ttsVoiceDetails" class="voice-details" role="status">Loading supported Kokoro voices...</p>
                     <button type="submit" id="startButton" class="primary-button" disabled>Start voice interview</button>
                 </form>
                 <p id="setupError" class="error-message" role="alert"></p>
@@ -37,17 +43,48 @@
         </section>
 
         <section id="interviewScreen" class="interview-screen hidden">
-            <div class="interview-heading"><div><span class="eyebrow">LIVE VOICE SESSION</span><h1>Your interview room</h1></div><button id="endButton" class="end-button">End interview</button></div>
-            <div class="voice-room">
-                <div class="card-heading"><div><h2>Interview in progress</h2><p class="muted">Your answer is captured by microphone</p></div><span id="interviewStatus" class="status-label">Connecting</span></div>
-                <div class="interview-metrics"><span id="questionProgress">Question 0 of 0</span><span id="elapsedTime">00:00 elapsed</span></div>
-                <div class="progress-track"><div id="progressBar"></div></div>
-                <div id="voiceVisualizer" class="voice-visualizer voice-orb" aria-hidden="true"><div class="avatar-glow"></div><span class="orb-mic">MIC</span></div>
-                <p id="voiceStatus" class="voice-status" aria-live="polite">Preparing your voice session...</p>
-                <div id="conversation" class="captions" aria-live="polite" aria-label="Read-only interview captions"></div>
-                <div class="action-controls"><button type="button" id="repeatButton" disabled>Repeat question</button></div>
+            <div class="interview-heading"><div><span class="eyebrow">LIVE VOICE SESSION</span><h1>Your interview room</h1></div><div class="session-heading-actions"><span id="interviewStatus" class="status-label">Connecting</span></div></div>
+            <div class="interview-layout">
+                <section class="voice-room glass-card" aria-label="Interview">
+                    <div class="interview-metrics"><span id="questionProgress">Question 0 of 0</span><span id="elapsedTime">00:00 elapsed</span></div>
+                    <div class="progress-track"><div id="progressBar"></div></div>
+                    <div class="question-card"><span>INTERVIEWER PROMPT</span><p id="questionText">Your interviewer is getting ready...</p></div>
+                    <div class="orb-stage">
+                        <div id="voiceVisualizer" class="voice-visualizer voice-orb" aria-hidden="true"><div class="orb-core"></div><div class="orb-ring orb-ring-one"></div><div class="orb-ring orb-ring-two"></div><div class="orb-particles"><i></i><i></i><i></i><i></i></div></div>
+                        <div id="cameraTile" class="camera-tile hidden"><video id="cameraPreview" autoplay muted playsinline></video><span class="live-indicator"><i></i> CAMERA ON</span></div>
+                    </div>
+                    <p id="voiceStatus" class="voice-status" aria-live="polite">Preparing your voice session...</p>
+                    <details class="transcript-panel"><summary>Live transcript <span>Expand</span></summary><div id="conversation" class="captions" aria-live="polite" aria-label="Read-only interview captions"></div></details>
+                    <div class="bottom-controls" aria-label="Interview controls">
+                        <button type="button" id="micToggle" class="control-button" aria-pressed="true"><span aria-hidden="true">◉</span><small>Mic on</small></button>
+                        <button type="button" id="cameraToggle" class="control-button" aria-pressed="false"><span aria-hidden="true">▣</span><small>Camera off</small></button>
+                        <button type="button" id="speakerToggle" class="control-button" aria-pressed="true"><span aria-hidden="true">♫</span><small>Speaker on</small></button>
+                        <button type="button" id="repeatButton" class="control-button repeat-control" disabled><span aria-hidden="true">↻</span><small>Repeat</small></button>
+                        <button type="button" id="settingsToggle" class="control-button"><span aria-hidden="true">⚙</span><small>Monitoring</small></button>
+                        <button type="button" id="endButtonBottom" class="control-button control-end"><span aria-hidden="true">■</span><small>End</small></button>
+                    </div>
+                    <p class="voice-note">Your microphone is used for interview answers. Camera and screen sharing are optional.</p>
+                </section>
+                <aside id="monitorPanel" class="monitor-panel glass-card" aria-label="Candidate-controlled monitoring">
+                    <div class="monitor-heading"><div><span class="eyebrow">PRIVACY CONTROLS</span><h2>Session monitoring</h2></div><span class="local-only-badge">LOCAL ONLY</span></div>
+                    <p class="muted monitor-intro">Monitoring is optional. Captures stay in this browser session and are never uploaded.</p>
+                    <div class="monitor-status-grid">
+                        <div><span>Camera</span><strong id="cameraStatus">Off</strong></div>
+                        <div><span>Screen</span><strong id="screenStatus">Not shared</strong></div>
+                        <div><span>Recording</span><strong id="recordingStatus">Off</strong></div>
+                        <div><span>Snapshots</span><strong id="snapshotCount">0</strong></div>
+                    </div>
+                    <label class="consent-row"><input id="cameraSnapshotConsent" type="checkbox"><span>Allow camera snapshots during this interview</span></label>
+                    <label class="consent-row"><input id="screenSnapshotConsent" type="checkbox"><span>Allow screen snapshots while sharing</span></label>
+                    <label class="consent-row"><input id="recordingConsent" type="checkbox"><span>I consent to local video recording</span></label>
+                    <label class="interval-control" for="captureInterval">Snapshot interval</label>
+                    <select id="captureInterval"><option value="30">Every 30 seconds</option><option value="60" selected>Every 60 seconds</option></select>
+                    <div class="monitor-actions"><button type="button" id="screenToggle" class="secondary-button" aria-pressed="false">Share screen</button><button type="button" id="recordToggle" class="secondary-button" disabled>Start recording</button></div>
+                    <div class="monitor-data-actions"><button type="button" id="downloadRecording" class="text-button hidden">Download local recording</button><button type="button" id="clearMonitoring" class="text-button">Delete local monitoring data</button></div>
+                    <section class="event-section"><h3>Integrity event timeline</h3><p id="monitorEmpty" class="muted">No events or snapshots captured.</p><ol id="monitorTimeline" class="monitor-timeline" aria-live="polite"></ol></section>
+                    <p class="privacy-note">Events describe browser state only. They do not determine intent or honesty. Data is cleared when the session ends or you delete it.</p>
+                </aside>
             </div>
-            <p class="voice-note">The microphone listens during your turn and pauses while the interviewer speaks. Captions are read-only.</p>
         </section>
 
         <section id="completionScreen" class="completion-screen hidden">
@@ -59,6 +96,6 @@
     </main>
     <footer><span>InterviewAI</span><span>Voice-first interview practice</span></footer>
 </div>
-<script src="/static/app.js" defer></script>
+<script src="/static/app.js?v=20261118-interview-room" defer></script>
 </body>
 </html>

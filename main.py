@@ -28,7 +28,7 @@ import xml.etree.ElementTree as ET
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,7 +55,11 @@ from audio.fallback_pipeline import (
     FallbackVoicePipeline,
     FallbackPipelineError,
 )
-from audio.kokoro_tts import kokoro_tts_service
+from audio.kokoro_tts import (
+    DEFAULT_KOKORO_VOICE,
+    KokoroTTSError,
+    kokoro_tts_service,
+)
 
 
 # --------------------------------------------------
@@ -146,13 +150,11 @@ app.add_middleware(
 # --------------------------------------------------
 
 BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR / "static"
+FRONTEND_DIST_DIR = BASE_DIR / "frontend" / "dist"
+FRONTEND_ASSET_DIR = FRONTEND_DIST_DIR / "assets"
 
-app.mount(
-    "/static",
-    StaticFiles(directory=STATIC_DIR),
-    name="static",
-)
+if FRONTEND_ASSET_DIR.is_dir():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_ASSET_DIR), name="frontend-assets")
 
 # --------------------------------------------------
 # HTTP ENDPOINTS
@@ -160,8 +162,10 @@ app.mount(
 
 @app.get("/")
 async def root():
-
-    return FileResponse(STATIC_DIR / "index.html")
+    index_file = FRONTEND_DIST_DIR / "index.html"
+    if not index_file.is_file():
+        raise HTTPException(503, "React frontend build is missing. Run `npm --prefix frontend run build`.")
+    return FileResponse(index_file)
 
 
 @app.get("/health")
@@ -178,6 +182,33 @@ async def health_check():
         "tts_provider": "kokoro-local",
         "tts_status": kokoro_tts_service.status,
     }
+
+
+@app.get("/api/tts/voices")
+async def get_tts_voices():
+    """List English voices supported by this Kokoro model."""
+    return {
+        "default_voice": DEFAULT_KOKORO_VOICE,
+        "voices": kokoro_tts_service.voice_catalog(),
+    }
+
+
+@app.post("/api/tts/preview")
+async def preview_tts_voice(payload: dict):
+    """Generate a short local Kokoro preview for a supported voice."""
+    voice = kokoro_tts_service.resolve_voice(payload.get("voice_id"))
+    try:
+        audio = await kokoro_tts_service.synthesize_wav(
+            "Hello, thank you for joining the interview. I look forward to our conversation.",
+            voice=voice,
+        )
+    except KokoroTTSError as exc:
+        raise HTTPException(503, "Kokoro could not generate the voice preview.") from exc
+    return Response(
+        content=audio,
+        media_type="audio/wav",
+        headers={"Cache-Control": "no-store", "X-Kokoro-Voice": voice},
+    )
 
 
 def voice_services_missing() -> list[str]:
@@ -349,10 +380,66 @@ async def interview_websocket(websocket: WebSocket):
 
     audio_processor = None
     voice_pipeline = None
+    selected_voice = DEFAULT_KOKORO_VOICE
     audio_enabled = False
+    recording_consent_accepted = False
+    recording_active = False
+    interview_paused = False
     initial_speech_text = None
     tts_task: asyncio.Task | None = None
     processed_audio_hashes: set[str] = set()
+    live_transcription_task: asyncio.Task | None = None
+    live_transcription_metadata: dict[str, int] | None = None
+    live_transcription_sequence = 0
+    live_transcription_turn_id = 0
+    live_transcription_last_end_bytes = 0
+    live_transcription_error_sent = False
+    live_transcription_disabled = False
+
+    async def flush_live_transcription():
+        nonlocal live_transcription_task
+        nonlocal live_transcription_metadata
+        nonlocal live_transcription_error_sent
+        nonlocal live_transcription_disabled
+
+        task = live_transcription_task
+        if task is None or not task.done():
+            return
+
+        metadata = live_transcription_metadata
+        live_transcription_task = None
+        live_transcription_metadata = None
+
+        try:
+            text = task.result()
+        except asyncio.CancelledError:
+            return
+        except Exception as error:
+            logger.warning(
+                "Live transcription request failed (%s).",
+                type(error).__name__,
+            )
+            live_transcription_disabled = True
+            if not live_transcription_error_sent:
+                await websocket.send_json({
+                    "event": "live_transcription_error",
+                    "success": False,
+                    "message": "Live captions are temporarily unavailable.",
+                })
+                live_transcription_error_sent = True
+            return
+
+        if text and metadata and not live_transcription_disabled:
+            await websocket.send_json({
+                "event": "live_transcription",
+                "success": True,
+                "text": text,
+                **metadata,
+            })
+
+    def cancel_live_transcription():
+        if live_transcription_task is not None and not live_transcription_task.done():
+            live_transcription_task.cancel()
 
     async def deliver_speech(
         text: str,
@@ -456,6 +543,14 @@ async def interview_websocket(websocket: WebSocket):
                 "NO_ACTIVE_SESSION",
             )
 
+            return
+
+        if interview_paused or not recording_consent_accepted or not recording_active:
+            await send_error(
+                websocket,
+                "The interview is paused until recording consent and recording are restored.",
+                "RECORDING_REQUIRED",
+            )
             return
 
         if not isinstance(candidate_message, str) or not candidate_message.strip():
@@ -725,7 +820,7 @@ async def interview_websocket(websocket: WebSocket):
                     await send_error(websocket, "Audio frame exceeds 256 KB.", "AUDIO_TOO_LARGE")
                     continue
 
-                if not audio_enabled or audio_processor is None:
+                if not audio_enabled or audio_processor is None or interview_paused:
 
                     await send_error(
                         websocket,
@@ -750,6 +845,16 @@ async def interview_websocket(websocket: WebSocket):
                     result = audio_processor.process_audio(
                         audio_chunk
                     )
+                    await flush_live_transcription()
+
+                    if result.speech_started:
+                        if live_transcription_task is not None:
+                            cancel_live_transcription()
+                        live_transcription_turn_id += 1
+                        live_transcription_sequence = 0
+                        live_transcription_last_end_bytes = 0
+                        live_transcription_error_sent = False
+                        live_transcription_disabled = False
 
                     # ----------------------------------
                     # SPEECH STARTED
@@ -782,6 +887,7 @@ async def interview_websocket(websocket: WebSocket):
                                 completed_utterances
                             ),
                         })
+                        cancel_live_transcription()
 
                         # Process every completed utterance.
                         for utterance_index, completed_audio in enumerate(completed_utterances):
@@ -890,6 +996,53 @@ async def interview_websocket(websocket: WebSocket):
                                                      "Speech transcription failed. Check Deepgram configuration and try again.",
                                                      "TRANSCRIPTION_FAILED")
 
+                    elif (
+                        getattr(audio_processor, "is_speaking", False)
+                        and voice_pipeline is not None
+                        and not live_transcription_disabled
+                        and live_transcription_task is None
+                    ):
+                        snapshot = audio_processor.get_utterance_snapshot()
+                        sample_rate = audio_processor.sample_rate
+                        bytes_per_second = sample_rate * 2
+                        interval_bytes = bytes_per_second * 3
+                        end_bytes = len(snapshot)
+                        if (
+                            end_bytes >= interval_bytes
+                            and end_bytes - live_transcription_last_end_bytes >= interval_bytes
+                        ):
+                            overlap_bytes = int(bytes_per_second * 0.8)
+                            start_bytes = max(
+                                0,
+                                live_transcription_last_end_bytes - overlap_bytes,
+                            )
+                            live_chunk = snapshot[start_bytes:end_bytes]
+                            live_transcription_sequence += 1
+                            live_transcription_last_end_bytes = end_bytes
+                            keyterm_builder = getattr(
+                                voice_pipeline,
+                                "interview_keyterms",
+                                None,
+                            )
+                            keyterms = (
+                                keyterm_builder(interview_plan, current_question)
+                                if keyterm_builder
+                                else None
+                            )
+                            live_transcription_metadata = {
+                                "turn_id": live_transcription_turn_id,
+                                "sequence": live_transcription_sequence,
+                                "start_ms": round(start_bytes * 1000 / bytes_per_second),
+                                "end_ms": round(end_bytes * 1000 / bytes_per_second),
+                            }
+                            live_transcription_task = asyncio.create_task(
+                                voice_pipeline.transcribe_audio(
+                                    audio=live_chunk,
+                                    sample_rate=sample_rate,
+                                    keyterms=keyterms,
+                                )
+                            )
+
                 except WebSocketAudioError as error:
 
                     logger.warning(
@@ -899,6 +1052,7 @@ async def interview_websocket(websocket: WebSocket):
                         audio_processor.max_buffer_seconds,
                     )
 
+                    cancel_live_transcription()
                     audio_processor.reset()
 
                     await send_error(
@@ -946,8 +1100,67 @@ async def interview_websocket(websocket: WebSocket):
 
             event = message.get("event")
 
+            if event == "recording_consent":
+                accepted = message.get("accepted") is True
+                recording_consent_accepted = accepted
+                if not accepted:
+                    recording_active = False
+                    if session_id is not None:
+                        interview_paused = True
+                        audio_enabled = False
+                        if audio_processor is not None:
+                            cancel_live_transcription()
+                            audio_processor.reset()
+                        if tts_task and not tts_task.done():
+                            tts_task.cancel()
+                    await websocket.send_json({
+                        "event": "interview_paused" if session_id is not None else "recording_consent_status",
+                        "success": True,
+                        "accepted": False,
+                        "reason": "consent_withdrawn" if session_id is not None else None,
+                        "message": "Recording consent was withdrawn. The interview is paused.",
+                    })
+                else:
+                    await websocket.send_json({
+                        "event": "recording_consent_status",
+                        "success": True,
+                        "accepted": True,
+                    })
+                continue
+
+            if event == "recording_status":
+                active = message.get("active") is True
+                if active and not recording_consent_accepted:
+                    await send_error(websocket, "Recording consent is required.", "RECORDING_CONSENT_REQUIRED")
+                    continue
+                recording_active = active
+                if not active and session_id is not None:
+                    interview_paused = True
+                    audio_enabled = False
+                    if audio_processor is not None:
+                        cancel_live_transcription()
+                        audio_processor.reset()
+                    if tts_task and not tts_task.done():
+                        tts_task.cancel()
+                    await websocket.send_json({
+                        "event": "interview_paused",
+                        "success": True,
+                        "reason": "recording_stopped",
+                        "message": "Recording stopped. Restore your camera and recording to continue.",
+                    })
+                else:
+                    await websocket.send_json({
+                        "event": "recording_status",
+                        "success": True,
+                        "active": recording_active,
+                    })
+                continue
+
             # Resume only an in-progress session and restore its conversation state.
             if event == "resume_session":
+                if not recording_consent_accepted or not recording_active:
+                    await send_error(websocket, "Accept recording consent and restore recording before resuming.", "RECORDING_REQUIRED")
+                    continue
                 requested_id = message.get("session_id")
                 if not isinstance(requested_id, str) or not requested_id:
                     await send_error(websocket, "A valid session_id is required.", "INVALID_SESSION")
@@ -962,6 +1175,10 @@ async def interview_websocket(websocket: WebSocket):
                     await send_error(websocket, "This interview belongs to a different client.", "SESSION_ACCESS_DENIED")
                     continue
                 session_id = requested_id
+                interview_paused = True
+                selected_voice = kokoro_tts_service.resolve_voice(
+                    restored.get("tts_voice")
+                )
                 interview_plan = restored.get("interview_plan")
                 history = await database.get_turns(session_id)
                 last_question_id = next((
@@ -976,6 +1193,7 @@ async def interview_websocket(websocket: WebSocket):
                 await websocket.send_json({
                     "event": "interview_started", "success": True,
                     "session_id": session_id,
+                    "tts_voice": selected_voice,
                     "candidate_profile": restored.get("candidate_profile"),
                     "job_profile": restored.get("job_profile"),
                     "total_questions": (interview_plan or {}).get("total_questions", 0),
@@ -991,6 +1209,20 @@ async def interview_websocket(websocket: WebSocket):
             # ==========================================
 
             if event == "start_interview":
+
+                if (message.get("recording_consent") is not True
+                        or not recording_consent_accepted
+                        or not recording_active):
+                    await send_error(
+                        websocket,
+                        "Explicit recording consent and an active recording are required before the interview can start.",
+                        "RECORDING_CONSENT_REQUIRED",
+                    )
+                    continue
+
+                selected_voice = kokoro_tts_service.resolve_voice(
+                    message.get("voice_id")
+                )
 
                 missing_voice = voice_services_missing()
                 if missing_voice:
@@ -1103,6 +1335,7 @@ async def interview_websocket(websocket: WebSocket):
                         candidate_profile=candidate_profile,
                         job_profile=job_profile,
                         interview_plan=interview_plan,
+                        tts_voice=selected_voice,
                         client_ip=(websocket.client.host if websocket.client else None),
                         max_active_per_ip=settings.max_concurrent_sessions_per_ip,
                     )
@@ -1159,6 +1392,7 @@ async def interview_websocket(websocket: WebSocket):
                         "event": "interview_started",
                         "success": True,
                         "session_id": session_id,
+                        "tts_voice": selected_voice,
                         "candidate_profile": candidate_profile,
                         "job_profile": job_profile,
                         "total_questions": (
@@ -1276,6 +1510,11 @@ async def interview_websocket(websocket: WebSocket):
 
                     continue
 
+                if not recording_consent_accepted or not recording_active:
+                    interview_paused = True
+                    await send_error(websocket, "Recording must be restored before audio can resume.", "RECORDING_REQUIRED")
+                    continue
+
                 if audio_enabled:
 
                     await send_error(
@@ -1293,7 +1532,8 @@ async def interview_websocket(websocket: WebSocket):
                     if voice_pipeline is None:
 
                         voice_pipeline = FallbackVoicePipeline(
-                            interviewer=interviewer
+                            interviewer=interviewer,
+                            tts_voice=selected_voice,
                         )
 
                     audio_enabled = True
@@ -1321,6 +1561,7 @@ async def interview_websocket(websocket: WebSocket):
                     )
 
                     if audio_processor is not None:
+                        cancel_live_transcription()
                         audio_processor.reset()
 
                     audio_processor = None
@@ -1340,7 +1581,11 @@ async def interview_websocket(websocket: WebSocket):
 
             elif event == "stop_audio":
 
+                if session_id is not None:
+                    interview_paused = True
+
                 if audio_processor is not None:
+                    cancel_live_transcription()
                     audio_processor.reset()
 
                 audio_enabled = False
@@ -1350,12 +1595,25 @@ async def interview_websocket(websocket: WebSocket):
                     "success": True,
                 })
 
+                if session_id is not None:
+                    await websocket.send_json({
+                        "event": "interview_paused",
+                        "success": True,
+                        "reason": "audio_stopped",
+                        "message": "Interview paused. Restore recording and audio to continue.",
+                    })
+
                 continue
 
             elif event == "audio_client_ready":
                 if session_id is None or current_question is None or voice_pipeline is None:
                     await send_error(websocket, "Voice session is not ready.", "VOICE_PIPELINE_NOT_READY")
                     continue
+                if not recording_consent_accepted or not recording_active:
+                    interview_paused = True
+                    await send_error(websocket, "Recording must be restored before the interview can continue.", "RECORDING_REQUIRED")
+                    continue
+                interview_paused = False
                 try:
                     queue_speech(initial_speech_text or current_question.get("question", ""))
                     initial_speech_text = None
@@ -1411,6 +1669,9 @@ async def interview_websocket(websocket: WebSocket):
                 action = "repeat" if event == "repeat_question" else message.get("action")
                 if session_id is None or interview_plan is None or current_question is None:
                     await send_error(websocket, "There is no active question.", "NO_ACTIVE_SESSION")
+                    continue
+                if interview_paused or not recording_consent_accepted or not recording_active:
+                    await send_error(websocket, "The interview is paused until recording is restored.", "RECORDING_REQUIRED")
                     continue
                 if action == "repeat":
                     text = current_question.get("question", "")
@@ -1515,6 +1776,7 @@ async def interview_websocket(websocket: WebSocket):
                 )
 
                 if audio_processor is not None:
+                    cancel_live_transcription()
                     audio_processor.reset()
 
                 audio_enabled = False
@@ -1584,6 +1846,14 @@ async def interview_websocket(websocket: WebSocket):
 
     finally:
 
+        if live_transcription_task is not None:
+            if not live_transcription_task.done():
+                live_transcription_task.cancel()
+            await asyncio.gather(
+                live_transcription_task,
+                return_exceptions=True,
+            )
+
         if tts_task and not tts_task.done():
             tts_task.cancel()
             await asyncio.gather(tts_task, return_exceptions=True)
@@ -1599,6 +1869,17 @@ async def interview_websocket(websocket: WebSocket):
                 logger.exception(
                     "Could not close voice pipeline."
                 )
+
+
+@app.get("/{frontend_path:path}")
+async def serve_react_routes(frontend_path: str):
+    """Serve the React entry point for browser routes in the production build."""
+    if frontend_path.startswith(("api/", "assets/", "static/")):
+        raise HTTPException(404, "Not found.")
+    index_file = FRONTEND_DIST_DIR / "index.html"
+    if not index_file.is_file():
+        raise HTTPException(503, "React frontend build is missing. Run `npm --prefix frontend run build`.")
+    return FileResponse(index_file)
 
 
 # --------------------------------------------------

@@ -23,11 +23,32 @@ notepad .env
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-Set `GROQ_API_KEY` and `DEEPGRAM_API_KEY` in `.env`. No hosted TTS key or voice ID is used. Keep `KOKORO_ENABLED=true`; `KOKORO_VOICE=am_michael`, `KOKORO_SPEED=1.0`, and `KOKORO_DEVICE=cpu` are the local voice defaults. Kokoro-82M does not provide an Indian-English voice; `am_michael` is its highest-graded male English option, but it speaks American English. Set `KOKORO_VOICE` to another compatible voice ID if desired. Kokoro emits mono audio at 24 kHz. First use downloads the model, voice, and English pronunciation assets; after they are cached, speech generation runs locally. The app loads the model and generates a short throwaway phrase in a background startup task, warming both model and first-inference paths before the first question when startup finishes in time. Run the live smoke test once while online to download and warm the assets.
+Set `GROQ_API_KEY` and `DEEPGRAM_API_KEY` in `.env`. No hosted TTS key is required. Keep `KOKORO_ENABLED=true`; `KOKORO_VOICE=af_heart`, `KOKORO_SPEED=1.0`, and `KOKORO_DEVICE=cpu` are the local voice defaults. Choose from the supported American-English and British-English voices in the interview setup and preview a voice before starting. Kokoro emits mono audio at 24 kHz. First use downloads the model, voice, and English pronunciation assets; after they are cached, speech generation runs locally. The app loads the model and generates a short throwaway phrase in a background startup task, warming both model and first-inference paths before the first question when startup finishes in time. Run the live smoke test once while online to download and warm the assets.
 
 Kokoro's American English pipeline can run without eSpeak NG; eSpeak NG adds pronunciation fallback for out-of-dictionary words. If you need that fallback, download and install the Windows MSI from the [official eSpeak NG releases](https://github.com/espeak-ng/espeak-ng/releases).
 
-Open <http://127.0.0.1:8000>. Upload TXT, PDF, or DOCX resumes up to 5 MB, or paste resume and job details in setup.
+The frontend is a React + JavaScript application built with Vite. Install Node.js 20.19+ or 22.12+, then use two terminals for development.
+
+```powershell
+# Terminal 1, from the project root: start the existing FastAPI backend.
+.\venv-kokoro\Scripts\Activate.ps1
+python -m uvicorn main:app --host 127.0.0.1 --port 8000
+
+# Terminal 2, from the project root: install and start the React frontend.
+cd frontend
+npm ci
+npm run dev
+```
+
+Open <http://127.0.0.1:5173>. Vite proxies HTTP API requests and the existing interview WebSocket to FastAPI. Upload TXT, PDF, or DOCX resumes up to 5 MB, or paste resume and job details in setup.
+
+For production, build the frontend before starting FastAPI. FastAPI serves the React build and its browser routes at port 8000:
+
+```powershell
+npm --prefix frontend ci
+npm --prefix frontend run build
+python -m uvicorn main:app --host 127.0.0.1 --port 8000
+```
 
 ## API
 
@@ -37,6 +58,10 @@ Open <http://127.0.0.1:8000>. Upload TXT, PDF, or DOCX resumes up to 5 MB, or pa
 - `GET /api/interviews/{id}` returns a session and transcript.
 - `GET /api/interviews/{id}/report` returns a saved evaluation.
 - `POST /api/interviews/{id}/evaluate` retries evaluation for a completed interview.
+
+## Recording consent
+
+Before interview planning, the browser requires explicit recording consent and working camera, microphone, and `MediaRecorder` support. The existing local recorder captures camera video and microphone audio; microphone audio is also streamed for transcription, while answers and transcript are saved with the interview session. FastAPI requires a consent acknowledgement and active recording status before creating a session. If recording or media permission stops during an interview, the server pauses answer processing until recording is restored.
 
 ## WebSocket audio contract
 

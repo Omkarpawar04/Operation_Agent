@@ -141,8 +141,14 @@ def test_environment(tmp_path, monkeypatch):
 
 def start_test_interview(websocket):
 
+    websocket.send_json({"event": "recording_consent", "accepted": True})
+    assert websocket.receive_json()["event"] == "recording_consent_status"
+    websocket.send_json({"event": "recording_status", "active": True})
+    assert websocket.receive_json()["event"] == "recording_status"
+
     websocket.send_json({
         "event": "start_interview",
+        "recording_consent": True,
         "candidate_name": "Test Candidate",
         "resume_text": "Python developer with SQL experience.",
         "job_description": (
@@ -224,14 +230,66 @@ def test_voice_session_refuses_text_only_provider_fallback(test_environment, mon
     monkeypatch.setattr(main, "voice_services_missing", lambda: ["DEEPGRAM_API_KEY"])
     with client.websocket_connect("/ws/interview") as websocket:
         websocket.receive_json()
+        websocket.send_json({"event": "recording_consent", "accepted": True})
+        websocket.receive_json()
+        websocket.send_json({"event": "recording_status", "active": True})
+        websocket.receive_json()
         websocket.send_json({
             "event": "start_interview",
+            "recording_consent": True,
             "resume_text": "Python developer.",
             "job_description": "Python role.",
         })
         error = websocket.receive_json()
     assert error["event"] == "interview_error"
     assert error["code"] == "VOICE_CONFIGURATION_MISSING"
+
+
+def test_start_interview_requires_backend_recording_consent(test_environment):
+    client, test_database = test_environment
+    with client.websocket_connect("/ws/interview") as websocket:
+        assert websocket.receive_json()["event"] == "connection_ready"
+        websocket.send_json({
+            "event": "start_interview",
+            "recording_consent": True,
+            "resume_text": "Python developer.",
+            "job_description": "Python role.",
+        })
+        error = websocket.receive_json()
+        assert error["event"] == "interview_error"
+        assert error["code"] == "RECORDING_CONSENT_REQUIRED"
+        assert asyncio.run(test_database.list_sessions()) == []
+
+
+def test_start_interview_requires_active_recording(test_environment):
+    client, test_database = test_environment
+    with client.websocket_connect("/ws/interview") as websocket:
+        assert websocket.receive_json()["event"] == "connection_ready"
+        websocket.send_json({"event": "recording_consent", "accepted": True})
+        assert websocket.receive_json()["accepted"] is True
+        websocket.send_json({
+            "event": "start_interview",
+            "recording_consent": True,
+            "resume_text": "Python developer.",
+            "job_description": "Python role.",
+        })
+        error = websocket.receive_json()
+        assert error["code"] == "RECORDING_CONSENT_REQUIRED"
+        assert asyncio.run(test_database.list_sessions()) == []
+
+
+def test_recording_loss_pauses_and_blocks_question_progression(test_environment):
+    client, _ = test_environment
+    with client.websocket_connect("/ws/interview") as websocket:
+        websocket.receive_json()
+        start_test_interview(websocket)
+        websocket.send_json({"event": "recording_status", "active": False})
+        paused = websocket.receive_json()
+        assert paused["event"] == "interview_paused"
+        websocket.send_json({"event": "candidate_action", "action": "skip"})
+        rejected = websocket.receive_json()
+        assert rejected["event"] == "interview_error"
+        assert rejected["code"] == "RECORDING_REQUIRED"
 
 
 # --------------------------------------------------

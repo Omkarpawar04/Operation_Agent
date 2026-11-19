@@ -112,9 +112,8 @@ class Settings(BaseSettings):
 
     kokoro_enabled: bool = True
 
-    # Kokoro-82M supports English voices in American and British accents,
-    # but no Indian-English voice. Use its highest-graded male English option.
-    kokoro_voice: str = "am_michael"
+    # Default supported Kokoro voice; the interview setup can select another.
+    kokoro_voice: str = "af_heart"
 
     kokoro_speed: float = Field(default=1.0, gt=0, le=2)
 

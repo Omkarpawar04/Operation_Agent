@@ -13,6 +13,8 @@ const conversation = byId("conversation");
 const progressText = byId("questionProgress");
 const progressBar = byId("progressBar");
 const evaluationReport = byId("evaluationReport");
+const ttsVoiceSelect = byId("ttsVoice");
+const previewVoiceButton = byId("previewVoice");
 
 let socket;
 let sessionId = null;
@@ -35,6 +37,26 @@ let startedAt = 0;
 let elapsedTimer = null;
 let activeSources = new Set();
 let completionTimer = null;
+let voiceCatalogReady = false;
+let voicePreviewSource = null;
+let voicePreviewRequest = 0;
+let kokoroVoices = [];
+let micEnabled = true;
+let speakerEnabled = true;
+let outputAnalyser = null;
+let outputGain = null;
+let cameraStream = null;
+let screenStream = null;
+let snapshotTimer = null;
+let snapshots = [];
+let monitorEvents = [];
+let lastMonitorEvent = new Map();
+let mediaRecorder = null;
+let recordingChunks = [];
+let localRecording = null;
+let discardRecordingOnStop = false;
+let monitoringCleanup = false;
+let lastEventSnapshotAt = 0;
 
 const STATES = {
     idle: "Waiting to start",
@@ -54,6 +76,7 @@ function setState(state) {
     const label = STATES[state] || state;
     voiceStatus.textContent = label;
     byId("interviewStatus").textContent = label;
+    byId("voiceVisualizer").dataset.state = state;
 }
 
 function connectWebSocket() {
@@ -99,12 +122,14 @@ function handleServerEvent(data) {
             break;
         case "interview_started":
             sessionId = data.session_id;
+            monitoringCleanup = false;
             localStorage.setItem("interviewSessionId", sessionId);
             totalQuestions = data.total_questions || 0;
             updateProgress(data.question?.id, data.question_index || 1);
             setupScreen.classList.add("hidden");
             completionScreen.classList.add("hidden");
             interviewScreen.classList.remove("hidden");
+            byId("monitorPanel").classList.remove("hidden");
             if (data.greeting) setCaption("Interviewer", `${data.greeting} ${data.question?.text || ""}`);
             else if (data.question?.text) setCaption("Interviewer", data.question.text);
             repeatButton.disabled = false;
@@ -220,21 +245,105 @@ for (const [inputId, textId] of [["resumeFile", "resumeText"], ["jobFile", "jobD
 
 async function loadVoiceRequirements() {
     try {
-        const response = await fetch("/health");
+        const [response, voicesResponse] = await Promise.all([
+            fetch("/health"),
+            fetch("/api/tts/voices")
+        ]);
+        if (!voicesResponse.ok) throw new Error("Could not load supported Kokoro voices.");
+        const voiceData = await voicesResponse.json();
+        kokoroVoices = Array.isArray(voiceData.voices) ? voiceData.voices : [];
+        ttsVoiceSelect.replaceChildren();
+        for (const voice of kokoroVoices) {
+            const option = document.createElement("option");
+            option.value = voice.id;
+            option.textContent = `${voice.name} (${voice.id}) · ${voice.accent}`;
+            ttsVoiceSelect.append(option);
+        }
+        if (!kokoroVoices.length) throw new Error("No supported Kokoro English voices were found.");
+        ttsVoiceSelect.value = voiceData.default_voice || "af_heart";
+        if (!ttsVoiceSelect.value) ttsVoiceSelect.selectedIndex = 0;
+        voiceCatalogReady = true;
+        previewVoiceButton.disabled = false;
+        updateSelectedVoiceDetails();
+
+        if (!response.ok) throw new Error("Could not check voice service status.");
         const status = await response.json();
         if (status.voice_available) {
             const kokoroStatus = status.tts_status === "ready"
                 ? "Kokoro local voice is loaded."
                 : "Kokoro loads locally on first speech; first use may take longer.";
             byId("voiceRequirements").textContent = `Voice services are ready. ${kokoroStatus} Starting an interview will request microphone access.`;
-            startButton.disabled = false;
+            startButton.disabled = !voiceCatalogReady;
         } else {
             const missing = (status.voice_missing || []).join(" and ");
             byId("voiceRequirements").textContent = `Voice interview is unavailable until ${missing} is configured. Text-only interviews are disabled.`;
             startButton.disabled = true;
         }
-    } catch { byId("voiceRequirements").textContent = "Could not verify voice service configuration."; }
+    } catch (error) {
+        voiceCatalogReady = false;
+        previewVoiceButton.disabled = true;
+        startButton.disabled = true;
+        byId("voiceRequirements").textContent = error.message || "Could not verify voice service configuration.";
+        byId("ttsVoiceDetails").textContent = "Supported voices could not be loaded.";
+    }
 }
+
+function updateSelectedVoiceDetails() {
+    const voice = kokoroVoices.find((item) => item.id === ttsVoiceSelect.value);
+    byId("ttsVoiceDetails").textContent = voice
+        ? `${voice.name} · ${voice.id} · Verified accent: ${voice.accent}`
+        : "Choose a supported Kokoro voice.";
+}
+
+function stopVoicePreview() {
+    voicePreviewRequest += 1;
+    if (voicePreviewSource) {
+        try { voicePreviewSource.stop(); } catch {}
+        voicePreviewSource.disconnect();
+        voicePreviewSource = null;
+    }
+}
+
+ttsVoiceSelect.addEventListener("change", () => {
+    stopVoicePreview();
+    updateSelectedVoiceDetails();
+    byId("setupError").textContent = "";
+});
+
+previewVoiceButton.addEventListener("click", async () => {
+    stopVoicePreview();
+    const requestId = voicePreviewRequest;
+    const voiceId = ttsVoiceSelect.value;
+    previewVoiceButton.disabled = true;
+    try {
+        const AudioCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtor) throw new Error("This browser does not support audio playback.");
+        audioContext = audioContext || new AudioCtor();
+        await audioContext.resume();
+        const response = await fetch("/api/tts/preview", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({voice_id: voiceId})
+        });
+        if (!response.ok) throw new Error("Could not generate this voice preview.");
+        const audioBuffer = await audioContext.decodeAudioData(await response.arrayBuffer());
+        if (requestId !== voicePreviewRequest || voiceId !== ttsVoiceSelect.value) return;
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContext.destination);
+        source.onended = () => {
+            if (voicePreviewSource === source) voicePreviewSource = null;
+        };
+        voicePreviewSource = source;
+        source.start();
+    } catch (error) {
+        if (requestId === voicePreviewRequest) {
+            byId("setupError").textContent = error.message || "Voice preview failed.";
+        }
+    } finally {
+        previewVoiceButton.disabled = !voiceCatalogReady;
+    }
+});
 
 interviewFormSubmit();
 function interviewFormSubmit() {
@@ -263,7 +372,8 @@ function interviewFormSubmit() {
             startButton.disabled = true;
             startButton.textContent = "Preparing voice interview...";
             setState("connecting");
-            if (!sendEvent("start_interview", {candidate_name: candidateName || null, resume_text: resumeText, job_description: jobDescription})) {
+            stopVoicePreview();
+            if (!sendEvent("start_interview", {candidate_name: candidateName || null, resume_text: resumeText, job_description: jobDescription, voice_id: ttsVoiceSelect.value})) {
                 throw new Error("Could not start the voice session.");
             }
         } catch (error) {
@@ -288,9 +398,10 @@ function startMicrophoneCapture() {
         microphoneGain.gain.value = 0;
         microphoneProcessor.onaudioprocess = (event) => {
             if (!socket || socket.readyState !== WebSocket.OPEN) return;
-            if (audioGenerating && !assistantSpeaking) return;
             const input = event.inputBuffer.getChannelData(0);
             const rms = Math.sqrt(input.reduce((sum, value) => sum + value * value, 0) / input.length);
+            byId("voiceVisualizer").style.setProperty("--audio-level", Math.min(1, rms * 12).toFixed(2));
+            if (!micEnabled || (audioGenerating && !assistantSpeaking)) return;
             if (assistantSpeaking) {
                 // Require clear, sustained microphone speech. Short echo spikes
                 // from the laptop speakers should not cut off the question.
@@ -309,6 +420,9 @@ function startMicrophoneCapture() {
         microphoneSource.connect(microphoneProcessor);
         microphoneProcessor.connect(microphoneGain);
         microphoneGain.connect(audioContext.destination);
+        mediaStream.getAudioTracks().forEach((track) => track.addEventListener("ended", () => {
+            if (audioEnabled) addMonitorEvent("microphone_track_ended", "Microphone track ended (permission or device)");
+        }, {once: true}));
         audioEnabled = true;
         setState("listening");
     });
@@ -322,6 +436,8 @@ function stopMicrophoneCapture() {
     if (mediaStream) { mediaStream.getTracks().forEach((track) => track.stop()); mediaStream = null; }
     stopOutputAudio();
     if (audioContext) { audioContext.close().catch(() => {}); audioContext = null; }
+    outputAnalyser = null;
+    outputGain = null;
 }
 
 function resampleAudio(input, inRate, outRate) {
@@ -357,18 +473,56 @@ function playAudioChunk(arrayBuffer) {
     for (let i = 0; i < count; i++) channel[i] = sourceData.getInt16(i * 2, true) / 32768;
     const source = audioContext.createBufferSource();
     source.buffer = buffer;
-    source.connect(audioContext.destination);
+    source.connect(getOutputAnalyser());
     activeSources.add(source);
     source.onended = () => activeSources.delete(source);
     const startAt = Math.max(audioContext.currentTime + 0.015, audioQueueTime);
     source.start(startAt);
     audioQueueTime = startAt + buffer.duration;
+    animateOrbFromAudio();
+}
+
+function getOutputAnalyser() {
+    if (!audioContext) return null;
+    if (!outputAnalyser) {
+        outputAnalyser = audioContext.createAnalyser();
+        outputAnalyser.fftSize = 256;
+        outputGain = audioContext.createGain();
+        outputGain.gain.value = speakerEnabled ? 1 : 0;
+        outputAnalyser.connect(outputGain);
+        outputGain.connect(audioContext.destination);
+    }
+    return outputAnalyser;
+}
+
+let orbAnimationFrame = 0;
+function animateOrbFromAudio() {
+    if (!outputAnalyser || !assistantSpeaking || orbAnimationFrame) return;
+    const values = new Uint8Array(outputAnalyser.frequencyBinCount);
+    const animate = () => {
+        if (!assistantSpeaking || !outputAnalyser) {
+            orbAnimationFrame = 0;
+            byId("voiceVisualizer").style.setProperty("--audio-level", "0");
+            return;
+        }
+        outputAnalyser.getByteTimeDomainData(values);
+        let sum = 0;
+        for (const value of values) { const sample = (value - 128) / 128; sum += sample * sample; }
+        const level = Math.min(1, Math.sqrt(sum / values.length) * 2.2);
+        byId("voiceVisualizer").style.setProperty("--audio-level", level.toFixed(2));
+        orbAnimationFrame = requestAnimationFrame(animate);
+    };
+    orbAnimationFrame = requestAnimationFrame(animate);
 }
 
 function stopOutputAudio() {
     for (const source of activeSources) { try { source.stop(); } catch {} }
     activeSources.clear();
     audioQueueTime = audioContext?.currentTime || 0;
+    assistantSpeaking = false;
+    if (orbAnimationFrame) cancelAnimationFrame(orbAnimationFrame);
+    orbAnimationFrame = 0;
+    byId("voiceVisualizer").style.setProperty("--audio-level", "0");
 }
 
 function scheduleMicrophoneResume() {
@@ -377,18 +531,25 @@ function scheduleMicrophoneResume() {
         if (assistantSpeaking && !interruptionSent) {
             assistantSpeaking = false;
             byId("voiceVisualizer").classList.remove("active");
+            byId("voiceVisualizer").style.setProperty("--audio-level", "0");
             setState("listening");
         }
     }, remaining * 1000 + 100);
 }
 
 function setCaption(speaker, text) {
-    conversation.replaceChildren();
-    const label = document.createElement("strong");
-    label.textContent = `${speaker}: `;
+    const entry = document.createElement("div");
+    entry.className = `message ${speaker === "You" ? "user" : "assistant"}`;
+    const label = document.createElement("span");
+    label.className = "message-label";
+    label.textContent = speaker;
     const content = document.createElement("span");
     content.textContent = text;
-    conversation.append(label, content);
+    entry.append(label, content);
+    conversation.append(entry);
+    while (conversation.children.length > 40) conversation.firstElementChild.remove();
+    conversation.scrollTop = conversation.scrollHeight;
+    if (speaker === "Interviewer") byId("questionText").textContent = text;
 }
 
 function updateProgress(questionId, index) {
@@ -409,6 +570,310 @@ function updateElapsed() {
     byId("elapsedTime").textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")} elapsed`;
 }
 
+function timestamp() {
+    return new Date().toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+}
+
+function renderMonitoringTimeline() {
+    const timeline = byId("monitorTimeline");
+    timeline.replaceChildren();
+    const entries = [...monitorEvents, ...snapshots].sort((a, b) => a.time - b.time).slice(-60);
+    byId("monitorEmpty").classList.toggle("hidden", entries.length > 0);
+    for (const entry of entries) {
+        const item = document.createElement("li");
+        const label = document.createElement("span");
+        label.textContent = entry.label;
+        const time = document.createElement("time");
+        time.dateTime = new Date(entry.time).toISOString();
+        time.textContent = new Date(entry.time).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+        item.append(label, time);
+        timeline.append(item);
+    }
+    byId("snapshotCount").textContent = String(snapshots.length);
+}
+
+function addMonitorEvent(type, label) {
+    if (!sessionId || monitoringCleanup) return;
+    const now = Date.now();
+    if (now - (lastMonitorEvent.get(type) || 0) < 3000) return;
+    lastMonitorEvent.set(type, now);
+    monitorEvents.push({type, label, time: now});
+    if (monitorEvents.length > 100) monitorEvents.shift();
+    renderMonitoringTimeline();
+    const source = screenStream && byId("screenSnapshotConsent").checked
+        ? {kind: "screen", video: byId("screenCaptureVideo")}
+        : cameraStream && byId("cameraSnapshotConsent").checked
+            ? {kind: "camera", video: byId("cameraPreview")}
+            : null;
+    if (source && now - lastEventSnapshotAt >= 3000) {
+        lastEventSnapshotAt = now;
+        captureSnapshot(source.kind, source.video, "Event snapshot");
+    }
+}
+
+function captureSnapshot(kind, video, label = "Snapshot") {
+    if (!video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth || !video.videoHeight) return;
+    const maxWidth = 1280;
+    const scale = Math.min(1, maxWidth / video.videoWidth);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+    canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+    const context = canvas.getContext("2d", {alpha: false});
+    if (!context) return;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+        if (!blob || !sessionId) return;
+        snapshots.push({kind, label: `${label} · ${kind}`, time: Date.now(), blob});
+        if (snapshots.length > 50) snapshots.shift();
+        renderMonitoringTimeline();
+    }, "image/jpeg", 0.82);
+}
+
+function configureSnapshotTimer() {
+    if (snapshotTimer) window.clearInterval(snapshotTimer);
+    snapshotTimer = null;
+    const interval = Number(byId("captureInterval").value) * 1000;
+    const cameraAllowed = byId("cameraSnapshotConsent").checked && cameraStream;
+    const screenAllowed = byId("screenSnapshotConsent").checked && screenStream;
+    if (cameraAllowed || screenAllowed) snapshotTimer = window.setInterval(() => {
+        if (cameraAllowed && cameraStream) captureSnapshot("camera", byId("cameraPreview"));
+        if (screenAllowed && screenStream) captureSnapshot("screen", byId("screenCaptureVideo"));
+    }, interval);
+}
+
+async function toggleCamera() {
+    if (cameraStream) { stopCamera(); return; }
+    if (!navigator.mediaDevices?.getUserMedia) {
+        addMonitorEvent("camera_unavailable", "Camera is not supported by this browser");
+        return;
+    }
+    const button = byId("cameraToggle");
+    button.disabled = true;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({video: {width: {ideal: 1280}, height: {ideal: 720}}, audio: false});
+        if (!sessionId) { stream.getTracks().forEach((track) => track.stop()); return; }
+        cameraStream = stream;
+        const video = byId("cameraPreview");
+        video.srcObject = stream;
+        byId("cameraTile").classList.remove("hidden");
+        byId("cameraStatus").textContent = "On";
+        byId("cameraToggle").setAttribute("aria-pressed", "true");
+        byId("cameraToggle").querySelector("small").textContent = "Camera on";
+        byId("recordToggle").disabled = !byId("recordingConsent").checked || !window.MediaRecorder;
+        stream.getVideoTracks().forEach((track) => track.addEventListener("ended", () => {
+            if (cameraStream === stream) {
+                addMonitorEvent("camera_track_ended", "Camera track ended (permission or device)");
+                stopCamera(false);
+            }
+        }, {once: true}));
+        await video.play().catch(() => {});
+        configureSnapshotTimer();
+        addMonitorEvent("camera_started", "Camera enabled by candidate");
+    } catch (error) {
+        addMonitorEvent("camera_denied", error.name === "NotAllowedError" ? "Camera permission denied" : "Camera could not be started");
+        byId("cameraStatus").textContent = "Permission denied";
+    } finally {
+        button.disabled = false;
+    }
+}
+
+function stopCamera(logEvent = true) {
+    const stream = cameraStream;
+    cameraStream = null;
+    if (stream) stream.getTracks().forEach((track) => track.stop());
+    const video = byId("cameraPreview");
+    video.pause();
+    video.srcObject = null;
+    byId("cameraTile").classList.add("hidden");
+    byId("cameraStatus").textContent = "Off";
+    byId("cameraToggle").setAttribute("aria-pressed", "false");
+    byId("cameraToggle").querySelector("small").textContent = "Camera off";
+    byId("recordToggle").disabled = true;
+    if (mediaRecorder?.state === "recording") stopRecording();
+    configureSnapshotTimer();
+    if (logEvent && stream) addMonitorEvent("camera_stopped", "Camera disabled by candidate");
+}
+
+async function toggleScreenShare() {
+    if (screenStream) { stopScreenShare(true); return; }
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+        addMonitorEvent("screen_unavailable", "Screen sharing is not supported by this browser");
+        return;
+    }
+    const button = byId("screenToggle");
+    button.disabled = true;
+    try {
+        // This API must run directly from the candidate's click gesture.
+        const stream = await navigator.mediaDevices.getDisplayMedia({video: true, audio: false});
+        if (!sessionId) { stream.getTracks().forEach((track) => track.stop()); return; }
+        screenStream = stream;
+        let video = byId("screenCaptureVideo");
+        if (!video) {
+            video = document.createElement("video");
+            video.id = "screenCaptureVideo";
+            video.muted = true;
+            video.playsInline = true;
+            video.className = "hidden";
+            document.body.append(video);
+        }
+        video.srcObject = stream;
+        await video.play().catch(() => {});
+        stream.getVideoTracks().forEach((track) => track.addEventListener("ended", () => stopScreenShare(true), {once: true}));
+        byId("screenStatus").textContent = "Sharing";
+        byId("screenToggle").textContent = "Stop sharing";
+        byId("screenToggle").setAttribute("aria-pressed", "true");
+        configureSnapshotTimer();
+        addMonitorEvent("screen_share_started", "Screen sharing started by candidate");
+    } catch (error) {
+        if (error.name !== "NotAllowedError") addMonitorEvent("screen_share_error", "Screen sharing could not be started");
+        byId("screenStatus").textContent = error.name === "NotAllowedError" ? "Not shared" : "Unavailable";
+    } finally {
+        button.disabled = false;
+    }
+}
+
+function stopScreenShare(logEvent = true) {
+    const stream = screenStream;
+    screenStream = null;
+    if (stream) stream.getTracks().forEach((track) => track.stop());
+    const video = byId("screenCaptureVideo");
+    if (video) { video.pause(); video.srcObject = null; }
+    byId("screenStatus").textContent = "Not shared";
+    byId("screenToggle").textContent = "Share screen";
+    byId("screenToggle").setAttribute("aria-pressed", "false");
+    configureSnapshotTimer();
+    if (logEvent && stream) addMonitorEvent("screen_share_stopped", "Screen sharing stopped");
+}
+
+function startRecording() {
+    if (!byId("recordingConsent").checked || !cameraStream || !window.MediaRecorder) return;
+    try {
+        const mimeType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+            .find((type) => MediaRecorder.isTypeSupported(type));
+        mediaRecorder = new MediaRecorder(cameraStream, mimeType ? {mimeType} : undefined);
+        recordingChunks = [];
+        discardRecordingOnStop = false;
+        mediaRecorder.addEventListener("dataavailable", (event) => { if (event.data?.size) recordingChunks.push(event.data); });
+        mediaRecorder.addEventListener("stop", () => {
+            if (!discardRecordingOnStop && recordingChunks.length) {
+                if (localRecording) URL.revokeObjectURL(localRecording.url);
+                const blob = new Blob(recordingChunks, {type: mediaRecorder?.mimeType || "video/webm"});
+                localRecording = {blob, url: URL.createObjectURL(blob)};
+                byId("downloadRecording").classList.remove("hidden");
+            } else recordingChunks = [];
+            byId("recordingStatus").textContent = "Off";
+            byId("recordToggle").textContent = "Start recording";
+            byId("recordToggle").disabled = !byId("recordingConsent").checked || !cameraStream || !window.MediaRecorder;
+            if (!discardRecordingOnStop) addMonitorEvent("recording_stopped", "Local video recording stopped");
+        }, {once: true});
+        mediaRecorder.start(1000);
+        byId("recordingStatus").textContent = "Recording";
+        byId("recordToggle").textContent = "Stop recording";
+        addMonitorEvent("recording_started", "Local video recording started with consent");
+    } catch {
+        byId("recordingStatus").textContent = "Unavailable";
+        addMonitorEvent("recording_error", "Local video recording could not be started");
+    }
+}
+
+function stopRecording(discard = false) {
+    if (!mediaRecorder || mediaRecorder.state === "inactive") return;
+    discardRecordingOnStop = discard;
+    byId("recordToggle").disabled = true;
+    mediaRecorder.stop();
+}
+
+function clearMonitoringData() {
+    snapshots = [];
+    monitorEvents = [];
+    lastMonitorEvent.clear();
+    lastEventSnapshotAt = 0;
+    recordingChunks = [];
+    if (mediaRecorder?.state === "recording") stopRecording(true);
+    if (localRecording) URL.revokeObjectURL(localRecording.url);
+    localRecording = null;
+    byId("downloadRecording").classList.add("hidden");
+    renderMonitoringTimeline();
+}
+
+function stopAllMonitoring() {
+    monitoringCleanup = true;
+    if (snapshotTimer) window.clearInterval(snapshotTimer);
+    snapshotTimer = null;
+    stopRecording(true);
+    stopCamera(false);
+    stopScreenShare(false);
+    clearMonitoringData();
+    byId("cameraStatus").textContent = "Off";
+    byId("screenStatus").textContent = "Not shared";
+    byId("recordingStatus").textContent = "Off";
+}
+
+function finishSessionMonitoring() {
+    stopAllMonitoring();
+    byId("cameraSnapshotConsent").checked = false;
+    byId("screenSnapshotConsent").checked = false;
+    byId("recordingConsent").checked = false;
+}
+
+function endInterview() {
+    if (!sessionId || !window.confirm("End this interview and generate its report?")) return;
+    finishSessionMonitoring();
+    stopMicrophoneCapture();
+    sendEvent("interrupt");
+    sendEvent("finish_interview");
+}
+
+byId("micToggle").addEventListener("click", () => {
+    micEnabled = !micEnabled;
+    byId("micToggle").setAttribute("aria-pressed", String(micEnabled));
+    byId("micToggle").querySelector("small").textContent = micEnabled ? "Mic on" : "Mic muted";
+    byId("micToggle").classList.toggle("is-active", micEnabled);
+});
+
+byId("cameraToggle").addEventListener("click", toggleCamera);
+byId("screenToggle").addEventListener("click", toggleScreenShare);
+byId("recordToggle").addEventListener("click", () => {
+    if (mediaRecorder?.state === "recording") stopRecording();
+    else startRecording();
+});
+byId("speakerToggle").addEventListener("click", () => {
+    speakerEnabled = !speakerEnabled;
+    if (outputGain) outputGain.gain.setTargetAtTime(speakerEnabled ? 1 : 0, audioContext.currentTime, 0.025);
+    byId("speakerToggle").setAttribute("aria-pressed", String(speakerEnabled));
+    byId("speakerToggle").querySelector("small").textContent = speakerEnabled ? "Speaker on" : "Speaker off";
+});
+byId("settingsToggle").addEventListener("click", () => {
+    const panel = byId("monitorPanel");
+    const expanded = !panel.classList.contains("settings-collapsed");
+    panel.classList.toggle("settings-collapsed", expanded);
+    byId("settingsToggle").setAttribute("aria-expanded", String(!expanded));
+});
+byId("endButtonBottom").addEventListener("click", endInterview);
+byId("cameraSnapshotConsent").addEventListener("change", configureSnapshotTimer);
+byId("screenSnapshotConsent").addEventListener("change", configureSnapshotTimer);
+byId("captureInterval").addEventListener("change", configureSnapshotTimer);
+byId("recordingConsent").addEventListener("change", (event) => {
+    byId("recordToggle").disabled = !event.target.checked || !cameraStream || !window.MediaRecorder;
+    if (!event.target.checked && mediaRecorder?.state === "recording") stopRecording();
+});
+byId("clearMonitoring").addEventListener("click", clearMonitoringData);
+byId("downloadRecording").addEventListener("click", () => {
+    if (!localRecording) return;
+    const link = document.createElement("a");
+    link.href = localRecording.url;
+    link.download = `interview-recording-${Date.now()}.webm`;
+    link.click();
+});
+
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") addMonitorEvent("tab_hidden", "Interview tab became hidden");
+});
+window.addEventListener("blur", () => addMonitorEvent("window_blur", "Interview window lost focus"));
+document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement) addMonitorEvent("fullscreen_exited", "Fullscreen mode was exited");
+});
+
 function showError(message) {
     setState("error");
     voiceStatus.textContent = message;
@@ -423,13 +888,6 @@ repeatButton.addEventListener("click", () => {
     if (sendEvent("repeat_question")) setState("generating_response");
 });
 
-byId("endButton").addEventListener("click", () => {
-    if (!sessionId || !window.confirm("End this interview and generate its report?")) return;
-    stopMicrophoneCapture();
-    sendEvent("interrupt");
-    sendEvent("finish_interview");
-});
-
 function finishInterview() {
     if (assistantSpeaking && audioContext) {
         const remaining = Math.max(0, audioQueueTime - audioContext.currentTime);
@@ -442,6 +900,7 @@ function finishInterview() {
 
 function finishInterviewNow() {
     completionTimer = null;
+    finishSessionMonitoring();
     stopMicrophoneCapture();
     sessionId = null;
     localStorage.removeItem("interviewSessionId");
@@ -530,6 +989,7 @@ byId("newInterviewButton").addEventListener("click", () => location.reload());
 window.addEventListener("beforeunload", () => {
     if (elapsedTimer) window.clearInterval(elapsedTimer);
     if (mediaStream) mediaStream.getTracks().forEach((track) => track.stop());
+    finishSessionMonitoring();
 });
 
 connectWebSocket();

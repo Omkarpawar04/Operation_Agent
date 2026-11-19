@@ -45,17 +45,50 @@ def test_resume_session_restores_question(api_environment):
     asyncio.run(db.create_session(
         session_id="resumable", candidate_name="Test",
         interview_plan=plan,
+        tts_voice="bm_george",
     ))
     asyncio.run(db.update_session("resumable", status="in_progress"))
     asyncio.run(db.save_turn("resumable", "assistant", "Tell me about your work.",
                              "question", {"question_id": "q1"}))
     with client.websocket_connect("/ws/interview") as websocket:
         assert websocket.receive_json()["event"] == "connection_ready"
+        websocket.send_json({"event": "recording_consent", "accepted": True})
+        assert websocket.receive_json()["event"] == "recording_consent_status"
+        websocket.send_json({"event": "recording_status", "active": True})
+        assert websocket.receive_json()["event"] == "recording_status"
         websocket.send_json({"event": "resume_session", "session_id": "resumable"})
         resumed = websocket.receive_json()
     assert resumed["event"] == "interview_started"
     assert resumed["resumed"] is True
     assert resumed["question"]["id"] == "q1"
+    assert resumed["tts_voice"] == "bm_george"
+
+
+def test_voice_catalog_and_preview_use_supported_or_default_voice(api_environment, monkeypatch):
+    client, _ = api_environment
+    requested = []
+
+    async def fake_preview(text, *, voice):
+        requested.append((text, voice))
+        return b"RIFF-preview"
+
+    monkeypatch.setattr(
+        main.kokoro_tts_service,
+        "synthesize_wav",
+        fake_preview,
+    )
+
+    catalog = client.get("/api/tts/voices").json()
+    valid_preview = client.post("/api/tts/preview", json={"voice_id": "bm_george"})
+    invalid_preview = client.post("/api/tts/preview", json={"voice_id": "unknown_voice"})
+
+    assert len(catalog["voices"]) == 28
+    assert catalog["default_voice"] == "af_heart"
+    assert valid_preview.status_code == 200
+    assert valid_preview.headers["content-type"].startswith("audio/wav")
+    assert valid_preview.headers["X-Kokoro-Voice"] == "bm_george"
+    assert invalid_preview.headers["X-Kokoro-Voice"] == "af_heart"
+    assert [voice for _, voice in requested] == ["bm_george", "af_heart"]
 
 
 def test_report_not_found_until_evaluation_saved(api_environment):

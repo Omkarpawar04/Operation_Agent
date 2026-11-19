@@ -37,6 +37,7 @@ async def test_create_and_retrieve_session(tmp_path):
         candidate_profile={"skills": ["Python", "SQL"]},
         job_profile={"title": "Software Developer"},
         interview_plan={"questions": []},
+        tts_voice="bm_george",
     )
 
     assert session is not None
@@ -47,6 +48,7 @@ async def test_create_and_retrieve_session(tmp_path):
         "Python",
         "SQL",
     ]
+    assert session["tts_voice"] == "bm_george"
 
 
 @pytest.mark.asyncio

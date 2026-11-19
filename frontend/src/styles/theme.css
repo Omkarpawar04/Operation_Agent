@@ -1,0 +1,21 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-synthesis: none;
+  color: #334155;
+  background: #f8fafc;
+  --page: #f8fafc;
+  --card: #fff;
+  --blue: #2563eb;
+  --blue-hover: #1d4ed8;
+  --soft-blue: #dbeafe;
+  --blue-surface: #eff6ff;
+  --heading: #0f172a;
+  --text: #334155;
+  --secondary: #64748b;
+  --border: #e2e8f0;
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --error: #dc2626;
+  --shadow: 0 8px 28px rgba(15, 23, 42, .055);
+}

@@ -26,6 +26,10 @@ storage/
 .vscode/
 .idea/
 
+# React frontend build and dependencies
+frontend/node_modules/
+frontend/dist/
+
 # Virtual environments
 venv/
 .venv/

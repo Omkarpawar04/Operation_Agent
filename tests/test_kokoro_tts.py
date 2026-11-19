@@ -17,9 +17,13 @@ from audio.kokoro_tts import (
 
 
 class FakeKokoroPipeline:
-    def __init__(self, *, delay: float = 0, fail: bool = False):
+    def __init__(self, *, delay: float = 0, fail: bool = False, audio=None):
         self.delay = delay
         self.fail = fail
+        self.audio = (
+            audio if audio is not None
+            else np.array([0.1, -0.2, 0.3], dtype=np.float32)
+        )
         self.voice_loads = []
         self.calls = []
         self.active_calls = 0
@@ -40,7 +44,7 @@ class FakeKokoroPipeline:
                     time.sleep(self.delay)
                 if self.fail:
                     raise RuntimeError("mock synthesis failure")
-                yield text, "mock phonemes", np.array([0.1, -0.2, 0.3], dtype=np.float32)
+                yield text, "mock phonemes", self.audio
             finally:
                 self.active_calls -= 1
 
@@ -116,6 +120,48 @@ def test_generates_valid_24khz_mono_pcm16_wav():
     assert params.nframes == 3
     assert params.comptype == "NONE"
     assert len(pcm) == params.nframes * params.sampwidth
+
+
+def test_supported_voice_catalog_contains_only_english_voices_and_falls_back():
+    service = KokoroTTSService(pipeline_factory=lambda **_: FakeKokoroPipeline())
+    voices = service.voice_catalog()
+
+    assert len(voices) == 28
+    assert voices[0] == {
+        "id": "af_heart",
+        "name": "Heart",
+        "accent": "American English",
+    }
+    assert {voice["accent"] for voice in voices} == {
+        "American English", "British English"
+    }
+    assert service.resolve_voice("not_a_real_voice") == "af_heart"
+    assert service.resolve_voice("hm_omega") == "af_heart"
+
+
+def test_voice_switching_uses_correct_cached_language_pipeline():
+    pipelines = {}
+    creations = []
+
+    def factory(*, lang_code, device):
+        creations.append((lang_code, device))
+        pipelines[lang_code] = FakeKokoroPipeline()
+        return pipelines[lang_code]
+
+    service = KokoroTTSService(pipeline_factory=factory)
+
+    async def synthesize_with_voice_changes():
+        await service.synthesize_wav("An American voice.", voice="af_heart")
+        await service.synthesize_wav("A British voice.", voice="bm_george")
+        await service.synthesize_wav("Another American voice.", voice="am_michael")
+
+    asyncio.run(synthesize_with_voice_changes())
+
+    assert creations == [("a", "cpu"), ("b", "cpu")]
+    assert pipelines["a"].voice_loads == ["af_heart", "am_michael"]
+    assert pipelines["b"].voice_loads == ["bm_george"]
+    assert [call[1] for call in pipelines["a"].calls] == ["af_heart", "am_michael"]
+    assert pipelines["b"].calls[0][1] == "bm_george"
 
 
 def test_truncated_wav_is_rejected():
@@ -237,6 +283,22 @@ def test_fallback_pipeline_transports_pcm_without_wav_header():
     assert len(pcm) == 6
 
 
+def test_interview_pipeline_keeps_the_selected_voice_for_every_response():
+    service, model, _ = make_service()
+    pipeline = FallbackVoicePipeline(tts_service=service, tts_voice="bm_george")
+
+    async def collect_two_turns():
+        first = [chunk async for chunk in pipeline.stream_speech("First answer.")]
+        second = [chunk async for chunk in pipeline.stream_speech("Follow-up answer.")]
+        await pipeline.close()
+        return first, second
+
+    first, second = asyncio.run(collect_two_turns())
+
+    assert first and second
+    assert [call[1] for call in model.calls] == ["bm_george", "bm_george"]
+
+
 def test_kokoro_streams_each_sentence_before_synthesizing_the_next():
     service, pipeline_model, _ = make_service(FakeKokoroPipeline(delay=0.04))
 
@@ -253,6 +315,39 @@ def test_kokoro_streams_each_sentence_before_synthesizing_the_next():
     assert calls_after_first == 1
     assert len(pipeline_model.calls) == 2
     assert len(remaining) == 1
+
+
+def test_speech_preprocessing_collapses_duplicate_marks_and_whitespace():
+    service, _, _ = make_service()
+
+    normalized = service._validate_text(
+        "  Hello,,,   there!!!  Are you ready??!  "
+    )
+
+    assert normalized == "Hello, there! Are you ready?"
+
+
+def test_streaming_trims_only_excess_silence_at_model_chunk_end():
+    speech = np.full(1000, 0.1, dtype=np.float32)
+    silence = np.zeros(24000, dtype=np.float32)
+    service, model, _ = make_service(
+        FakeKokoroPipeline(audio=np.concatenate((speech, silence)))
+    )
+
+    async def collect():
+        return [chunk async for chunk in service.stream_pcm(
+            "A longer first sentence with useful detail. A second sentence with other details,"
+        )]
+
+    chunks = asyncio.run(collect())
+
+    assert len(model.calls) == 2
+    assert len(chunks) == 2
+    voiced_frames = 5 * (service.sample_rate // 100)
+    period_frames = voiced_frames + service.sample_rate * service.sentence_pause_ms // 1000
+    comma_frames = voiced_frames + service.sample_rate * service.comma_pause_ms // 1000
+    assert len(chunks[0]) == period_frames * 2
+    assert len(chunks[1]) == comma_frames * 2
 
 
 def test_fallback_pipeline_rejects_empty_text_and_surfaces_tts_errors():
