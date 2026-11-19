@@ -14,17 +14,32 @@ import dashboardRouter from './dashboard/routes.js';
 
 const app = express();
 
-// Excel imports arrive as a JSON body with the file inside, so that one route accepts a larger body
+// Excel imports arrive as a JSOfN body with the file inside, so that one route accepts a larger body
 app.use('/api/students/import', express.json({ limit: '20mb' }));
 app.use(express.json());
 
-// Enable CORS for frontend running on port 5173
+
+// Enable CORS for frontend development ports
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5176'
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
+
+
 
 // Slow down password guessing: 8 wrong attempts per email + address, then wait 15 minutes
 const MAX_FAILS = 8;

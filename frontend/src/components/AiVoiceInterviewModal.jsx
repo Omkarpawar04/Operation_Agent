@@ -1,93 +1,236 @@
-import React, { useState } from 'react';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, Volume2, Sparkles, MessageSquare } from 'lucide-react';
 
-export default function AiVoiceInterviewModal({ isOpen, onClose, candidateName = "Candidate" }) {
+import React, { useState } from 'react';
+import {
+  Mic, MicOff, Video, VideoOff, PhoneOff,
+  Volume2, Sparkles, MessageSquare
+} from 'lucide-react';
+
+export default function AiVoiceInterviewModal({
+  isOpen,
+  onClose,
+  candidateName = "Candidate"
+}) {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const [transcript, setTranscript] = useState([
-    { speaker: 'AI', text: "Hello! Welcome to your AI Mock Interview. Let's start with your technical background. Can you describe a complex full-stack project you built?" },
-    { speaker: candidateName, text: "Sure! I recently built an autonomous placement portal using React, Node.js, and PostgreSQL..." },
-    { speaker: 'AI', text: "That sounds impressive. How did you handle secure authentication and role-based permissions?" }
+
+  const [transcript] = useState([
+    {
+      speaker: 'AI Interviewer',
+      text: "Hello! Welcome to your AI Mock Interview. Let's start with your technical background. Can you describe a complex full-stack project you built?"
+    },
+    {
+      speaker: candidateName,
+      text: "Sure! I recently built an autonomous placement portal using React, Node.js, and PostgreSQL..."
+    },
+    {
+      speaker: 'AI Interviewer',
+      text: "That sounds impressive. How did you handle secure authentication and role-based permissions?"
+    }
   ]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-      <div className="w-full max-w-4xl bg-slate-900 border border-indigo-500/30 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[650px] relative">
-        
-        {/* Top Header */}
-        <div className="bg-slate-950/60 px-6 py-4 border-b border-indigo-500/20 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020617]/90 backdrop-blur-xl">
+
+      <div className="w-full max-w-5xl h-[650px] max-h-[90vh] rounded-3xl overflow-hidden border border-indigo-400/30 shadow-2xl shadow-indigo-950/60 flex flex-col relative"
+        style={{
+          background: 'linear-gradient(135deg, #080d25 0%, #111746 45%, #10102e 100%)'
+        }}>
+
+        {/* Header */}
+        <div className="px-6 py-4 flex items-center justify-between border-b border-white/10 bg-white/[0.04] relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-            <span className="font-bold text-white text-sm">AI Voice Mock Interview · Live Session</span>
+            <div className="w-3 h-3 rounded-full bg-rose-500 animate-pulse shadow-lg shadow-rose-500/70" />
+            <div>
+              <h2 className="text-white font-bold text-sm">
+                AI Voice Mock Interview
+              </h2>
+              <p className="text-indigo-300 text-[11px]">
+                Live Interview Session
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs rounded-full">
-            <Sparkles className="w-3.5 h-3.5 animate-spin" />
-            <span>Active Voice Node</span>
+
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 text-cyan-300 text-xs font-semibold">
+            <Sparkles size={14} />
+            AI Interviewer Active
           </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 overflow-hidden">
-          
-          {/* Left / Center: AI Visualizer / Avatar Arena */}
-          <div className="lg:col-span-2 bg-gradient-to-br from-slate-950 via-indigo-950/40 to-slate-900 p-6 flex flex-col items-center justify-center relative border-r border-indigo-500/20">
-            
-            {/* Pulsing 3D AI Voice Orb */}
-            <div className="relative flex items-center justify-center my-auto">
-              <div className="absolute w-48 h-48 rounded-full bg-cyan-500/20 blur-2xl animate-pulse"></div>
-              <div className="absolute w-36 h-36 rounded-full bg-indigo-600/30 blur-xl animate-ping" style={{ animationDuration: '3s' }}></div>
-              <div className="w-28 h-28 rounded-full bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-2xl shadow-cyan-500/50 ring-4 ring-cyan-400/30 relative z-10">
-                <Volume2 className="w-12 h-12 text-white animate-bounce" style={{ animationDuration: '2s' }} />
+        {/* Main Content */}
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 overflow-hidden relative">
+
+          {/* Decorative Background Lights */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute w-96 h-96 bg-blue-600/20 rounded-full blur-[120px] -top-32 -left-20" />
+            <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-[130px] bottom-0 right-1/4" />
+            <div className="absolute w-72 h-72 bg-cyan-500/10 rounded-full blur-[100px] top-1/3 right-0" />
+          </div>
+
+          {/* AI Interview Area */}
+          <div
+            className="lg:col-span-2 relative flex flex-col items-center justify-center p-8 border-r border-white/10 overflow-hidden"
+            style={{
+              background: 'radial-gradient(ellipse at 50% 40%, rgba(79,70,229,0.22), transparent 55%)'
+            }}
+          >
+
+            {/* Background Decorative Circles */}
+            <div className="absolute w-[420px] h-[420px] rounded-full border border-indigo-400/10" />
+            <div className="absolute w-[330px] h-[330px] rounded-full border border-cyan-400/10" />
+            <div className="absolute w-[240px] h-[240px] rounded-full border border-purple-400/10" />
+
+            {/* AI Voice Orb */}
+            <div className="relative flex items-center justify-center z-10">
+
+              <div className="absolute w-64 h-64 rounded-full bg-indigo-500/20 blur-3xl animate-pulse" />
+
+              <div
+                className="absolute w-44 h-44 rounded-full border border-cyan-300/30 animate-ping"
+                style={{ animationDuration: '3s' }}
+              />
+
+              <div
+                className="w-36 h-36 rounded-full flex items-center justify-center relative"
+                style={{
+                  background: 'linear-gradient(145deg, #22d3ee, #4f46e5 55%, #9333ea)',
+                  boxShadow: '0 0 35px rgba(59,130,246,0.55), 0 0 90px rgba(124,58,237,0.3)',
+                  border: '3px solid rgba(255,255,255,0.25)'
+                }}
+              >
+                <Volume2
+                  className="w-16 h-16 text-white"
+                  strokeWidth={1.8}
+                />
               </div>
             </div>
 
-            <div className="text-center mt-6 space-y-1">
-              <h3 className="text-white font-bold text-lg">AI Interviewer is listening...</h3>
-              <p className="text-xs text-slate-400">Speak clearly into your microphone to answer.</p>
+            {/* Interview Status */}
+            <div className="text-center mt-12 relative z-10 space-y-3">
+              <div className="flex items-center justify-center gap-2">
+                <span className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
+                <h3 className="text-white font-bold text-2xl">
+                  Your AI Interviewer is listening
+                </h3>
+              </div>
+
+              <p className="text-indigo-200/80 text-sm">
+                Speak naturally. Your interview session is in progress.
+              </p>
+
+              <div className="flex items-center justify-center gap-2 pt-2">
+                <span className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-cyan-300 text-xs">
+                  ✦ AI Powered Interview
+                </span>
+                <span className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-purple-300 text-xs">
+                  Real-time Session
+                </span>
+              </div>
             </div>
 
-            {/* Bottom Controls Bar */}
-            <div className="flex items-center gap-4 mt-6 bg-slate-900/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-indigo-500/30 shadow-xl">
-              <button 
+            {/* Controls */}
+            <div className="relative z-10 flex items-center gap-4 mt-12 px-7 py-4 rounded-2xl border border-white/15 bg-white/[0.08] backdrop-blur-xl shadow-2xl">
+
+              <button
                 onClick={() => setIsMuted(!isMuted)}
-                className={`p-3 rounded-xl transition ${isMuted ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                title={isMuted ? "Unmute microphone" : "Mute microphone"}
+                className={`p-4 rounded-xl transition-all ${
+                  isMuted
+                    ? 'bg-rose-500 text-white'
+                    : 'bg-white/10 text-white hover:bg-white/20'
+                }`}
               >
-                {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                {isMuted
+                  ? <MicOff size={21} />
+                  : <Mic size={21} />
+                }
               </button>
-              <button 
+
+              <button
                 onClick={() => setIsVideoOff(!isVideoOff)}
-                className={`p-3 rounded-xl transition ${isVideoOff ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                title={isVideoOff ? "Turn on camera" : "Turn off camera"}
+                className={`p-4 rounded-xl transition-all ${
+                  isVideoOff
+                    ? 'bg-rose-500 text-white'
+                    : 'bg-white/10 text-white hover:bg-white/20'
+                }`}
               >
-                {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+                {isVideoOff
+                  ? <VideoOff size={21} />
+                  : <Video size={21} />
+                }
               </button>
-              <button 
+
+              <button
                 onClick={onClose}
-                className="flex items-center gap-2 px-5 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-rose-600/30"
+                className="flex items-center gap-2 px-6 py-4 rounded-xl text-white font-bold text-sm transition-all hover:scale-105 shadow-lg"
+                style={{
+                  background: 'linear-gradient(90deg, #e11d48, #be123c)',
+                  boxShadow: '0 5px 25px rgba(225,29,72,0.3)'
+                }}
               >
-                <PhoneOff className="w-4 h-4" />
-                <span>End Session</span>
+                <PhoneOff size={17} />
+                End Interview
               </button>
             </div>
+
+            <p className="absolute bottom-4 text-slate-500 text-[10px]">
+              FINXL AI INTERVIEW EXPERIENCE
+            </p>
           </div>
 
-          {/* Right Sidebar: Live Transcription Chat View */}
-          <div className="bg-slate-950 p-4 flex flex-col justify-between overflow-hidden">
-            <div className="flex items-center gap-2 pb-3 border-b border-slate-800 text-xs font-bold text-slate-300">
-              <MessageSquare className="w-4 h-4 text-cyan-400" />
-              <span>Live Transcript</span>
+          {/* Transcript Sidebar */}
+          <div className="relative z-10 flex flex-col bg-[#090e25]/80 backdrop-blur-xl p-5 overflow-hidden">
+
+            <div className="flex items-center gap-2 pb-4 border-b border-white/10">
+              <MessageSquare size={18} className="text-cyan-400" />
+              <h3 className="text-white font-bold text-sm">
+                Live Transcript
+              </h3>
+              <span className="ml-auto text-[10px] text-cyan-300 bg-cyan-400/10 px-2 py-1 rounded-full">
+                LIVE
+              </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-3 py-4 text-xs pr-1">
-              {transcript.map((item, idx) => (
-                <div key={idx} className={`space-y-1 ${item.speaker === 'AI' ? 'text-left' : 'text-right'}`}>
-                  <span className="text-[10px] text-cyan-400 font-semibold">{item.speaker}</span>
+            <div className="flex-1 overflow-y-auto space-y-5 py-5 pr-1">
+              {transcript.map((item, index) => (
+                <div
+                  key={index}
+                  className={`flex flex-col ${
+                    item.speaker === candidateName
+                      ? 'items-end'
+                      : 'items-start'
+                  }`}
+                >
+                  <span className="text-[10px] text-indigo-300 font-bold mb-2">
+                    {item.speaker}
+                  </span>
+
+                  <div
+                    className={`max-w-[95%] p-3 rounded-2xl text-xs leading-relaxed ${
+                      item.speaker === candidateName
+                        ? 'bg-indigo-600 text-white rounded-tr-sm'
+                        : 'bg-white/[0.08] border border-white/10 text-slate-200 rounded-tl-sm'
+                    }`}
+                  >
+                    {item.text}
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
 
+            <div className="mt-auto p-3 rounded-xl bg-indigo-500/10 border border-indigo-400/20">
+              <div className="flex items-center gap-2 text-cyan-300 text-xs font-semibold">
+                <Sparkles size={14} />
+                AI Interview Assistant
+              </div>
+              <p className="text-slate-400 text-[10px] mt-1 leading-relaxed">
+                Your interview conversation will appear here during the session.
+              </p>
+            </div>
+
+          </div>
         </div>
       </div>
     </div>
