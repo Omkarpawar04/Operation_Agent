@@ -21,7 +21,7 @@ class SessionManager:
         if existing is not None:
             if existing.stage != command.stage.value or existing.course_id != command.course_id:
                 raise Conflict("Idempotency key reused with a different request")
-        return existing
+        return existing 
 
     def validate_start(self, command: StartSessionCommand) -> UUID | None:
         if self.find_existing(command) is not None:

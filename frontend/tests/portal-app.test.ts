@@ -58,7 +58,7 @@ describe('PortalApp Full Student Flow', () => {
 
     expect(app.currentView).toBe('interview');
     expect(app.activeSessionId).toBe('sess-new-123');
-    expect(mainEl.textContent).toContain('FINXL AI Voice Interview');
+    expect(mainEl.textContent).toContain('FINXL AI INTERVIEW STUDIO');
     expect(mainEl.textContent).toContain('Introduce yourself and your finance background.');
 
     // Switch back to progression

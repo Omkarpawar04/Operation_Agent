@@ -16,6 +16,7 @@ export class BrowserSpeechOutput implements SpeechOutput {
   private _voices: SpeechSynthesisVoice[] = [];
   private _voicesLoaded = false;
   private _currentReject: ((err: SpeechOutputError) => void) | null = null;
+  private _karaokeFallback: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     if (this.isSupported()) {
@@ -133,13 +134,36 @@ export class BrowserSpeechOutput implements SpeechOutput {
         utterance.pitch = options?.pitch ?? 1.0;
         utterance.volume = options?.volume ?? 1.0;
 
+        let boundaryEventsAvailable = false;
+        let approximateWordIndex = -1;
+        const words = [...textToSpeak.matchAll(/\S+/g)];
+        utterance.onstart = () => {
+          // Some browser voices omit boundary events. This timer only runs while
+          // the real utterance is active and is replaced by native boundaries
+          // as soon as the browser provides them.
+          this._karaokeFallback = setInterval(() => {
+            if (boundaryEventsAvailable || approximateWordIndex >= words.length - 1) return;
+            approximateWordIndex += 1;
+            options?.onBoundary?.(words[approximateWordIndex]?.index ?? 0);
+          }, 420);
+        };
+        utterance.onboundary = (event: SpeechSynthesisEvent) => {
+          if (event.name === 'word') {
+            boundaryEventsAvailable = true;
+            this._clearKaraokeFallback();
+            options?.onBoundary?.(event.charIndex);
+          }
+        };
+
         utterance.onend = () => {
+          this._clearKaraokeFallback();
           this._currentUtterance = null;
           this._currentReject = null;
           resolve();
         };
 
         utterance.onerror = (event: SpeechSynthesisErrorEvent) => {
+          this._clearKaraokeFallback();
           this._currentUtterance = null;
           this._currentReject = null;
 
@@ -183,6 +207,7 @@ export class BrowserSpeechOutput implements SpeechOutput {
    * Cancels active speech output immediately.
    */
   stop(): void {
+    this._clearKaraokeFallback();
     if (!this.isSupported()) {
       return;
     }
@@ -195,6 +220,13 @@ export class BrowserSpeechOutput implements SpeechOutput {
       window.speechSynthesis.cancel();
     } catch {
       // Ignore if cancel fails
+    }
+  }
+
+  private _clearKaraokeFallback(): void {
+    if (this._karaokeFallback !== null) {
+      clearInterval(this._karaokeFallback);
+      this._karaokeFallback = null;
     }
   }
 }

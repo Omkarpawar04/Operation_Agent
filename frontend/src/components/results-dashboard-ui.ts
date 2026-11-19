@@ -22,36 +22,30 @@ export class ResultsDashboardUI {
     this._callbacks = callbacks;
   }
 
-  static readonly STAGE_METADATA: Record<string, { title: string; category: string; description: string }> = {
+  static readonly STAGE_METADATA: Record<string, { title: string; category: string }> = {
     soft_1: {
       title: 'Communication & Behavioral Foundations',
       category: 'Soft Skills (Stage 1/3)',
-      description: 'Foundational professional communication, workplace storytelling, and behavioral readiness.',
     },
     soft_2: {
       title: 'Problem Framing & Structured Thinking',
       category: 'Soft Skills (Stage 2/3)',
-      description: 'Hypothesis-driven problem breakdown, adaptability, and structured situational response.',
     },
     soft_3: {
       title: 'Executive Presence & Stakeholder Influence',
       category: 'Soft Skills (Stage 3/3)',
-      description: 'High-stakes boardroom presentation, consensus building, and executive alignment.',
     },
     technical_1: {
       title: 'Accounting Fundamentals & 3-Statement Mechanics',
       category: 'Technical Skills (Stage 1/3)',
-      description: 'Balance Sheet, Income Statement, and Cash Flow Statement linkage and working capital dynamics.',
     },
     technical_2: {
       title: 'Valuation Methodologies (DCF & Comps)',
       category: 'Technical Skills (Stage 2/3)',
-      description: 'Discounted Cash Flow, WACC derivation, terminal value calculations, and trading multiples.',
     },
     technical_3: {
       title: 'LBO Modeling & M&A Mechanics',
       category: 'Technical Skills (Stage 3/3)',
-      description: 'Debt sizing, return waterfalls (IRR/MoIC), purchase price allocation, and accretion/dilution.',
     },
   };
 
@@ -109,25 +103,21 @@ export class ResultsDashboardUI {
     `;
 
     for (const item of stages) {
-      const meta = ResultsDashboardUI.STAGE_METADATA[item.stage] || {
-        title: item.stage,
-        category: 'Interview Stage',
-        description: 'Complete this stage as part of your interview curriculum.',
-      };
+      const meta = ResultsDashboardUI.STAGE_METADATA[item.stage] || { title: item.stage, category: 'Interview Stage' };
 
       const statusBadge = this._getStatusBadgeHtml(item.status);
       const isAvailable = item.status === 'available' || item.status === 'in_progress';
       const isPassed = item.status === 'passed';
 
       html += `
-        <div class="stage-card" data-stage="${item.stage}">
+        <div class="stage-card ${isPassed ? 'is-complete' : isAvailable ? 'is-active' : 'is-locked'}" data-stage="${item.stage}">
           <div>
             <div class="stage-card-header">
               <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">${meta.category}</span>
               ${statusBadge}
             </div>
             <h3 class="stage-title">${this._escapeHtml(meta.title)}</h3>
-            <p class="stage-description">${this._escapeHtml(meta.description)}</p>
+            <p class="stage-description">${this._escapeHtml(item.stage.replace('_', ' ').toUpperCase())} · ${this._escapeHtml(item.status.replace('_', ' '))}</p>
           </div>
           <div style="margin-top: 1rem;">
             ${

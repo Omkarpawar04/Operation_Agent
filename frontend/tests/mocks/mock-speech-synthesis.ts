@@ -7,6 +7,7 @@ export class MockSpeechSynthesisUtterance {
   voice: any = null;
 
   onstart: (() => void) | null = null;
+  onboundary: ((event: { name: string; charIndex: number }) => void) | null = null;
   onend: (() => void) | null = null;
   onerror: ((event: { error: string }) => void) | null = null;
 

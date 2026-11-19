@@ -24,6 +24,7 @@ describe('VoiceInterviewUI Component', () => {
       cancelListening: vi.fn(),
       speakCurrentQuestion: vi.fn(),
       stopSpeaking: vi.fn(),
+      retryMicrophoneAccess: vi.fn(),
       submitAnswer: vi.fn(),
       skipQuestion: vi.fn(),
       retry: vi.fn(),
@@ -58,12 +59,14 @@ describe('VoiceInterviewUI Component', () => {
       isFollowUp: false,
     });
 
-    expect(container.textContent).toContain('FINXL AI Voice Interview');
+    expect(container.textContent).toContain('FINXL AI INTERVIEW STUDIO');
     expect(container.textContent).toContain('Behavioral Interview 1');
     expect(container.textContent).toContain('How do you handle team disagreements?');
     expect(container.textContent?.match(/Behavioral Interview 1/g)).toHaveLength(1);
-    expect(container.querySelector('.finxl-question-card strong')?.textContent?.trim()).toBe('Question 1');
+    expect(container.querySelector('.question-index')?.textContent?.trim()).toBe('QUESTION 1');
     expect(container.querySelector('#finxl-btn-start-mic')).not.toBeNull();
+    expect(container.querySelector('.neural-orb')).not.toBeNull();
+    expect(container.querySelector('.finxl-transcript-box')?.textContent).toContain('Your recognized speech');
   });
 
   it('shows the skip action and labels a follow-up skip distinctly', () => {
@@ -96,15 +99,13 @@ describe('VoiceInterviewUI Component', () => {
     expect(container.textContent).not.toContain('&#x20;');
     expect(container.textContent).not.toContain('**');
     expect(container.textContent).not.toContain('[Synthetic development question');
-    expect(container.textContent).toContain('Question 2');
+    expect(container.textContent).toContain('QUESTION 2');
     expect(container.textContent?.match(/Behavioral Interview 1/g)).toHaveLength(1);
-    expect(container.querySelector('.finxl-question-card strong')?.textContent?.trim()).toBe('Question 2');
+    expect(container.querySelector('.question-index')?.textContent?.trim()).toBe('QUESTION 2');
     const button = container.querySelector<HTMLButtonElement>('#finxl-btn-submit-voice-answer')!;
     expect(button.textContent?.trim()).toBe('Submit Spoken Answer');
     expect(button.disabled).toBe(false);
-    expect(button.style.whiteSpace).toBe('normal');
-    expect(button.style.textOverflow).toBe('clip');
-    expect(button.style.color).toBe('#ffffff');
+    expect(button.closest('.finxl-voice-controls')).not.toBeNull();
   });
 
   it('hides stale synthetic fixture text and keeps submission disabled', () => {
@@ -154,7 +155,8 @@ describe('VoiceInterviewUI Component', () => {
       isFollowUp: false,
     });
 
-    expect(container.textContent).toContain('Speaking question...');
+    expect(container.textContent).toContain('SPEAKING QUESTION');
+    expect(container.querySelector('.finxl-voice-interview')?.getAttribute('data-orb-state')).toBe('speaking');
   });
 
   it('displays listening status and live transcripts', () => {
@@ -176,10 +178,11 @@ describe('VoiceInterviewUI Component', () => {
       isFollowUp: false,
     });
 
-    expect(container.textContent).toContain('Recognizing speech...');
+    expect(container.textContent).toContain('MICROPHONE ACTIVE');
     expect(container.textContent).toContain('I initiated a technical review');
     expect(container.textContent).toContain('in progress words');
     expect(container.querySelector('#finxl-btn-stop-mic')).not.toBeNull();
+    expect(container.querySelector('.transcript-interim')?.textContent).toContain('in progress words');
   });
 
   it('triggers startListening() and stopListening() on button clicks', () => {
@@ -307,8 +310,42 @@ describe('VoiceInterviewUI Component', () => {
       isFollowUp: false,
     });
 
-    expect(container.textContent).toContain('Interview Completed — PASSED');
-    expect(container.textContent).toContain('Final Score: 84.0%');
-    expect(container.textContent).toContain('Attempt ID: att-xyz-99');
+    expect(container.textContent).toContain('Stage passed');
+    expect(container.textContent).toContain('84.0');
+    expect(container.textContent).toContain('att-xyz-99');
+  });
+
+  it('renders the actual studio with question, workspace and controls in order', () => {
+    subscriberCallback?.({
+      sessionId: 'sess-1', stage: 'soft_1', state: 'question_ready',
+      activeQuestion: { id: 'q-1', text: 'A real backend question?', kind: 'base', sequence: 4, version: 1 },
+      currentVersion: 1, interimTranscript: '', finalTranscript: '', isSpeechInputSupported: true,
+      isSpeechOutputSupported: true, isListening: false, isSpeaking: false, isSubmitting: false,
+      lastError: null, assessmentResult: null, isFollowUp: false,
+    });
+    const question = container.querySelector('.studio-question')!;
+    const workspace = container.querySelector('.studio-workspace')!;
+    const controls = container.querySelector('.finxl-voice-controls')!;
+    expect(question.compareDocumentPosition(workspace) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(workspace.compareDocumentPosition(controls) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(workspace.querySelector('.neural-orb')).not.toBeNull();
+    expect(workspace.querySelector('.finxl-transcript-box')).not.toBeNull();
+    expect(controls.querySelectorAll('button')).toHaveLength(4);
+    expect(controls.textContent).toContain('Stop Recording');
+    expect(controls.textContent).toContain('Stop Audio');
+  });
+
+  it('shows the orb error state and microphone retry after a permission failure', () => {
+    subscriberCallback?.({
+      sessionId: 'sess-1', stage: 'soft_1', state: 'error',
+      activeQuestion: { id: 'q-1', text: 'Question?', kind: 'base', sequence: 1, version: 1 },
+      currentVersion: 1, interimTranscript: '', finalTranscript: '', isSpeechInputSupported: true,
+      isSpeechOutputSupported: true, isListening: false, isSpeaking: false, isSubmitting: false,
+      microphoneState: 'denied', lastError: { message: 'Microphone permission was denied.', isRetryable: false },
+      assessmentResult: null, isFollowUp: false,
+    });
+    expect(container.querySelector('.finxl-voice-interview')?.getAttribute('data-orb-state')).toBe('error');
+    container.querySelector<HTMLButtonElement>('#finxl-btn-retry-mic')?.click();
+    expect(mockLifecycle.retryMicrophoneAccess).toHaveBeenCalledOnce();
   });
 });

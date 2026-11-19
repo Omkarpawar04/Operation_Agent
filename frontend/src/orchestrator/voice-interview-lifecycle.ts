@@ -40,6 +40,7 @@ export interface VoiceInterviewSnapshot {
   } | null;
   assessmentResult: AssessmentResult | null;
   isFollowUp: boolean;
+  spokenCharIndex: number;
 }
 
 export interface VoiceInterviewConfig {
@@ -92,6 +93,7 @@ export class VoiceInterviewLifecycle {
       lastError: null,
       assessmentResult: null,
       isFollowUp: false,
+      spokenCharIndex: 0,
     };
   }
 
@@ -180,10 +182,12 @@ export class VoiceInterviewLifecycle {
     }
 
     const previousState = this._snapshot.state;
-    this._updateSnapshot({ isSpeaking: true, playbackBlocked: false, state: 'speaking_question' });
+    this._updateSnapshot({ isSpeaking: true, spokenCharIndex: 0, playbackBlocked: false, state: 'speaking_question' });
 
     try {
-      await this._speechOutput.speak(questionText, this._language);
+      await this._speechOutput.speak(questionText, this._language, {
+        onBoundary: (charIndex) => this._updateSnapshot({ spokenCharIndex: charIndex }),
+      });
     } catch (err: any) {
       if (err?.code === 'not-allowed') {
         this._updateSnapshot({ playbackBlocked: true });
@@ -212,6 +216,7 @@ export class VoiceInterviewLifecycle {
     this._speechOutput.stop();
     this._updateSnapshot({
       isSpeaking: false,
+      spokenCharIndex: 0,
       state: this._snapshot.isFollowUp ? 'follow_up_received' : 'question_ready',
     });
   }

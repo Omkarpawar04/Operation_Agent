@@ -146,6 +146,9 @@ export interface SpeechOutputOptions {
    * Optional voice name to match (exact or substring).
    */
   voiceName?: string;
+
+  /** Browser speech boundary offset, when the engine supplies word events. */
+  onBoundary?: (charIndex: number) => void;
 }
 
 /**

@@ -86,7 +86,8 @@ describe('VoiceInterviewLifecycle Integration', () => {
     // Verified: Question was spoken via SpeechOutput
     expect(mockSpeechOutput.speak).toHaveBeenCalledWith(
       'Tell me about a challenging technical trade-off you had to make.',
-      'en-IN'
+      'en-IN',
+      expect.objectContaining({ onBoundary: expect.any(Function) })
     );
   });
 
@@ -143,7 +144,8 @@ describe('VoiceInterviewLifecycle Integration', () => {
     // Verified: Spoke the follow-up question
     expect(mockSpeechOutput.speak).toHaveBeenCalledWith(
       'What specific metrics did you monitor?',
-      'en-IN'
+      'en-IN',
+      expect.objectContaining({ onBoundary: expect.any(Function) })
     );
   });
 

@@ -47,6 +47,15 @@ describe('BrowserSpeechOutput', () => {
     expect(mockSynth.speaking).toBe(false);
   });
 
+  it('forwards native word boundary offsets for question highlighting', async () => {
+    const onBoundary = vi.fn();
+    const speakPromise = adapter.speak('Hello candidate', 'en-IN', { onBoundary });
+    const utterance = mockSynth.activeUtterances[0];
+    utterance.onboundary?.({ name: 'word', charIndex: 6 });
+    expect(onBoundary).toHaveBeenCalledWith(6);
+    await speakPromise;
+  });
+
   it('selects suitable voice matching requested language (en-IN)', async () => {
     adapter.speak('Welcome to the interview', 'en-IN');
 
