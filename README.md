@@ -2,6 +2,10 @@
 
 FastAPI serves the browser client, WebSocket interview, and SQLite history. Groq handles interview planning, conversational turns, and evaluation. Deepgram transcribes spoken candidate answers. Kokoro generates interviewer speech locally. Candidates answer by voice; captions are read-only.
 
+## Project documentation
+
+The [documentation index](docs/README.md) links to the architecture, module catalog, API/WebSocket reference, configuration, and testing guides.
+
 ## Windows setup
 
 The published Kokoro 0.9.4 package supports Python 3.10–3.12. Keep the existing environment and use a separate Python 3.12 environment for the app with local TTS. Python 3.12.10 is the last 3.12 release with a Windows installer.
@@ -65,7 +69,7 @@ Before interview planning, the browser requires explicit recording consent and w
 
 ## WebSocket audio contract
 
-Connect to `/ws/interview`. The client starts with `start_interview`, then sends `start_audio` and `audio_client_ready`. Browser microphone frames are mono signed 16-bit little-endian PCM at 16 kHz. Browser echo cancellation and noise suppression remain enabled. The backend uses WebRTC VAD with a short pre-roll and a configurable 900 ms silence endpoint, then sends the completed utterance to Deepgram Nova-3 with interview-specific technical keyterms. The returned transcript is preserved as recognized; the application does not replace candidate words. `DEEPGRAM_LANGUAGE=en` is the broad English default; set a supported regional language such as `en-IN` in `.env` when that best matches the speakers.
+Connect to `/ws/interview`. The client starts with `start_interview`, then sends `start_audio` and `audio_client_ready`. Browser microphone frames are mono signed 16-bit little-endian PCM at 16 kHz. Browser echo cancellation and noise suppression remain enabled. The backend uses WebRTC VAD with a short pre-roll and a configurable 450 ms default silence endpoint, then sends the completed utterance to Deepgram Nova-3 with interview-specific technical keyterms. The returned transcript is preserved as recognized; the application does not replace candidate words. `DEEPGRAM_LANGUAGE=en` is the broad English default; set a supported regional language such as `en-IN` in `.env` when that best matches the speakers.
 
 For each interviewer turn the server sends `audio_generating` while Kokoro synthesizes the first sentence, then `audio_started`, binary mono PCM at 24 kHz as sentence audio becomes ready, and `audio_completed`. The existing model and voice stay loaded in memory. `audio_interrupted` cancels delivery when the candidate interrupts. Spoken answers can be up to 120 seconds. The existing browser PCM decoder and playback queue remain in use with a smaller microphone callback buffer. Text captions are read-only.
 
