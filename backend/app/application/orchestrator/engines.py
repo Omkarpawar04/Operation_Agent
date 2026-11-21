@@ -50,13 +50,27 @@ class QuestionGenerationEngine:
 
 class FollowUpGenerationEngine:
     @staticmethod
+    def select_bank_candidate(
+        candidates: tuple[QuestionBankEntry, ...], history: tuple[str, ...]
+    ) -> QuestionBankEntry:
+        """Prefer the revised FINXL curriculum, then stable bank order, without repeats."""
+        eligible = tuple(item for item in candidates if not repeated_question(item.text, history))
+        if not eligible:
+            raise InvalidProviderOutput("No unused question-bank content is available")
+        return min(
+            eligible,
+            key=lambda item: (
+                0 if item.question_id.startswith("Q_CURR_FIN_11_") else 1,
+                item.question_id,
+                item.content_version,
+            ),
+        )
+
+    @staticmethod
     def select_development_candidate(
         candidates: tuple[QuestionBankEntry, ...], history: tuple[str, ...]
     ) -> QuestionBankEntry:
-        eligible = tuple(item for item in candidates if not repeated_question(item.text, history))
-        if not eligible:
-            raise InvalidProviderOutput("No unused development question-bank content is available")
-        return eligible[0]
+        return FollowUpGenerationEngine.select_bank_candidate(candidates, history)
 
     def generate(
         self,

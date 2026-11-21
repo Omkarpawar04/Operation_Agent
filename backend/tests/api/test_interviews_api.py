@@ -35,9 +35,7 @@ def test_protected_student_routes_reject_anonymous_requests(client_and_factory) 
         response = client.request(
             method,
             path,
-            json={"stage": "soft_1", "idempotency_key": "anonymous"}
-            if method == "POST"
-            else None,
+            json={"stage": "soft_1", "idempotency_key": "anonymous"} if method == "POST" else None,
         )
         assert response.status_code == 401
 
@@ -45,6 +43,7 @@ def test_protected_student_routes_reject_anonymous_requests(client_and_factory) 
 def test_development_identity_is_rejected_in_production(client_and_factory) -> None:
     client, _factory = client_and_factory
     client.app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None,
         app_env="production",
         llm_provider="gemini",
         gemini_api_key="test-placeholder-only",
@@ -63,10 +62,14 @@ def test_production_bearer_jwt_authentication_success(client_and_factory) -> Non
         db.add(UserRow(id=user_id, auth_subject=f"jwt:{user_id}"))
 
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    public_pem = private_key.public_key().public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    ).decode("utf-8")
+    public_pem = (
+        private_key.public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode("utf-8")
+    )
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
@@ -74,6 +77,7 @@ def test_production_bearer_jwt_authentication_success(client_and_factory) -> Non
     ).decode("utf-8")
 
     client.app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None,
         app_env="production",
         llm_provider="gemini",
         gemini_api_key="placeholder",
@@ -108,6 +112,7 @@ def test_production_bearer_jwt_authentication_success(client_and_factory) -> Non
 def test_spoofed_forwarded_headers_do_not_bypass_rate_limit(client_and_factory) -> None:
     client, _factory = client_and_factory
     client.app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None,
         app_env="test",
         request_rate_limit_count=1,
         trusted_proxies=[],  # untrusted
@@ -129,11 +134,10 @@ def test_spoofed_forwarded_headers_do_not_bypass_rate_limit(client_and_factory) 
     assert second.json()["error"]["code"] == "rate_limit_exceeded"
 
 
-
 def test_shared_rate_limit_returns_retry_after(client_and_factory) -> None:
     client, _factory = client_and_factory
     client.app.dependency_overrides[get_settings] = lambda: Settings(
-        app_env="test", request_rate_limit_count=1
+        _env_file=None, app_env="test", request_rate_limit_count=1
     )
     target = f"/api/v1/interviews/{UUID(int=99)}"
     first = client.get(target, headers={"X-Dev-User-ID": str(UUID(int=1))})
@@ -169,9 +173,7 @@ def test_new_fake_question_response_has_clean_text_and_valid_sequence(
         headers=headers,
     )
     assert started.status_code == 201
-    response = client.get(
-        f"/api/v1/interviews/{started.json()['id']}/question", headers=headers
-    )
+    response = client.get(f"/api/v1/interviews/{started.json()['id']}/question", headers=headers)
     assert response.status_code == 200
     body = response.json()
     assert body["text"].startswith("Describe a specific situation")
@@ -207,9 +209,7 @@ def test_persisted_development_question_requires_fresh_interview(
             "[Synthetic development question 1] Describe a specific situation "
             "and the evidence behind your decision."
         )
-    response = client.get(
-        f"/api/v1/interviews/{started.json()['id']}/question", headers=headers
-    )
+    response = client.get(f"/api/v1/interviews/{started.json()['id']}/question", headers=headers)
     assert response.status_code == 409
     assert response.json()["error"]["message"].endswith("Start a fresh interview.")
 
@@ -289,6 +289,7 @@ def test_owner_isolation_hides_foreign_session(client_and_factory, dev_user_id: 
 def test_fake_provider_completes_text_interview(client_and_factory, dev_user_id: str) -> None:
     client, factory = client_and_factory
     client.app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None,
         app_env="test",
         max_base_questions=1,
         max_follow_ups_per_question=1,
@@ -360,6 +361,13 @@ def test_fake_provider_completes_text_interview(client_and_factory, dev_user_id:
         f"/api/v1/interviews/{created.json()['id']}/assessment", headers=headers
     )
     assert assessment.status_code == 200 and assessment.json()["passed"] is True
+    assert "competency_feedback" in assessment.json()
+    assert "evidence" not in assessment.json()
+    other_student = client.get(
+        f"/api/v1/interviews/{created.json()['id']}/assessment",
+        headers={"X-Dev-User-ID": str(UUID(int=998))},
+    )
+    assert other_student.status_code == 404
     progress = client.get("/api/v1/progression", headers=headers)
     assert progress.status_code == 200
     assert progress.json()["stages"][0]["status"] == "passed"
@@ -377,6 +385,7 @@ def test_insufficient_answer_completes_as_deterministic_failure(
 ) -> None:
     client, factory = client_and_factory
     client.app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None,
         app_env="test",
         max_base_questions=1,
         max_follow_ups_per_question=0,
@@ -413,6 +422,7 @@ def test_workflow_generates_follow_up_then_next_base_question(
 ) -> None:
     client, factory = client_and_factory
     client.app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None,
         app_env="test",
         max_base_questions=2,
         max_follow_ups_per_question=2,
@@ -701,6 +711,7 @@ def test_repeated_follow_up_output_releases_reservation_for_same_key_retry(
 def test_prompt_injection_text_cannot_set_pass_result(client_and_factory, dev_user_id: str) -> None:
     client, factory = client_and_factory
     client.app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None,
         app_env="test",
         max_base_questions=1,
         max_follow_ups_per_question=0,
@@ -777,7 +788,7 @@ def test_configured_attempt_limit_rejects_another_completed_attempt(
             )
         )
     client.app.dependency_overrides[get_settings] = lambda: Settings(
-        app_env="test", max_attempts_per_stage=1
+        _env_file=None, app_env="test", max_attempts_per_stage=1
     )
     response = client.post(
         "/api/v1/interviews",

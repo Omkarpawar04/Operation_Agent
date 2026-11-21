@@ -55,6 +55,14 @@ def build_records(
 ) -> tuple[list[CompetencyDefinitionRow], list[AssessmentRubricRow], list[QuestionBankRow]]:
     """Map the pack into existing tables after the caller validates the full pack."""
     pack_version = content["pack_version"]
+    legacy_pack_version = content.get("base_pack_version", pack_version)
+
+    def record_version(item: dict[str, Any]) -> str:
+        version = item.get("content_version", legacy_pack_version)
+        if not isinstance(version, str) or not version.strip():
+            raise ContentImportError("Assessment content record has an invalid content version")
+        return version
+
     evidence_by_id = {row["evidence_id"]: row for row in content["expected_answer_evidence"]}
     competencies = []
     for item in content["competencies"]:
@@ -68,13 +76,13 @@ def build_records(
                 stage_ids_json=list(stages),
                 title=item["name"],
                 definition=item["description"],
-                content_version=pack_version,
+                content_version=record_version(item),
                 approval_status=item["approval_status"],
                 content_source=CONTENT_SOURCE,
                 created_by=None,
                 approved_at=None,
                 approved_by=None,
-                content_metadata_json=_metadata(item, pack_version),
+                content_metadata_json=_metadata(item, record_version(item)),
             )
         )
 
@@ -87,13 +95,13 @@ def build_records(
             scoring_scale_json=item["scoring_scale"],
             evidence_requirements_json=item["evidence_requirements"],
             insufficient_evidence_json=item["insufficient_evidence_criteria"],
-            content_version=pack_version,
+            content_version=record_version(item),
             approval_status=item["approval_status"],
             content_source=CONTENT_SOURCE,
             created_by=None,
             approved_at=None,
             approved_by=None,
-            content_metadata_json=_metadata(item, pack_version),
+            content_metadata_json=_metadata(item, record_version(item)),
         )
         for item in content["rubrics"]
     ]
@@ -123,7 +131,7 @@ def build_records(
                 difficulty=item["difficulty"],
                 expected_answer_json=answer_characteristics,
                 rubric_version_id=item["rubric_id"],
-                content_version=pack_version,
+                content_version=record_version(item),
                 approval_status=item["approval_status"],
                 content_source=CONTENT_SOURCE,
                 parent_question_id=None,
@@ -134,7 +142,7 @@ def build_records(
                 approved_by=None,
                 content_metadata_json=_metadata(
                     item,
-                    pack_version,
+                    record_version(item),
                     expected_answer_evidence=evidence,
                     development_eligible=item["approval_status"] == ContentStatus.DRAFT.value,
                 ),
@@ -157,18 +165,24 @@ def build_records(
                     for question in content["questions"]
                     if question["question_id"] == parent_id
                 ),
-                content_version=pack_version,
+                content_version=record_version(item),
                 approval_status=item["approval_status"],
                 content_source=CONTENT_SOURCE,
                 parent_question_id=parent_id,
-                parent_content_version=pack_version,
+                parent_content_version=record_version(
+                    next(
+                        question
+                        for question in content["questions"]
+                        if question["question_id"] == parent_id
+                    )
+                ),
                 development_eligible=item["approval_status"] == ContentStatus.DRAFT.value,
                 created_by=None,
                 approved_at=None,
                 approved_by=None,
                 content_metadata_json=_metadata(
                     item,
-                    pack_version,
+                    record_version(item),
                     question_category="follow_up_candidate",
                     development_eligible=item["approval_status"] == ContentStatus.DRAFT.value,
                 ),

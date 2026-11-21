@@ -106,7 +106,9 @@ def client_and_factory() -> Generator[tuple[TestClient, sessionmaker[Session]], 
     application = create_app()
     application.state.disable_workers = True
     application.dependency_overrides[get_db] = override_db
-    application.dependency_overrides[get_settings] = lambda: Settings(app_env="test")
+    application.dependency_overrides[get_settings] = lambda: Settings(
+        app_env="test", _env_file=None
+    )
     application.dependency_overrides[get_readiness] = lambda: CheckReadiness(
         SqlAlchemyReadinessAdapter(engine)
     )

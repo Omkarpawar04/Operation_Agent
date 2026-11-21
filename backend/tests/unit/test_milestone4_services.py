@@ -163,10 +163,7 @@ def test_transcript_deletion_is_scoped_and_keeps_result_for_progression(
     assert evaluation is not None and evaluation.evidence_json == []
     result = db_session.get(AssessmentResultRow, attempts[0].id)
     assert (
-        result is not None
-        and result.passed
-        and result.score == "80"
-        and result.evidence_json == []
+        result is not None and result.passed and result.score == "80" and result.evidence_json == []
     )
     assert answers[1].transcript == "private answer"
     assert questions[1].text == "Generated question"
@@ -227,8 +224,9 @@ def test_retention_policy_rejects_naive_clock() -> None:
 
 def test_production_settings_require_real_adapters_and_explicit_policies() -> None:
     with pytest.raises(ValidationError, match="configured Gemini provider"):
-        Settings(app_env="production")
+        Settings(_env_file=None, app_env="production")
     production = Settings(
+        _env_file=None,
         app_env="production",
         database_url="postgresql+psycopg://localhost:5432/finxl",
         llm_provider="gemini",
@@ -254,6 +252,7 @@ def test_recovery_worker_starts_and_shuts_down_with_lifespan(monkeypatch) -> Non
         main,
         "get_settings",
         lambda: Settings(
+            _env_file=None,
             app_env="test",
             database_url="sqlite://",
             lease_recovery_interval_seconds=3600,

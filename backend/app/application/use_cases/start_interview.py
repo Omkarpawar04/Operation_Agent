@@ -2,7 +2,11 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
-from app.application.orchestrator.engines import InvalidProviderOutput, QuestionGenerationEngine
+from app.application.orchestrator.engines import (
+    FollowUpGenerationEngine,
+    InvalidProviderOutput,
+    QuestionGenerationEngine,
+)
 from app.application.sessions.manager import SessionManager
 from app.application.workflow import (
     is_development_placeholder_question,
@@ -143,7 +147,7 @@ class StartInterview:
             )
             if not approved_questions:
                 raise Conflict("Approved assessment questions are not configured for this stage")
-            bank_question = approved_questions[0]
+            bank_question = FollowUpGenerationEngine.select_bank_candidate(approved_questions, ())
             competency = self._assessment_content.approved_competency(bank_question.competency_id)
             rubric = self._assessment_content.approved_rubric(bank_question.rubric_version_id)
             if (
@@ -179,7 +183,7 @@ class StartInterview:
                 raise Conflict(
                     "No eligible development assessment questions are configured for this stage"
                 )
-            bank_question = candidates[0]
+            bank_question = FollowUpGenerationEngine.select_bank_candidate(candidates, ())
             competency = self._assessment_content.development_competency(
                 bank_question.competency_id,
                 allow_draft=self._settings.dev_assessment_allow_draft,

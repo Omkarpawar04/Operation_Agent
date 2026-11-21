@@ -210,11 +210,20 @@ def assessment(
     session_id: UUID,
     principal: Principal = Depends(current_principal),
     reader: GetAssessment = Depends(get_assessment_reader),
-) -> dict[str, str | bool]:
+) -> dict[str, object]:
     result = reader.execute(session_id, principal.user_id)
     return {
         "attempt_id": str(result.attempt_id),
         "score": result.score,
         "passed": result.passed,
         "rubric_version": result.rubric_version,
+        "competency_feedback": [
+            {
+                "competency_id": item.competency_id,
+                "title": item.title,
+                "strengths": list(item.strengths),
+                "areas_for_improvement": list(item.areas_for_improvement),
+            }
+            for item in result.competency_feedback
+        ],
     }

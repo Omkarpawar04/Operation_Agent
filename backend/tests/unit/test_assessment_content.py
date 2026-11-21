@@ -7,12 +7,22 @@ from sqlalchemy.orm import Session
 
 from app.adapters.llm.fake import FakeLLMProvider
 from app.adapters.persistence.assessment_content import SqlAlchemyAssessmentContentAdapter
+from app.adapters.persistence.queries import SqlAlchemyQueryAdapter
 from app.application.orchestrator.engines import FollowUpGenerationEngine, InvalidProviderOutput
 from app.application.use_cases.start_interview import StartInterview
 from app.core.config import Settings
 from app.core.errors import Conflict
 from app.db.base import Base
-from app.db.models import AssessmentRubricRow, CompetencyDefinitionRow, QuestionBankRow
+from app.db.models import (
+    AssessmentAttemptRow,
+    AssessmentResultRow,
+    AssessmentRubricRow,
+    CompetencyDefinitionRow,
+    InterviewSessionRow,
+    QuestionBankRow,
+    QuestionRow,
+    UserRow,
+)
 from app.domain.assessments.content import (
     ContentStatus,
     QuestionBankEntry,
@@ -134,6 +144,114 @@ def test_provenance_round_trip_and_legacy_null_remains_unknown() -> None:
     assert QuestionProvenance.from_json(None) is None
 
 
+def test_bank_selection_prefers_revised_curriculum_then_avoids_repeats() -> None:
+    now = datetime.now(UTC)
+
+    def entry(question_id: str, text: str) -> QuestionBankEntry:
+        return QuestionBankEntry(
+            question_id=question_id,
+            stage=InterviewStage.SOFT_1,
+            competency_id="finance_foundations",
+            text=text,
+            category=QuestionCategory.BASE,
+            difficulty="basic",
+            expected_answer_characteristics=("Explain the concept accurately",),
+            rubric_version_id="finance_foundations_v1",
+            content_version="1.1.0" if question_id.startswith("Q_CURR_FIN_11_") else "1.0.0",
+            status=ContentStatus.DRAFT,
+            content_source="FINXL curriculum draft",
+            created_at=now,
+        )
+
+    revised = entry("Q_CURR_FIN_11_soft_1_01", "Explain working capital with an example.")
+    legacy = entry("Q_DRAFT_SOFT1_01", "Explain a structured interview response with an example.")
+    candidates = (legacy, revised)
+    assert FollowUpGenerationEngine.select_bank_candidate(candidates, ()) == revised
+    assert FollowUpGenerationEngine.select_bank_candidate(candidates, (revised.text,)) == legacy
+    with pytest.raises(InvalidProviderOutput, match="No unused"):
+        FollowUpGenerationEngine.select_bank_candidate(candidates, (revised.text, legacy.text))
+
+
+def test_assessment_view_returns_persisted_competency_feedback_for_owner_only() -> None:
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    competency, rubric, _question = _approved_content()
+    student_id = uuid4()
+    session_id = uuid4()
+    attempt_id = uuid4()
+    question_id = uuid4()
+    provenance = QuestionProvenance(
+        provider_name="question_bank",
+        model_identifier=None,
+        generation_type="approved_bank_selection",
+        prompt_schema_version="assessment_question.v1",
+        generated_at=None,
+        origin="approved_assessment_bank",
+        approval_status="approved",
+        bank_question_id="test_question_1",
+        competency_id=competency.competency_id,
+        rubric_version_id=rubric.rubric_version_id,
+        content_version="test-v1",
+    )
+    with Session(engine) as session:
+        session.add_all(
+            [
+                UserRow(id=student_id, auth_subject=f"test:{student_id}"),
+                competency,
+                rubric,
+                InterviewSessionRow(
+                    id=session_id,
+                    student_id=student_id,
+                    stage="soft_1",
+                    state="completed",
+                    idempotency_key="assessment-feedback-session",
+                ),
+                QuestionRow(
+                    id=question_id,
+                    session_id=session_id,
+                    sequence=1,
+                    kind="base",
+                    text="A test question.",
+                    provenance_json=provenance.to_json(),
+                ),
+                AssessmentAttemptRow(
+                    id=attempt_id,
+                    student_id=student_id,
+                    session_id=session_id,
+                    stage="soft_1",
+                    scope_key="global",
+                    idempotency_key="assessment-feedback-attempt",
+                    status="passed",
+                ),
+                AssessmentResultRow(
+                    attempt_id=attempt_id,
+                    score="80",
+                    passed=True,
+                    rubric_version=rubric.rubric_version_id,
+                    evidence_json=[
+                        {
+                            "dimension": "reasoning",
+                            "root_question_id": str(question_id),
+                            "evidence": ["Connected the answer to cash timing."],
+                            "missing": ["Could explain the receivables impact."],
+                        }
+                    ],
+                ),
+            ]
+        )
+        session.commit()
+        reader = SqlAlchemyQueryAdapter(session)
+        result = reader.get_assessment(session_id, student_id)
+        assert result is not None
+        assert len(result.competency_feedback) == 1
+        feedback = result.competency_feedback[0]
+        assert feedback.title == "Test competency"
+        assert feedback.strengths == ("Connected the answer to cash timing.",)
+        assert feedback.areas_for_improvement == ("Could explain the receivables impact.",)
+        assert reader.get_assessment(session_id, uuid4()) is None
+    engine.dispose()
+
+
 def test_gemini_follow_up_selection_must_match_approved_question_and_competency() -> None:
     class Selector(FakeLLMProvider):
         def generate_follow_up(self, prompt: InterviewPrompt) -> GeneratedQuestion:
@@ -204,6 +322,7 @@ def test_production_start_fails_closed_without_approved_bank_content() -> None:
             return super().generate_question(prompt)
 
     settings = Settings(
+        _env_file=None,
         app_env="production",
         llm_provider="gemini",
         gemini_api_key="test-key-not-used",

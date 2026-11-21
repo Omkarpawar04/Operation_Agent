@@ -9,6 +9,7 @@ from app.core.errors import Conflict
 from app.db.models import (
     AssessmentAttemptRow,
     AssessmentResultRow,
+    CompetencyDefinitionRow,
     CourseContentRevisionRow,
     EnrollmentRow,
     InterviewSessionRow,
@@ -24,6 +25,7 @@ from app.domain.interviews.models import (
 )
 from app.ports.interview_queries import (
     ApprovedCourseConfiguration,
+    AssessmentCompetencyFeedback,
     AssessmentView,
     CourseContentPort,
     InterviewQueryPort,
@@ -95,7 +97,48 @@ class SqlAlchemyQueryAdapter(
         result = self._session.get(AssessmentResultRow, attempt.id)
         if result is None:
             return None
-        return AssessmentView(attempt.id, result.score, result.passed, result.rubric_version)
+        feedback: dict[str, tuple[str, set[str], set[str]]] = {}
+        for item in result.evidence_json:
+            if not isinstance(item, dict):
+                continue
+            root_question_id = item.get("root_question_id")
+            if not isinstance(root_question_id, str):
+                continue
+            question = self._session.get(QuestionRow, UUID(root_question_id))
+            if question is None:
+                continue
+            provenance = QuestionProvenance.from_json(question.provenance_json)
+            if provenance is None or provenance.competency_id is None:
+                continue
+            competency = self._session.get(CompetencyDefinitionRow, provenance.competency_id)
+            if competency is None:
+                continue
+            aggregate = feedback.setdefault(
+                competency.competency_id, (competency.title, set(), set())
+            )
+            strengths = item.get("evidence", [])
+            areas = item.get("missing", [])
+            if isinstance(strengths, list):
+                aggregate[1].update(
+                    value for value in strengths if isinstance(value, str) and value.strip()
+                )
+            if isinstance(areas, list):
+                aggregate[2].update(
+                    value for value in areas if isinstance(value, str) and value.strip()
+                )
+        competency_feedback = tuple(
+            AssessmentCompetencyFeedback(
+                competency_id, values[0], tuple(sorted(values[1])), tuple(sorted(values[2]))
+            )
+            for competency_id, values in sorted(feedback.items())
+        )
+        return AssessmentView(
+            attempt.id,
+            result.score,
+            result.passed,
+            result.rubric_version,
+            competency_feedback,
+        )
 
     def get_active_session(self, student_id: UUID) -> SessionView | None:
         active_states = (

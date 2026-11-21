@@ -46,6 +46,7 @@ def test_development_identity_adapter_fails_closed_in_production() -> None:
     from app.core.config import Settings
 
     settings = Settings(
+        _env_file=None,
         app_env="production",
         llm_provider="gemini",
         gemini_api_key="test-placeholder-only",

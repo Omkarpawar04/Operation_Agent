@@ -14,10 +14,14 @@ from app.ports.services import Principal
 @pytest.fixture(scope="module")
 def rsa_keypair():
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    public_pem = private_key.public_key().public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    ).decode("utf-8")
+    public_pem = (
+        private_key.public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode("utf-8")
+    )
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
@@ -50,6 +54,7 @@ def test_jwt_valid_token_resolves_principal(rsa_keypair):
     private_pem, public_pem = rsa_keypair
     user_id = uuid4()
     settings = Settings(
+        _env_file=None,
         app_env="production",
         jwt_public_key=public_pem,
         jwt_issuer="https://auth.example.com",
@@ -82,6 +87,7 @@ def test_jwt_valid_token_resolves_principal(rsa_keypair):
 def test_jwt_rejects_expired_token(rsa_keypair):
     private_pem, public_pem = rsa_keypair
     settings = Settings(
+        _env_file=None,
         app_env="production",
         jwt_public_key=public_pem,
         jwt_issuer="https://auth.example.com",
@@ -111,6 +117,7 @@ def test_jwt_rejects_expired_token(rsa_keypair):
 def test_jwt_rejects_immature_token(rsa_keypair):
     private_pem, public_pem = rsa_keypair
     settings = Settings(
+        _env_file=None,
         app_env="production",
         jwt_public_key=public_pem,
         jwt_leeway_seconds=0,
@@ -137,6 +144,7 @@ def test_jwt_rejects_immature_token(rsa_keypair):
 def test_jwt_rejects_issuer_mismatch(rsa_keypair):
     private_pem, public_pem = rsa_keypair
     settings = Settings(
+        _env_file=None,
         app_env="production",
         jwt_public_key=public_pem,
         jwt_issuer="https://trusted.issuer.com",
@@ -163,6 +171,7 @@ def test_jwt_rejects_issuer_mismatch(rsa_keypair):
 def test_jwt_rejects_audience_mismatch(rsa_keypair):
     private_pem, public_pem = rsa_keypair
     settings = Settings(
+        _env_file=None,
         app_env="production",
         jwt_public_key=public_pem,
         jwt_audience="https://expected.aud",
@@ -188,6 +197,7 @@ def test_jwt_rejects_audience_mismatch(rsa_keypair):
 
 def test_jwt_rejects_unsigned_and_none_algorithm():
     settings = Settings(
+        _env_file=None,
         app_env="test",
         jwt_public_key="some-public-key",
         jwt_algorithms=["RS256"],
@@ -203,6 +213,7 @@ def test_jwt_rejects_unsigned_and_none_algorithm():
 
 def test_jwt_rejects_unallowed_algorithm(rsa_keypair):
     settings = Settings(
+        _env_file=None,
         app_env="test",
         jwt_public_key="some-key",
         jwt_algorithms=["RS256"],
@@ -222,6 +233,7 @@ def test_jwt_rejects_invalid_signature(rsa_keypair, other_rsa_keypair):
     _, public_pem = rsa_keypair
     other_private_pem = other_rsa_keypair
     settings = Settings(
+        _env_file=None,
         app_env="test",
         jwt_public_key=public_pem,
         jwt_algorithms=["RS256"],
@@ -235,7 +247,7 @@ def test_jwt_rejects_invalid_signature(rsa_keypair, other_rsa_keypair):
 
 def test_jwt_rejects_malformed_tokens(rsa_keypair):
     _, public_pem = rsa_keypair
-    settings = Settings(app_env="test", jwt_public_key=public_pem)
+    settings = Settings(_env_file=None, app_env="test", jwt_public_key=public_pem)
     adapter = JwtIdentityAdapter(settings)
 
     with pytest.raises(ValueError, match="Token is missing"):
@@ -248,7 +260,7 @@ def test_jwt_rejects_malformed_tokens(rsa_keypair):
 
 def test_jwt_rejects_non_uuid_subject_without_mapper(rsa_keypair):
     private_pem, public_pem = rsa_keypair
-    settings = Settings(app_env="test", jwt_public_key=public_pem)
+    settings = Settings(_env_file=None, app_env="test", jwt_public_key=public_pem)
     adapter = JwtIdentityAdapter(settings)
     token = _mint_jwt(private_pem, {"sub": "auth0|student_abc_123", "exp": time.time() + 300})
 
@@ -259,7 +271,7 @@ def test_jwt_rejects_non_uuid_subject_without_mapper(rsa_keypair):
 def test_jwt_resolves_non_uuid_subject_with_verified_mapper(rsa_keypair):
     private_pem, public_pem = rsa_keypair
     student_uuid = uuid4()
-    settings = Settings(app_env="test", jwt_public_key=public_pem)
+    settings = Settings(_env_file=None, app_env="test", jwt_public_key=public_pem)
 
     def fake_mapper(sub: str, _claims: dict) -> UUID | None:
         if sub == "auth0|student_abc_123":
@@ -275,7 +287,7 @@ def test_jwt_resolves_non_uuid_subject_with_verified_mapper(rsa_keypair):
 
 def test_jwt_rejects_unmapped_external_subject(rsa_keypair):
     private_pem, public_pem = rsa_keypair
-    settings = Settings(app_env="test", jwt_public_key=public_pem)
+    settings = Settings(_env_file=None, app_env="test", jwt_public_key=public_pem)
 
     def fake_mapper(_sub: str, _claims: dict) -> UUID | None:
         return None  # Unmapped
@@ -291,6 +303,7 @@ def test_jwt_resolves_configured_student_id_claim(rsa_keypair):
     private_pem, public_pem = rsa_keypair
     student_uuid = uuid4()
     settings = Settings(
+        _env_file=None,
         app_env="test",
         jwt_public_key=public_pem,
         jwt_user_id_claim="student_id",
@@ -312,6 +325,7 @@ def test_jwt_resolves_configured_student_id_claim(rsa_keypair):
 def test_jwt_rejects_missing_configured_student_claim(rsa_keypair):
     private_pem, public_pem = rsa_keypair
     settings = Settings(
+        _env_file=None,
         app_env="test",
         jwt_public_key=public_pem,
         jwt_user_id_claim="custom_student_id",
@@ -329,6 +343,7 @@ def test_jwt_rejects_missing_configured_student_claim(rsa_keypair):
 def test_jwt_rejects_malformed_configured_student_claim(rsa_keypair):
     private_pem, public_pem = rsa_keypair
     settings = Settings(
+        _env_file=None,
         app_env="test",
         jwt_public_key=public_pem,
         jwt_user_id_claim="student_id",
@@ -345,7 +360,7 @@ def test_jwt_rejects_malformed_configured_student_claim(rsa_keypair):
 
 def test_jwt_rejects_empty_user_id_claim(rsa_keypair):
     private_pem, public_pem = rsa_keypair
-    settings = Settings(app_env="test", jwt_public_key=public_pem)
+    settings = Settings(_env_file=None, app_env="test", jwt_public_key=public_pem)
     adapter = JwtIdentityAdapter(settings)
     token = _mint_jwt(private_pem, {"sub": "   ", "exp": time.time() + 300})
 
@@ -357,6 +372,7 @@ def test_jwt_safe_jwks_rotation(rsa_keypair):
     private_pem, public_pem = rsa_keypair
     user_id = uuid4()
     settings = Settings(
+        _env_file=None,
         app_env="test",
         jwt_jwks_url="https://auth.example.com/.well-known/jwks.json",
         jwt_algorithms=["RS256"],

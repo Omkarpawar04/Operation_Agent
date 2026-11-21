@@ -22,30 +22,36 @@ export class ResultsDashboardUI {
     this._callbacks = callbacks;
   }
 
-  static readonly STAGE_METADATA: Record<string, { title: string; category: string }> = {
+  static readonly STAGE_METADATA: Record<string, { title: string; category: string; description: string }> = {
     soft_1: {
-      title: 'Communication & Behavioral Foundations',
+      title: 'Finance Foundations and Communication',
       category: 'Soft Skills (Stage 1/3)',
+      description: 'Explain basic finance concepts clearly, including working capital and why cash flow management matters.',
     },
     soft_2: {
-      title: 'Problem Framing & Structured Thinking',
+      title: 'Conceptual Understanding and Financial Reasoning',
       category: 'Soft Skills (Stage 2/3)',
+      description: 'Interpret basic financial ratios and connect profitability, liquidity, working capital, and business health.',
     },
     soft_3: {
-      title: 'Executive Presence & Stakeholder Influence',
+      title: 'Practical Finance Scenarios',
       category: 'Soft Skills (Stage 3/3)',
+      description: 'Analyze realistic business problems and justify recommendations for non-finance stakeholders.',
     },
     technical_1: {
-      title: 'Accounting Fundamentals & 3-Statement Mechanics',
+      title: 'Financial Modeling Fundamentals',
       category: 'Technical Skills (Stage 1/3)',
+      description: 'Build and explain forecasts from historical data, assumptions, and business drivers.',
     },
     technical_2: {
-      title: 'Valuation Methodologies (DCF & Comps)',
+      title: 'Financial Statements and Ratio Analysis',
       category: 'Technical Skills (Stage 2/3)',
+      description: 'Interpret financial statements, ratios, trends, and comparisons in context.',
     },
     technical_3: {
-      title: 'LBO Modeling & M&A Mechanics',
+      title: 'Advanced Financial Modeling Applications',
       category: 'Technical Skills (Stage 3/3)',
+      description: 'Integrate forecasts, sensitivities, variance analysis, and evidence based recommendations.',
     },
   };
 
@@ -103,7 +109,7 @@ export class ResultsDashboardUI {
     `;
 
     for (const item of stages) {
-      const meta = ResultsDashboardUI.STAGE_METADATA[item.stage] || { title: item.stage, category: 'Interview Stage' };
+      const meta = ResultsDashboardUI.STAGE_METADATA[item.stage] || { title: item.stage, category: 'Interview Stage', description: '' };
 
       const statusBadge = this._getStatusBadgeHtml(item.status);
       const isAvailable = item.status === 'available' || item.status === 'in_progress';
@@ -117,6 +123,7 @@ export class ResultsDashboardUI {
               ${statusBadge}
             </div>
             <h3 class="stage-title">${this._escapeHtml(meta.title)}</h3>
+            <p class="stage-description">${this._escapeHtml(meta.description)}</p>
             <p class="stage-description">${this._escapeHtml(item.stage.replace('_', ' ').toUpperCase())} · ${this._escapeHtml(item.status.replace('_', ' '))}</p>
           </div>
           <div style="margin-top: 1rem;">
@@ -218,8 +225,27 @@ export class ResultsDashboardUI {
       </div>
     `;
 
+    if (result.competency_feedback?.length) {
+      html += `
+        <div class="dimensions-section">
+          <h3 style="margin-top: 0; font-size: 1.2rem; color: var(--secondary-navy); margin-bottom: 1.25rem;">
+            Competency Feedback
+          </h3>
+          ${result.competency_feedback.map((item) => `
+            <div class="dimension-card">
+              <div class="dimension-header">
+                <span class="dimension-title">${this._escapeHtml(item.title)}</span>
+              </div>
+              ${item.strengths.length ? `<p><strong>Demonstrated:</strong> ${item.strengths.map((value) => this._escapeHtml(value)).join(' · ')}</p>` : ''}
+              ${item.areas_for_improvement.length ? `<p><strong>To practice:</strong> ${item.areas_for_improvement.map((value) => this._escapeHtml(value)).join(' · ')}</p>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
     // Evidence / Rubric breakdown if available
-    if (result.evidence && result.evidence.length > 0) {
+    if (!result.competency_feedback?.length && result.evidence && result.evidence.length > 0) {
       html += `
         <div class="dimensions-section">
           <h3 style="margin-top: 0; font-size: 1.2rem; color: var(--secondary-navy); margin-bottom: 1.25rem;">

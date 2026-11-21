@@ -11,6 +11,7 @@ def test_complete_interview_workflow_acceptance(client_and_factory, dev_user_id:
 
     # Configure deterministic 1-base question + 1-follow-up interview
     client.app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None,
         app_env="test",
         max_base_questions=1,
         max_follow_ups_per_question=1,
@@ -162,7 +163,7 @@ def test_complete_interview_workflow_acceptance(client_and_factory, dev_user_id:
     stages_after = {s["stage"]: s["status"] for s in after_prog.json()["stages"]}
     assert stages_after["soft_1"] == "passed"
     assert stages_after["soft_2"] == "available"  # Now available!
-    assert stages_after["soft_3"] == "locked"     # Still locked!
+    assert stages_after["soft_3"] == "locked"  # Still locked!
 
     # Step 10: Start the next eligible stage (soft_2)
     start_soft2 = client.post(
@@ -204,9 +205,7 @@ def test_complete_interview_workflow_acceptance(client_and_factory, dev_user_id:
     # Assessment persistence in DB
     with factory() as db:
         attempt = db.scalar(
-            select(AssessmentAttemptRow).where(
-                AssessmentAttemptRow.session_id == UUID(session_id)
-            )
+            select(AssessmentAttemptRow).where(AssessmentAttemptRow.session_id == UUID(session_id))
         )
         assert attempt is not None
         assert attempt.status == "passed"

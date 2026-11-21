@@ -127,5 +127,11 @@ Required configuration: `DATABASE_URL` (PostgreSQL SQLAlchemy URL). `FINXL_TEST_
 
 ## M8.2 assessment-content governance foundation
 
-Infrastructure supports versioned competencies, rubrics, question-bank entries, approval lifecycle states, and question-generation provenance. No FINXL assessment content is populated or declared approved. Production stages remain unavailable until content owners provide and approve competency definitions, rubrics, and question entries; the proposed soft_1 example remains development-only. This work does not start M9.
+Infrastructure supports versioned competencies, rubrics, question-bank entries, approval lifecycle states, and question-generation provenance. The FINXL finance curriculum pack is now populated as a draft across all six stages, with source traceability and approval lifecycle metadata. No new curriculum records are declared approved; production selection remains limited to approved content. This work does not start M9.
+
+## Finance curriculum alignment (draft)
+
+The student portal now describes the existing ordered stages as Finance Foundations and Communication (`soft_1`), Conceptual Understanding and Financial Reasoning (`soft_2`), Practical Finance Scenarios (`soft_3`), Financial Modeling Fundamentals (`technical_1`), Financial Statements and Ratio Analysis (`technical_2`), and Advanced Financial Modeling Applications (`technical_3`). Stage IDs and the server-side 50% progression policy are unchanged.
+
+The original 1.0.0 questions, competencies, rubrics, and provenance are retained unchanged. Draft version 1.1.0 adds eight stage-specific questions and follow-ups for each of the six stages, six stage-specific competencies, and six stage-specific rubrics. See `docs/assessment-content/v1/FINXL_Curriculum_Addendum.md` for counts and source mapping. The complete pack contains 100 base questions and 100 follow-up candidates; the original 52/52 remain preserved at content version 1.0.0. New material is inferred draft authored from the curriculum brief, with PDF page citations for topic support only. All new records remain unapproved. The question-bank importer and production approval gate remain in force; no migration or automatic publication is used.
 

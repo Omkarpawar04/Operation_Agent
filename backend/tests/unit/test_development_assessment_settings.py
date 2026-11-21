@@ -4,11 +4,12 @@ from app.core.config import Settings
 
 
 def test_question_bank_mode_and_draft_selection_are_explicit_development_opt_ins() -> None:
-    defaults = Settings(app_env="development")
+    defaults = Settings(_env_file=None, app_env="development")
     assert defaults.dev_assessment_content_mode == "fixture"
     assert defaults.dev_assessment_allow_draft is False
 
     enabled = Settings(
+        _env_file=None,
         app_env="development",
         dev_assessment_content_mode="question_bank",
         dev_assessment_allow_draft=True,
@@ -27,6 +28,7 @@ def test_question_bank_mode_and_draft_selection_are_explicit_development_opt_ins
 def test_production_rejects_development_assessment_content(settings) -> None:
     with pytest.raises(ValueError, match="Development assessment content"):
         Settings(
+            _env_file=None,
             app_env="production",
             llm_provider="gemini",
             gemini_api_key="test-only-not-used",
@@ -39,4 +41,4 @@ def test_production_rejects_development_assessment_content(settings) -> None:
 
 def test_other_environments_cannot_enable_development_assessment_mode() -> None:
     with pytest.raises(ValueError, match="development or test"):
-        Settings(app_env="staging", dev_assessment_content_mode="question_bank")
+        Settings(_env_file=None, app_env="staging", dev_assessment_content_mode="question_bank")

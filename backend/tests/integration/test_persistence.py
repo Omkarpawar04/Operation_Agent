@@ -48,7 +48,7 @@ def _postgres_client(postgres_factory, provider=None, settings=None):
             yield session
 
     application.dependency_overrides[get_db] = override_db
-    selected_settings = settings or Settings(app_env="test", max_base_questions=1)
+    selected_settings = settings or Settings(_env_file=None, app_env="test", max_base_questions=1)
     application.dependency_overrides[get_settings] = lambda: selected_settings
     application.dependency_overrides[get_llm_provider] = lambda: provider or FakeLLMProvider()
     return TestClient(application)
@@ -173,8 +173,7 @@ def test_postgres_transcript_erasure_is_owned_and_atomic(postgres_factory) -> No
         assert untouched is not None and untouched.transcript == "Private response"
         assert db.get(QuestionRow, question_ids[0]).text == "[deleted]"
         assert (
-            db.get(QuestionRow, question_ids[1]).text
-            == "Generated question with personal context"
+            db.get(QuestionRow, question_ids[1]).text == "Generated question with personal context"
         )
         audits = db.scalars(
             select(TranscriptDeletionAuditRow).where(
@@ -828,6 +827,7 @@ def test_postgres_start_revalidates_retake_policy_after_concurrent_completion(
 ) -> None:
     student_id = uuid4()
     policy_settings = Settings(
+        _env_file=None,
         app_env="test",
         max_base_questions=1,
         max_follow_ups_per_question=0,

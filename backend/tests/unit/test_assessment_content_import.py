@@ -56,9 +56,9 @@ def test_dry_run_validates_pack_without_writing(database, pack) -> None:
             result.inserted_rubrics,
             result.inserted_questions,
         ) == (
-            16,
-            16,
-            104,
+            22,
+            22,
+            200,
         )
         assert _counts(session) == (0, 0, 0)
 
@@ -97,11 +97,11 @@ def test_apply_preserves_draft_metadata_and_follow_up_parentage(database, pack) 
             result.inserted_rubrics,
             result.inserted_questions,
         ) == (
-            16,
-            16,
-            104,
+            22,
+            22,
+            200,
         )
-        assert _counts(session) == (16, 16, 104)
+        assert _counts(session) == (22, 22, 200)
         question = session.get(QuestionBankRow, ("Q_DRAFT_SOFT1_01", "1.0.0"))
         assert question is not None
         assert question.approval_status == "draft"
@@ -118,6 +118,30 @@ def test_apply_preserves_draft_metadata_and_follow_up_parentage(database, pack) 
         competency = session.get(CompetencyDefinitionRow, "C_FINANCE")
         assert competency is not None
         assert competency.stage_ids_json == ["technical_1", "technical_2"]
+
+
+def test_revised_curriculum_is_balanced_versioned_and_draft(database, pack) -> None:
+    from collections import Counter
+
+    from app.domain.interviews.models import InterviewStage
+
+    with Session(database) as session:
+        import_content(session, pack, apply=True)
+        base_counts = Counter(item["stage_id"] for item in pack["questions"])
+        assert all(base_counts[stage.value] >= 8 for stage in InterviewStage)
+        assert all(
+            item["approval_status"] == "draft"
+            and item["source_status"] == "inferred_draft"
+            and item["content_version"] == "1.1.0"
+            for item in pack["questions"]
+            if item["question_id"].startswith("Q_CURR_FIN_11_")
+        )
+        bank = SqlAlchemyAssessmentContentAdapter(session)
+        for stage in InterviewStage:
+            questions = bank.development_questions(stage, QuestionCategory.BASE, allow_draft=True)
+            assert sum(item.question_id.startswith("Q_CURR_FIN_11_") for item in questions) == 8
+            assert questions[0].question_id.startswith("Q_CURR_FIN_11_")
+            assert all(item.stage is stage for item in questions)
 
 
 def test_development_adapter_requires_explicit_draft_opt_in_and_valid_relationships(
@@ -140,14 +164,12 @@ def test_development_adapter_requires_explicit_draft_opt_in_and_valid_relationsh
             QuestionCategory.BASE,
             allow_draft=True,
         )
-        assert soft_questions[0].question_id == "Q_DRAFT_SOFT1_01"
-        assert soft_questions[0].competency_id == "C_SOFT_COMM"
+        assert soft_questions[0].question_id == "Q_CURR_FIN_11_soft_1_01"
+        assert soft_questions[0].competency_id == "FIN_FOUNDATIONS_COMM"
         assert soft_questions[0].status.value == "draft"
 
         multi_stage_question = next(
-            row
-            for row in pack["questions"]
-            if row["competency_id"] == "C_FINANCE"
+            row for row in pack["questions"] if row["competency_id"] == "C_FINANCE"
         )
         mapped_questions = bank.development_questions(
             InterviewStage.TECHNICAL_1,
@@ -188,11 +210,11 @@ def test_repeated_apply_is_idempotent_and_does_not_downgrade_existing_approval(
         result = import_content(session, pack, apply=True)
         preserved = session.get(QuestionBankRow, ("Q_DRAFT_SOFT1_01", "1.0.0"))
         assert result.inserted_questions == 0
-        assert result.unchanged_questions == 104
+        assert result.unchanged_questions == 200
         assert preserved is not None
         assert preserved.approval_status == "approved"
         assert preserved.approved_by == "existing-reviewer"
-        assert _counts(session) == (16, 16, 104)
+        assert _counts(session) == (22, 22, 200)
 
 
 def test_conflict_and_failed_flush_roll_back_all_import_rows(database, pack, monkeypatch) -> None:
@@ -204,7 +226,7 @@ def test_conflict_and_failed_flush_roll_back_all_import_rows(database, pack, mon
         session.commit()
         with pytest.raises(ContentImportError, match="Import conflicts detected"):
             import_content(session, pack, apply=True)
-        assert _counts(session) == (16, 16, 104)
+        assert _counts(session) == (22, 22, 200)
 
     rollback_engine = create_engine("sqlite://")
     Base.metadata.create_all(rollback_engine)

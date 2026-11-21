@@ -38,6 +38,7 @@ def test_development_bank_mode_starts_with_imported_draft_and_persists_provenanc
     with factory() as session:
         import_content(session, _load_pack(), apply=True)
     settings = Settings(
+        _env_file=None,
         app_env="test",
         dev_assessment_content_mode="question_bank",
         dev_assessment_allow_draft=True,
@@ -61,16 +62,16 @@ def test_development_bank_mode_starts_with_imported_draft_and_persists_provenanc
     expected = next(
         item["text"]
         for item in _load_pack()["questions"]
-        if item["question_id"] == "Q_DRAFT_SOFT1_01"
+        if item["question_id"] == "Q_CURR_FIN_11_soft_1_01"
     )
     assert body["text"] == expected
     assert body["stage_id"] == "soft_1"
     assert body["content_origin"] == "development_assessment_bank"
     assert body["content_approval_status"] == "draft"
-    assert body["bank_question_id"] == "Q_DRAFT_SOFT1_01"
-    assert body["competency_id"] == "C_SOFT_COMM"
-    assert body["rubric_version_id"] == "R_C_SOFT_COMM_V1"
-    assert body["content_version"] == "1.0.0"
+    assert body["bank_question_id"] == "Q_CURR_FIN_11_soft_1_01"
+    assert body["competency_id"] == "FIN_FOUNDATIONS_COMM"
+    assert body["rubric_version_id"] == "R_FIN_FOUNDATIONS_COMM_V1_1"
+    assert body["content_version"] == "1.1.0"
     assert body["development_only"] is True
     assert provider.question_calls == 0
 
@@ -82,10 +83,10 @@ def test_development_bank_mode_starts_with_imported_draft_and_persists_provenanc
         assert provenance["provider_name"] == "question_bank"
         assert provenance["origin"] == "development_assessment_bank"
         assert provenance["approval_status"] == "draft"
-        assert provenance["bank_question_id"] == "Q_DRAFT_SOFT1_01"
-        assert provenance["competency_id"] == "C_SOFT_COMM"
-        assert provenance["rubric_version_id"] == "R_C_SOFT_COMM_V1"
-        assert provenance["content_version"] == "1.0.0"
+        assert provenance["bank_question_id"] == "Q_CURR_FIN_11_soft_1_01"
+        assert provenance["competency_id"] == "FIN_FOUNDATIONS_COMM"
+        assert provenance["rubric_version_id"] == "R_FIN_FOUNDATIONS_COMM_V1_1"
+        assert provenance["content_version"] == "1.1.0"
 
     answer = client.post(
         f"/api/v1/interviews/{started.json()['id']}/answers",
@@ -109,8 +110,8 @@ def test_development_bank_mode_starts_with_imported_draft_and_persists_provenanc
     assert follow_up_body["kind"] == "follow_up"
     assert follow_up_body["content_origin"] == "development_assessment_bank"
     assert follow_up_body["content_approval_status"] == "draft"
-    assert follow_up_body["bank_question_id"] == "FU_Q_DRAFT_SOFT1_01_01"
-    assert follow_up_body["parent_question_id"] == "Q_DRAFT_SOFT1_01"
+    assert follow_up_body["bank_question_id"] == "FU_Q_CURR_FIN_11_soft_1_01_01"
+    assert follow_up_body["parent_question_id"] == "Q_CURR_FIN_11_soft_1_01"
     assert provider.question_calls == 0
 
 
@@ -121,6 +122,7 @@ def test_short_bank_answer_uses_follow_up_candidate_instead_of_missing_clarifica
     with factory() as session:
         import_content(session, _load_pack(), apply=True)
     settings = Settings(
+        _env_file=None,
         app_env="test",
         dev_assessment_content_mode="question_bank",
         dev_assessment_allow_draft=True,
@@ -154,7 +156,7 @@ def test_short_bank_answer_uses_follow_up_candidate_instead_of_missing_clarifica
         f"/api/v1/interviews/{started.json()['id']}/question", headers=headers
     ).json()
     assert current["kind"] == "follow_up"
-    assert current["bank_question_id"] == "FU_Q_DRAFT_SOFT1_01_01"
+    assert current["bank_question_id"] == "FU_Q_CURR_FIN_11_soft_1_01_01"
     assert provider.question_calls == 0
     with factory() as session:
         attempt = session.scalar(select(AssessmentAttemptRow))
@@ -169,6 +171,7 @@ def test_draft_bank_without_explicit_draft_opt_in_fails_without_fixture_fallback
     with factory() as session:
         import_content(session, _load_pack(), apply=True)
     settings = Settings(
+        _env_file=None,
         app_env="test",
         dev_assessment_content_mode="question_bank",
         dev_assessment_allow_draft=False,

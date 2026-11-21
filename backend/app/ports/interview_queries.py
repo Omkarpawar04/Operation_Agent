@@ -26,11 +26,20 @@ class QuestionView:
 
 
 @dataclass(frozen=True, slots=True)
+class AssessmentCompetencyFeedback:
+    competency_id: str
+    title: str
+    strengths: tuple[str, ...]
+    areas_for_improvement: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class AssessmentView:
     attempt_id: UUID
     score: str
     passed: bool
     rubric_version: str
+    competency_feedback: tuple[AssessmentCompetencyFeedback, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

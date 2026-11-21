@@ -278,7 +278,7 @@ def validate_content(content: dict[str, Any]) -> list[str]:
             or evidence_by_question.get(qid, {}).get("evidence_id") != evidence_id
         ):
             errors.append(f"question_item {qid} evidence relationship is inconsistent")
-        if (
+        if (              
             not isinstance(question_item.get("key_concepts_expected"), list)
             or not question_item["key_concepts_expected"]
         ):

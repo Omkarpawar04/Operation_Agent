@@ -17,4 +17,12 @@ export interface DetailedAssessmentResult {
   passed: boolean;
   rubric_version: string;
   evidence?: DimensionEvidenceItem[];
+  competency_feedback?: CompetencyFeedbackItem[];
+}
+
+export interface CompetencyFeedbackItem {
+  competency_id: string;
+  title: string;
+  strengths: string[];
+  areas_for_improvement: string[];
 }

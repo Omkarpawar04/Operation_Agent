@@ -55,7 +55,7 @@ def test_fake_short_answer_preserves_insufficient_evidence_and_requests_follow_u
 
 def test_production_settings_reject_development_question_provider() -> None:
     with pytest.raises(ValueError, match="Production requires a configured Gemini provider"):
-        Settings(
+        Settings(_env_file=None,
             app_env="production",
             llm_provider="fake",
             dev_assessment_content_mode="fixture",

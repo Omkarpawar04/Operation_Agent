@@ -40,12 +40,16 @@ describe('ResultsDashboardUI Component', () => {
 
     expect(container.textContent).toContain('Student Interview Journey');
     expect(container.textContent).toContain('1 / 6 Passed');
-    expect(container.textContent).toContain('Communication & Behavioral Foundations');
+    expect(container.textContent).toContain('Finance Foundations and Communication');
+    expect(container.textContent).toContain('why cash flow management matters');
     expect(container.textContent).toContain('Stage Cleared');
-    expect(container.textContent).toContain('Problem Framing & Structured Thinking');
+    expect(container.textContent).toContain('Conceptual Understanding and Financial Reasoning');
+    expect(container.textContent).toContain('Interpret basic financial ratios');
     expect(container.textContent).toContain('Start Stage Interview');
-    expect(container.textContent).toContain('Executive Presence & Stakeholder Influence');
-    expect(container.textContent).toContain('Accounting Fundamentals & 3-Statement Mechanics');
+    expect(container.textContent).toContain('Practical Finance Scenarios');
+    expect(container.textContent).toContain('Financial Modeling Fundamentals');
+    expect(container.textContent).toContain('Financial Statements and Ratio Analysis');
+    expect(container.textContent).toContain('Advanced Financial Modeling Applications');
 
     // Clicking available start stage button triggers callback
     const startBtn = container.querySelector<HTMLButtonElement>('.start-stage-btn[data-stage="soft_2"]');
@@ -79,15 +83,12 @@ describe('ResultsDashboardUI Component', () => {
       score: '88.5',
       passed: true,
       rubric_version: 'rubric_v2',
-      evidence: [
+      competency_feedback: [
         {
-          dimension: 'financial_accuracy',
-          evidence: ['Correctly identified working capital cash impact'],
-          missing: ['Could elaborate on Capex timing effects'],
-          insufficient: false,
-          confidence: '0.95',
-          score: '90.0',
-          explanation: 'Clear and accurate calculation flow.',
+          competency_id: 'FIN_WORKING_CAPITAL',
+          title: 'Working Capital and Cash Flow Analysis',
+          strengths: ['Correctly identified working capital cash impact'],
+          areas_for_improvement: ['Could explain capital spending timing'],
         },
       ],
     };
@@ -99,10 +100,10 @@ describe('ResultsDashboardUI Component', () => {
     expect(container.textContent).toContain('STAGE PASSED');
     expect(container.textContent).toContain('88.5');
     expect(container.textContent).toContain('att-555-uuid');
-    expect(container.textContent).toContain('rubric_v2');
-    expect(container.textContent).toContain('Financial Accuracy');
+    expect(container.textContent).toContain('Competency Feedback');
+    expect(container.textContent).toContain('Working Capital and Cash Flow Analysis');
     expect(container.textContent).toContain('Correctly identified working capital cash impact');
-    expect(container.textContent).toContain('Could elaborate on Capex timing effects');
-    expect(container.textContent).toContain('Clear and accurate calculation flow.');
+    expect(container.textContent).toContain('Could explain capital spending timing');
+    expect(container.textContent).not.toContain('90.0/100');
   });
 });

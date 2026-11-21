@@ -264,8 +264,7 @@ class SubmitAnswer:
             )
             analysis, evidence = AnswerAnalyzer().analyze(self._provider, prompt, rubric)
             root_question_id = reservation.root_question_id or (
-                reservation.active_question.parent_question_id
-                or reservation.active_question.id
+                reservation.active_question.parent_question_id or reservation.active_question.id
             )
             rubric_weights = {dimension.key: dimension.weight for dimension in rubric.dimensions}
             evidence = tuple(
@@ -291,8 +290,7 @@ class SubmitAnswer:
             )
             if (production or development_bank) and active_provenance is not None:
                 parent_id = (
-                    active_provenance.parent_question_id
-                    or active_provenance.bank_question_id
+                    active_provenance.parent_question_id or active_provenance.bank_question_id
                 )
                 if action in {InterviewAction.FOLLOW_UP, InterviewAction.CLARIFICATION}:
                     category = (
@@ -527,21 +525,16 @@ class SubmitAnswer:
                         approved_questions = self._assessment_content.approved_questions(
                             stage, QuestionCategory.BASE, active_provenance.competency_id
                         )
-                        selected_base = next(
-                            (
-                                item
-                                for item in approved_questions
-                                if not any(
-                                    item.text.strip().casefold() == old.strip().casefold()
-                                    for old in reservation.previous_questions
-                                )
-                            ),
-                            None,
-                        )
-                        if selected_base is None:
+                        try:
+                            selected_base = FollowUpGenerationEngine.select_bank_candidate(
+                                approved_questions,
+                                reservation.previous_questions
+                                + (reservation.active_question.text,),
+                            )
+                        except InvalidProviderOutput:
                             raise InvalidProviderOutput(
                                 "No additional approved base questions are configured"
-                            )
+                            ) from None
                         next_question_text = selected_base.text
                         next_question_provenance = self._approved_provenance(
                             selected_base.question_id,
@@ -745,9 +738,7 @@ class SubmitAnswer:
         if self._assessment_content is None or competency_id is None:
             return ()
         if production:
-            candidates = self._assessment_content.approved_questions(
-                stage, category, competency_id
-            )
+            candidates = self._assessment_content.approved_questions(stage, category, competency_id)
         else:
             candidates = self._assessment_content.development_questions(
                 stage,
@@ -755,16 +746,12 @@ class SubmitAnswer:
                 allow_draft=self._settings.dev_assessment_allow_draft,
                 competency_id=competency_id,
                 parent_question_id=(
-                    parent_question_id
-                    if category is not QuestionCategory.BASE
-                    else None
+                    parent_question_id if category is not QuestionCategory.BASE else None
                 ),
             )
         if category is QuestionCategory.BASE:
             return tuple(item for item in candidates if item.parent_question_id is None)
-        return tuple(
-            item for item in candidates if item.parent_question_id == parent_question_id
-        )
+        return tuple(item for item in candidates if item.parent_question_id == parent_question_id)
 
     @staticmethod
     def _question_evidence(
@@ -776,6 +763,5 @@ class SubmitAnswer:
                 raise ValueError("Assessment evidence is missing its parent main question")
             grouped.setdefault(item.root_question_id, []).append(item)
         return tuple(
-            (question_id, tuple(grouped[question_id]))
-            for question_id in sorted(grouped, key=str)
+            (question_id, tuple(grouped[question_id])) for question_id in sorted(grouped, key=str)
         )
